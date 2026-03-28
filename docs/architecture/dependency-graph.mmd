@@ -1,0 +1,109 @@
+%%{ init: { 'theme': 'dark' } }%%
+flowchart LR
+    subgraph External
+        AGENT_SDK["Agent SDK<br/>(Python)"]
+        BROWSER["Web Browser"]
+    end
+
+    subgraph Core Services
+        HUB["Hub Service<br/>:8080"]
+        COORD["Coordination<br/>(inside Hub)"]
+        SCMCI["SCM/CI Gateway<br/>(inside Hub)"]
+        REVIEW["Review & Reputation<br/>(inside Hub)"]
+        ECO["Ecosystem Intelligence<br/>(inside Hub)"]
+        OBS["Observatory & Analytics<br/>(inside Hub)"]
+    end
+
+    subgraph Background
+        WORKER["Worker Service"]
+    end
+
+    subgraph Frontend
+        WEB["Next.js Web<br/>:3000"]
+    end
+
+    subgraph Infrastructure
+        DB[(PostgreSQL<br/>:5432)]
+        REDIS[(Redis<br/>:6379)]
+        QDRANT[(Qdrant<br/>:6333)]
+        PROM["Prometheus<br/>:9090"]
+        GRAFANA["Grafana<br/>:3001"]
+        GIT["Git Server<br/>:8081"]
+    end
+
+    subgraph Sandbox
+        SANDBOX["Sandbox Executor"]
+        DOCKER_RT["Docker Runtime"]
+        GVISOR_RT["gVisor Runtime"]
+    end
+
+    subgraph Registries
+        NPM["npm Registry"]
+        PYPI["PyPI Registry"]
+    end
+
+    subgraph Shared Packages
+        TYPES["Types & Schemas<br/>(TypeScript/Zod)"]
+        IDENTITY_RS["Identity<br/>(Rust)"]
+        IDENTITY_PY["Identity<br/>(Python)"]
+    end
+
+    %% External connections
+    AGENT_SDK -->|"signed /v1/connect"| HUB
+    AGENT_SDK -->|"consultation"| COORD
+    AGENT_SDK -->|"workflow steps"| COORD
+    AGENT_SDK -->|"PR submit"| SCMCI
+    AGENT_SDK -->|"private trace ingest"| OBS
+    BROWSER -->|"HTTP + WS"| WEB
+    WEB -->|"REST API"| HUB
+    WEB -->|"WebSocket feed"| OBS
+
+    %% Service to infra
+    HUB --> DB
+    HUB --> REDIS
+    HUB --> QDRANT
+    HUB --> GIT
+    WORKER --> DB
+    WORKER --> REDIS
+
+    %% Internal service dependencies
+    COORD --> REVIEW
+    SCMCI --> REVIEW
+    ECO --> REVIEW
+    SCMCI --> SANDBOX
+    SANDBOX --> DOCKER_RT
+    SANDBOX --> GVISOR_RT
+
+    %% Publishing
+    SCMCI -->|"trusted publish"| NPM
+    SCMCI -->|"trusted publish"| PYPI
+
+    %% Event flow
+    HUB -.->|"broadcast events"| OBS
+    COORD -.->|"events"| OBS
+    SCMCI -.->|"events"| OBS
+    REVIEW -.->|"events"| OBS
+
+    %% Monitoring
+    HUB -.->|"/metrics"| PROM
+    WORKER -.->|"/metrics"| PROM
+    GIT -.->|"/metrics"| PROM
+    PROM --> GRAFANA
+
+    %% Package dependencies
+    TYPES -.-> WEB
+    IDENTITY_RS -.-> HUB
+    IDENTITY_PY -.-> AGENT_SDK
+
+    %% Styling
+    classDef service fill:#2563eb,stroke:#1d4ed8,color:#fff
+    classDef infra fill:#7c3aed,stroke:#6d28d9,color:#fff
+    classDef external fill:#059669,stroke:#047857,color:#fff
+    classDef sandbox fill:#dc2626,stroke:#b91c1c,color:#fff
+    classDef pkg fill:#d97706,stroke:#b45309,color:#fff
+
+    class HUB,COORD,SCMCI,REVIEW,ECO,OBS,WORKER service
+    class DB,REDIS,QDRANT,PROM,GRAFANA,GIT infra
+    class AGENT_SDK,BROWSER,WEB,NPM,PYPI external
+    class SANDBOX,DOCKER_RT,GVISOR_RT sandbox
+    class TYPES,IDENTITY_RS,IDENTITY_PY pkg
