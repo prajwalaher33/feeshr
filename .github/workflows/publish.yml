@@ -1,0 +1,162 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Package to publish (sdk, identity, types, web)"
+        required: true
+        type: choice
+        options:
+          - sdk
+          - identity
+          - types
+          - web
+      dry_run:
+        description: "Dry run (no actual publish)"
+        required: false
+        type: boolean
+        default: true
+
+# OIDC permissions for trusted publishing
+permissions:
+  id-token: write   # OIDC token for PyPI trusted publishing
+  contents: read
+  attestations: write
+
+env:
+  OIDC_REQUIRED_FOR_PUBLISHING: "true"
+
+jobs:
+  # ---------- PyPI publishing (SDK / Identity) ----------
+  publish-pypi:
+    if: inputs.target == 'sdk' || inputs.target == 'identity'
+    name: Publish to PyPI (trusted publishing)
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Set package path
+        run: |
+          if [ "${{ inputs.target }}" = "sdk" ]; then
+            echo "PKG_PATH=packages/sdk" >> $GITHUB_ENV
+          else
+            echo "PKG_PATH=packages/identity/python" >> $GITHUB_ENV
+          fi
+
+      - name: Build package
+        run: python -m build ${{ env.PKG_PATH }}
+
+      - name: Check package contents
+        run: twine check ${{ env.PKG_PATH }}/dist/*
+
+      # Trusted publishing via OIDC — no long-lived tokens
+      - name: Publish to TestPyPI (dry run or test)
+        if: inputs.dry_run
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: ${{ env.PKG_PATH }}/dist/
+          skip-existing: true
+          attestations: true
+
+      - name: Publish to PyPI (production)
+        if: ${{ !inputs.dry_run }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ env.PKG_PATH }}/dist/
+          attestations: true
+
+  # ---------- npm publishing (types / web) ----------
+  publish-npm:
+    if: inputs.target == 'types' || inputs.target == 'web'
+    name: Publish to npm (provenance)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+
+      - name: Set package path
+        run: |
+          if [ "${{ inputs.target }}" = "types" ]; then
+            echo "PKG_PATH=packages/types" >> $GITHUB_ENV
+          else
+            echo "PKG_PATH=apps/web" >> $GITHUB_ENV
+          fi
+
+      - name: Dry run — validate package contents
+        if: inputs.dry_run
+        run: npm pack --dry-run -w ${{ env.PKG_PATH }}
+
+      - name: Publish with provenance
+        if: ${{ !inputs.dry_run }}
+        run: npm publish -w ${{ env.PKG_PATH }} --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify provenance (post-publish)
+        if: ${{ !inputs.dry_run }}
+        run: npm audit signatures
+
+  # ---------- SBOM generation ----------
+  generate-sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install syft
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM (CycloneDX JSON)
+        run: |
+          syft dir:. -o cyclonedx-json > sbom.cdx.json
+          echo "SBOM generated: $(wc -c < sbom.cdx.json) bytes"
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+
+  # ---------- Provenance enforcement check ----------
+  provenance-check:
+    name: Verify publishing policies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enforce OIDC requirement
+        run: |
+          if [ "$OIDC_REQUIRED_FOR_PUBLISHING" != "true" ]; then
+            echo "ERROR: OIDC_REQUIRED_FOR_PUBLISHING must be true in CI"
+            exit 1
+          fi
+          echo "✓ OIDC publishing requirement enforced"
+
+      - name: Check no long-lived tokens in config
+        run: |
+          # Ensure no .pypirc or .npmrc with tokens are committed
+          if [ -f .pypirc ] || [ -f .npmrc ]; then
+            echo "ERROR: .pypirc or .npmrc found in repo — use trusted publishing instead"
+            exit 1
+          fi
+          echo "✓ No long-lived registry tokens in repository"

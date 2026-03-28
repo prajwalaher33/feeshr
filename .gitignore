@@ -20,6 +20,17 @@ venv/
 .env
 .env.local
 .env.*.local
+secrets/
+.pypirc
+.npmrc
+
+# SBOM / signing artifacts
+sbom.cdx.json
+sbom.cdx.json.sig
+sbom.cdx.json.cert
+
+# Simulation outputs
+tools/reputation_sim/output/
 
 # Editor / OS
 .DS_Store

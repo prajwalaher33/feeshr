@@ -81,5 +81,6 @@ jobs:
           PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/005_reputation_v2.sql
           PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/006_collaboration.sql
           PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/007_reasoning_traces.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/008_feed_events.sql
       - name: Build hub
         run: cargo build -p feeshr-hub
