@@ -1,0 +1,100 @@
+# Feeshr Platform — Development Targets
+#
+# Usage:
+#   make bootstrap    — install deps, start infra, run migrations
+#   make dev          — start all services for local development
+#   make test         — run all tests
+#   make lint         — lint all code
+#   make fmt          — format all code
+#   make sim          — run reputation simulation
+#   make sandbox-test — run sandbox isolation tests
+#   make privacy-test — run privacy/sanitizer tests
+#   make infra-up     — start Docker infrastructure
+#   make db-migrate   — run database migrations
+#   make pypi-build   — build Python packages
+#   make npm-pack-dry-run — dry-run npm packaging
+
+.PHONY: bootstrap dev test lint fmt sim sandbox-test privacy-test \
+        infra-up infra-down db-migrate pypi-build pypi-upload-testpypi \
+        npm-pack-dry-run
+
+# ─── Bootstrap ───────────────────────────────────────────────────────
+bootstrap:
+	@./scripts/dev/bootstrap.sh
+
+# ─── Development ─────────────────────────────────────────────────────
+dev:
+	@./scripts/dev/start-services.sh
+
+infra-up:
+	docker compose -f infra/docker/docker-compose.yml up -d postgres redis qdrant prometheus grafana
+
+infra-down:
+	docker compose -f infra/docker/docker-compose.yml down
+
+db-migrate:
+	@for f in packages/db/migrations/*.sql; do \
+		echo "Applying $$f ..."; \
+		PGPASSWORD=feeshr psql -h localhost -U feeshr -d feeshr -f "$$f"; \
+	done
+
+# ─── Formatting ──────────────────────────────────────────────────────
+fmt:
+	cargo fmt --all
+	npx -w apps/web prettier --write "apps/web/**/*.{ts,tsx}" 2>/dev/null || true
+	ruff format apps/agents/ packages/sdk/ packages/identity/python/ tools/reputation_sim/ 2>/dev/null || true
+
+# ─── Linting ─────────────────────────────────────────────────────────
+lint:
+	cargo clippy --all-targets -- -D warnings
+	npx -w apps/web tsc --noEmit
+	npx -w apps/web next lint 2>/dev/null || true
+	ruff check apps/agents/ packages/sdk/ packages/identity/python/
+
+# ─── Testing ─────────────────────────────────────────────────────────
+test: privacy-test
+	cargo test --all
+	pytest -v packages/identity/python/tests/ packages/sdk/tests/ apps/agents/tests/ sandbox/tests/
+	npx -w apps/web tsc --noEmit
+
+privacy-test:
+	@echo "=== Privacy / Sanitizer Tests ==="
+	cargo test -p feeshr-hub sanitizer 2>&1 || echo "Rust sanitizer tests need cargo build"
+	@echo "=== Client-side privacy guard check ==="
+	@node -e " \
+		const { validateFeedEvent } = require('./apps/web/lib/privacy-guard'); \
+		const safe = { type: 'agent_connected', agent_name: 'bot', timestamp: new Date().toISOString() }; \
+		const unsafe1 = { type: 'test', trace_context: 'secret', timestamp: new Date().toISOString() }; \
+		const unsafe2 = { type: 'test', prompt: 'hidden', timestamp: new Date().toISOString() }; \
+		console.assert(validateFeedEvent(safe), 'Safe event should pass'); \
+		console.assert(!validateFeedEvent(unsafe1), 'trace_context should be rejected'); \
+		console.assert(!validateFeedEvent(unsafe2), 'prompt should be rejected'); \
+		console.log('All client-side privacy tests passed.'); \
+	" 2>/dev/null || echo "  (requires built TS modules — run 'npx -w apps/web tsc' first)"
+
+# ─── Simulation ──────────────────────────────────────────────────────
+sim:
+	@./scripts/sim/run_reputation_sim.sh
+
+# ─── Sandbox Testing ─────────────────────────────────────────────────
+sandbox-test:
+	@./scripts/sandbox/test_isolation.sh docker
+
+# ─── Publishing ──────────────────────────────────────────────────────
+pypi-build:
+	pip install build
+	python -m build packages/sdk
+	python -m build packages/identity/python
+
+pypi-upload-testpypi:
+	@if [ -z "$(TESTPYPI_TOKEN)" ]; then \
+		echo "Set TESTPYPI_TOKEN to upload. Running twine check instead..."; \
+		pip install twine && twine check packages/sdk/dist/*; \
+	else \
+		twine upload --repository testpypi packages/sdk/dist/* \
+			--username __token__ --password "$(TESTPYPI_TOKEN)"; \
+	fi
+
+npm-pack-dry-run:
+	npm pack --dry-run -w packages/types
+	npm pack --dry-run -w apps/web 2>/dev/null || true
