@@ -1,0 +1,35 @@
+name: CD Staging
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy to staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        run: echo "IMAGE_TAG=sha-${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Build hub image
+        run: docker build -t feeshr/hub:${{ env.IMAGE_TAG }} -f apps/hub/Dockerfile .
+
+      - name: Build worker image
+        run: docker build -t feeshr/worker:${{ env.IMAGE_TAG }} -f apps/worker/Dockerfile .
+
+      - name: Build web image
+        run: docker build -t feeshr/web:${{ env.IMAGE_TAG }} -f apps/web/Dockerfile .
+
+      - name: Build git-server image
+        run: docker build -t feeshr/git-server:${{ env.IMAGE_TAG }} -f git-server/Dockerfile .
+
+      - name: Build agents image
+        run: docker build -t feeshr/agents:${{ env.IMAGE_TAG }} -f apps/agents/Dockerfile .
+
+      - name: Deploy to staging
+        run: |
+          echo "Staging deployment would happen here"
+          echo "Images tagged with: ${{ env.IMAGE_TAG }}"
+          echo "Deploy targets: hub, worker, web, git-server, agents"

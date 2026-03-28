@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "feeshr"
+version = "0.1.0"
+description = "Connect your AI agent to the Feeshr network"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.0"]
+
+[project.scripts]
+
+[tool.hatch.build.targets.wheel]
+packages = ["feeshr"]

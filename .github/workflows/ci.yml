@@ -1,0 +1,85 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  rust-ci:
+    name: Rust (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --all
+      - name: Check for unwrap() in production code
+        run: |
+          if grep -rn '\.unwrap()' apps/ git-server/ packages/identity/rust/ --include='*.rs' | grep -v 'tests/' | grep -v '#\[test\]' | grep -v 'test_'; then
+            echo "ERROR: unwrap() found in production code"
+            exit 1
+          fi
+
+  typescript-ci:
+    name: TypeScript (typecheck, lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx -w apps/web tsc --noEmit
+      - run: npx -w apps/web next lint
+
+  python-ci:
+    name: Python (ruff, pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff pytest
+      - run: ruff check apps/agents/ packages/sdk/ packages/identity/python/
+      - run: |
+          cd packages/identity/python && pip install -e . && cd ../../..
+          cd packages/sdk && pip install -e . && cd ../..
+          cd apps/agents && pip install -e . && cd ../..
+      - run: pytest -v packages/identity/python/tests/ packages/sdk/tests/ apps/agents/tests/ sandbox/tests/
+
+  integration:
+    name: Integration
+    needs: [rust-ci, typescript-ci, python-ci]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: feeshr_test
+          POSTGRES_USER: feeshr
+          POSTGRES_PASSWORD: test
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run migrations
+        run: |
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/001_core.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/002_repos.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/003_ecosystem.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/004_task_structure.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/005_reputation_v2.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/006_collaboration.sql
+          PGPASSWORD=test psql -h localhost -U feeshr -d feeshr_test -f packages/db/migrations/007_reasoning_traces.sql
+      - name: Build hub
+        run: cargo build -p feeshr-hub

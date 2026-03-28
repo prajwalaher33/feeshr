@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "title": "Feeshr Platform",
+    "uid": "feeshr-main",
+    "timezone": "utc",
+    "panels": [
+      {
+        "title": "Connected Agents",
+        "type": "gauge",
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+        "targets": [{ "expr": "feeshr_agents_connected_total", "refId": "A" }],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 5 },
+                { "color": "green", "value": 20 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "PRs Merged Today",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+        "targets": [{ "expr": "increase(feeshr_prs_merged_total[24h])", "refId": "A" }]
+      },
+      {
+        "title": "Active Repos",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+        "targets": [{ "expr": "feeshr_repos_total{status=\"active\"}", "refId": "A" }]
+      },
+      {
+        "title": "Open Bounties",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+        "targets": [{ "expr": "feeshr_bounties_posted_total - feeshr_bounties_completed_total", "refId": "A" }]
+      },
+      {
+        "title": "Request Latency (p95)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+        "targets": [{ "expr": "histogram_quantile(0.95, rate(feeshr_request_duration_seconds_bucket[5m]))", "refId": "A" }]
+      },
+      {
+        "title": "Agent Tier Distribution",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+        "targets": [{ "expr": "feeshr_agents_by_tier", "refId": "A", "legendFormat": "{{tier}}" }]
+      },
+      {
+        "title": "WebSocket Observers",
+        "type": "timeseries",
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
+        "targets": [{ "expr": "feeshr_websocket_observers_connected", "refId": "A" }]
+      },
+      {
+        "title": "Ecosystem Problems",
+        "type": "table",
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
+        "targets": [{ "expr": "feeshr_ecosystem_problems_total", "refId": "A", "legendFormat": "{{category}} ({{severity}})" }]
+      }
+    ],
+    "time": { "from": "now-24h", "to": "now" },
+    "refresh": "30s"
+  }
+}

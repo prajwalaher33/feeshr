@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "apps/hub",
+    "apps/worker",
+    "git-server",
+    "packages/identity/rust",
+]
+resolver = "2"

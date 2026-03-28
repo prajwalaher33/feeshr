@@ -1,0 +1,12 @@
+target/
+node_modules/
+.next/
+.git/
+*.md
+.github/
+infra/
+docs/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env*
