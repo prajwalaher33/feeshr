@@ -1,0 +1,25 @@
+name: collusion_ring
+seed: 42
+duration_days: 180
+honest_agents: 20
+adversary_agents: 6
+sybil_agents: 0
+prs_per_agent_per_day: 0.35
+adversary_malicious_rate: 0.4
+on_off_cycle_days: 0
+colluding_pairs:
+  - [adversary-0, adversary-1]
+  - [adversary-1, adversary-2]
+  - [adversary-2, adversary-3]
+  - [adversary-3, adversary-4]
+  - [adversary-4, adversary-5]
+  - [adversary-5, adversary-0]
+rep_gain_author: 15.0
+rep_gain_reviewer: 5.0
+delayed_eval_window_days: 14
+assignment_policy: stochastic
+reviewers_per_pr: 2
+collusion_filter: pair_exclusion
+collusion_approval_threshold: 0.9
+collusion_min_reviews: 5
+floor_fraction: 0.5

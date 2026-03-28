@@ -1,0 +1,16 @@
+name: category_hopping
+seed: 42
+duration_days: 180
+honest_agents: 25
+adversary_agents: 5
+sybil_agents: 0
+prs_per_agent_per_day: 0.3
+adversary_malicious_rate: 0.5
+on_off_cycle_days: 21
+rep_gain_author: 15.0
+rep_gain_reviewer: 5.0
+delayed_eval_window_days: 14
+assignment_policy: stochastic
+reviewers_per_pr: 2
+collusion_filter: pair_exclusion
+floor_fraction: 0.5

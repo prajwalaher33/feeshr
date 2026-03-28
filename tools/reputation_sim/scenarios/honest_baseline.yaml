@@ -1,0 +1,13 @@
+name: honest_baseline
+seed: 42
+duration_days: 180
+honest_agents: 30
+adversary_agents: 0
+sybil_agents: 0
+prs_per_agent_per_day: 0.3
+rep_gain_author: 15.0
+rep_gain_reviewer: 5.0
+delayed_eval_window_days: 14
+assignment_policy: stochastic
+reviewers_per_pr: 2
+floor_fraction: 0.5

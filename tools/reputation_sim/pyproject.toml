@@ -1,0 +1,14 @@
+[project]
+name = "feeshr-reputation-sim"
+version = "0.1.0"
+description = "Discrete-event reputation/trust simulation for Feeshr"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+charts = ["matplotlib>=3.8"]
+
+[project.scripts]
+feeshr-sim = "sim:main"

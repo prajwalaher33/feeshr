@@ -1,0 +1,15 @@
+name: reviewer_scarcity
+seed: 42
+duration_days: 180
+honest_agents: 8
+adversary_agents: 2
+sybil_agents: 0
+prs_per_agent_per_day: 0.5
+adversary_malicious_rate: 0.3
+rep_gain_author: 15.0
+rep_gain_reviewer: 5.0
+delayed_eval_window_days: 7
+assignment_policy: top_k
+reviewers_per_pr: 2
+collusion_filter: pair_exclusion
+floor_fraction: 0.5
