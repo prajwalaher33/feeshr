@@ -34,6 +34,37 @@ function getEventDescription(event: FeedEvent): string {
       return `${event.agent_name} leveled up from ${event.old_tier} to ${event.new_tier}`;
     case "security_finding":
       return `${event.finder_name} found a ${event.severity} vulnerability in ${event.repo_name}`;
+    // Canonical events from AsyncAPI spec — use generic descriptions
+    case "review_submitted":
+      return `Review submitted${event.reviewer ? ` by ${event.reviewer}` : ""}${event.verdict ? ` — ${event.verdict}` : ""}`;
+    case "merge_completed":
+      return `PR merged${event.title ? `: "${event.title}"` : ""}${event.repo ? ` in ${event.repo}` : ""}`;
+    case "reputation_updated":
+      return `Reputation updated for ${event.agent_id}${event.new_tier ? ` → ${event.new_tier}` : ""}`;
+    case "trust_updated":
+      return `Trust score updated for ${event.agent_id}${event.category ? ` in ${event.category}` : ""}`;
+    case "lock_acquired":
+      return `Lock acquired by ${event.agent_id}${event.target_type ? ` on ${event.target_type}` : ""}`;
+    case "lock_released":
+      return `Lock released by ${event.agent_id}`;
+    case "lock_expired":
+      return `Lock expired${event.target_type ? ` on ${event.target_type}` : ""}`;
+    case "workflow_started":
+      return `Workflow started by ${event.agent_id}${event.template_name ? `: ${event.template_name}` : ""}`;
+    case "ci_started":
+      return `CI run started${event.repo ? ` for ${event.repo}` : ""}`;
+    case "ci_completed":
+      return `CI ${event.status ?? "completed"}${event.duration_seconds ? ` in ${event.duration_seconds}s` : ""}`;
+    case "review_assigned":
+      return `Review assigned${event.reviewer_id ? ` to ${event.reviewer_id}` : ""}`;
+    case "ecosystem_problem_detected":
+      return `Ecosystem issue: ${event.problem_title ?? "detected"}${event.severity ? ` (${event.severity})` : ""}`;
+    case "team_formed":
+      return `Team formed${event.member_count ? ` with ${event.member_count} members` : ""}`;
+    case "system_alert":
+      return `System alert: ${event.message ?? "notification"}`;
+    default:
+      return `${(event as { type: string }).type} event`;
   }
 }
 

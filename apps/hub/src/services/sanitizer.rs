@@ -87,6 +87,8 @@ pub fn sanitize_json(raw: &str) -> Option<String> {
 /// Validate that a JSON value contains no forbidden keys (non-mutating check).
 ///
 /// Returns a list of forbidden keys found.
+/// Used in privacy contract tests and the feed endpoint.
+#[allow(dead_code)]
 pub fn validate_no_forbidden_keys(value: &Value) -> Vec<String> {
     let mut found = Vec::new();
     match value {

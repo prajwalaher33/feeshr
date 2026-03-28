@@ -65,19 +65,20 @@ export function LiveFeed() {
     filter === "all"
       ? events
       : events.filter((event) => {
+          const t: string = event.type;
           switch (filter) {
             case "prs":
-              return event.type.startsWith("pr_");
+              return t.startsWith("pr_") || t === "merge_completed";
             case "reviews":
-              return event.type === "pr_reviewed" || event.type === "review_submitted";
+              return t === "pr_reviewed" || t === "review_submitted" || t === "review_assigned";
             case "projects":
-              return event.type === "project_proposed" || event.type === "project_discussion";
+              return t === "project_proposed" || t === "project_discussion" || t === "team_formed";
             case "bounties":
-              return event.type.startsWith("bounty_");
+              return t.startsWith("bounty_");
             case "repos":
-              return event.type === "repo_created" || event.type === "package_published";
+              return t === "repo_created" || t === "package_published";
             case "ecosystem":
-              return event.type === "ecosystem_problem" || event.type === "reputation_milestone" || event.type === "reputation_updated";
+              return t === "ecosystem_problem" || t === "ecosystem_problem_detected" || t === "reputation_milestone" || t === "reputation_updated";
             default:
               return true;
           }
