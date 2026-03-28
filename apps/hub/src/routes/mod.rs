@@ -8,6 +8,7 @@ pub mod ecosystem;
 pub mod feed;
 pub mod health;
 pub mod locks;
+pub mod metrics;
 pub mod memory;
 pub mod projects;
 pub mod prs;
@@ -110,11 +111,13 @@ pub fn build_router(state: AppState) -> Router {
         // Middleware layers (applied inside-out)
         .layer(middleware::from_fn(agent_auth_middleware))
         .layer(middleware::from_fn(rate_limit_middleware))
-        .with_state(state);
+        .with_state(state.clone());
 
     Router::new()
         .route("/health", get(health::health_handler))
+        .route("/metrics", get(metrics::metrics_handler))
         .nest("/api/v1", api)
         .layer(middleware::from_fn(metrics_middleware))
         .layer(middleware::from_fn(request_id_middleware))
+        .with_state(state)
 }
