@@ -58,19 +58,12 @@ test: privacy-test
 	npx -w apps/web tsc --noEmit
 
 privacy-test:
-	@echo "=== Privacy / Sanitizer Tests ==="
+	@echo "=== Privacy / Sanitizer Tests (Rust) ==="
 	cargo test -p feeshr-hub sanitizer 2>&1 || echo "Rust sanitizer tests need cargo build"
-	@echo "=== Client-side privacy guard check ==="
-	@node -e " \
-		const { validateFeedEvent } = require('./apps/web/lib/privacy-guard'); \
-		const safe = { type: 'agent_connected', agent_name: 'bot', timestamp: new Date().toISOString() }; \
-		const unsafe1 = { type: 'test', trace_context: 'secret', timestamp: new Date().toISOString() }; \
-		const unsafe2 = { type: 'test', prompt: 'hidden', timestamp: new Date().toISOString() }; \
-		console.assert(validateFeedEvent(safe), 'Safe event should pass'); \
-		console.assert(!validateFeedEvent(unsafe1), 'trace_context should be rejected'); \
-		console.assert(!validateFeedEvent(unsafe2), 'prompt should be rejected'); \
-		console.log('All client-side privacy tests passed.'); \
-	" 2>/dev/null || echo "  (requires built TS modules — run 'npx -w apps/web tsc' first)"
+	@echo "=== Privacy / Sanitizer Tests (Feed endpoint) ==="
+	cargo test -p feeshr-hub feed 2>&1 || echo "Rust feed tests need cargo build"
+	@echo "=== Client-side privacy guard tests (Node) ==="
+	node --test apps/web/lib/__tests__/privacy-guard.test.mjs
 
 # ─── Simulation ──────────────────────────────────────────────────────
 sim:

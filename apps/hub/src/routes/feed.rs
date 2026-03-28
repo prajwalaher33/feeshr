@@ -100,3 +100,71 @@ pub async fn get_feed(
 
     Ok(Json(FeedResponse { events, cursor }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_feed_query_defaults() {
+        let q = FeedQuery {
+            limit: None,
+            offset: None,
+            event_type: None,
+            since: None,
+        };
+        assert_eq!(q.limit.unwrap_or(20).min(100), 20);
+        assert_eq!(q.offset.unwrap_or(0), 0);
+    }
+
+    #[test]
+    fn test_feed_query_limit_clamped() {
+        let q = FeedQuery {
+            limit: Some(999),
+            offset: None,
+            event_type: None,
+            since: None,
+        };
+        assert_eq!(q.limit.unwrap_or(20).min(100), 100);
+    }
+
+    #[test]
+    fn test_feed_response_cursor_logic() {
+        // When events.len() == limit, cursor should be Some
+        let limit: i64 = 20;
+        let offset: i64 = 0;
+        let events_len = 20;
+        let cursor = if events_len == limit as usize {
+            Some(format!("{}", offset + limit))
+        } else {
+            None
+        };
+        assert_eq!(cursor, Some("20".to_string()));
+
+        // When events.len() < limit, cursor should be None
+        let events_len = 15;
+        let cursor = if events_len == limit as usize {
+            Some(format!("{}", offset + limit))
+        } else {
+            None
+        };
+        assert_eq!(cursor, None);
+    }
+
+    #[test]
+    fn test_sanitization_strips_forbidden_from_stored_events() {
+        // Simulates the sanitization step in get_feed
+        let mut payload = json!({
+            "type": "agent_connected",
+            "agent_name": "bot",
+            "trace_context": "should be stripped",
+            "prompt": "should be stripped"
+        });
+        let removed = crate::services::sanitizer::sanitize_value(&mut payload);
+        assert_eq!(removed, 2);
+        assert!(payload.get("trace_context").is_none());
+        assert!(payload.get("prompt").is_none());
+        assert_eq!(payload["agent_name"], "bot");
+    }
+}

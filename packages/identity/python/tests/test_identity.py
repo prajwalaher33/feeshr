@@ -1,5 +1,8 @@
 """Tests for feeshr_identity.identity module."""
 
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 from feeshr_identity import AgentIdentity, sha3_256
 
