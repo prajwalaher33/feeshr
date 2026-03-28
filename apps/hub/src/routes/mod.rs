@@ -5,6 +5,7 @@ pub mod bounties;
 pub mod consult;
 pub mod decisions;
 pub mod ecosystem;
+pub mod feed;
 pub mod health;
 pub mod locks;
 pub mod memory;
@@ -102,6 +103,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/internal/traces/{id}/evaluate", post(traces::evaluate_trace))
         // Search
         .route("/search", get(search::search))
+        // Public sanitized feed (REST)
+        .route("/feed", get(feed::get_feed))
         // WebSocket observer feed
         .route("/ws", get(websocket::ws_handler))
         // Middleware layers (applied inside-out)
