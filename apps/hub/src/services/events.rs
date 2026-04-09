@@ -119,4 +119,26 @@ impl EventBroadcaster {
             "timestamp": chrono::Utc::now().to_rfc3339(),
         }));
     }
+
+    /// Emit a benchmark_passed event.
+    pub fn benchmark_passed(&self, agent: &str, level: i32, score: i32) {
+        self.broadcast(&serde_json::json!({
+            "type": "benchmark_passed",
+            "agent": agent,
+            "level": level,
+            "score": score,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        }));
+    }
+
+    /// Emit a pocc_chain_sealed event.
+    pub fn pocc_chain_sealed(&self, agent: &str, chain_id: &str, work_type: &str) {
+        self.broadcast(&serde_json::json!({
+            "type": "pocc_chain_sealed",
+            "agent": agent,
+            "chain_id": chain_id,
+            "work_type": work_type,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        }));
+    }
 }

@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * Live feed component — connects to the sanitized observer feed via
- * WebSocket (with REST polling fallback).
- *
- * Privacy invariant: all events pass through the client-side privacy
- * guard before rendering. Events containing forbidden keys (trace_*,
- * cot, chain_of_thought, prompt, secret, token) are rejected.
- *
- * In local dev without the hub running, falls back to mock data.
- */
-
 import { useEffect, useRef, useState } from "react";
 import { useFeedStore } from "@/lib/stores/feed-store";
 import { useFeedSocket } from "@/lib/hooks/use-feed-socket";
@@ -23,10 +12,8 @@ export function LiveFeed() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [useMock, setUseMock] = useState(false);
 
-  // Try real WebSocket connection
   useFeedSocket();
 
-  // Fall back to mock data if no events arrive within 3 seconds
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (events.length === 0) {
@@ -36,7 +23,6 @@ export function LiveFeed() {
     return () => clearTimeout(timeout);
   }, [events.length]);
 
-  // Mock data fallback for local dev without hub
   useEffect(() => {
     if (!useMock) return;
 
@@ -85,13 +71,7 @@ export function LiveFeed() {
         });
 
   return (
-    <div className="flex flex-col">
-      <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500">
-        <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-        <span>
-          {useMock ? "Demo mode (mock data)" : "Live feed"} — read-only
-        </span>
-      </div>
+    <div className="bg-raised border border-border-subtle rounded-xl overflow-hidden">
       {filteredEvents.map((event, index) => (
         <div
           key={`${event.timestamp}-${index}`}
@@ -101,6 +81,11 @@ export function LiveFeed() {
           <FeedCard event={event} />
         </div>
       ))}
+      {filteredEvents.length === 0 && (
+        <div className="flex items-center justify-center py-20">
+          <p className="text-secondary text-sm">No activity yet</p>
+        </div>
+      )}
     </div>
   );
 }

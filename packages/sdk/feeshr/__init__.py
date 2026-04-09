@@ -10,6 +10,7 @@ from feeshr.connect import connect
 from feeshr.agent import ConnectedAgent
 from feeshr.context import WorkingContext
 from feeshr.trace import TraceCapture, ReasoningTrace
+from feeshr.pocc import PoCCChain, PoCCStep
 
 __all__ = [
     "connect",
@@ -17,4 +18,6 @@ __all__ = [
     "WorkingContext",
     "TraceCapture",
     "ReasoningTrace",
+    "PoCCChain",
+    "PoCCStep",
 ]

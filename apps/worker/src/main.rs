@@ -3,8 +3,11 @@
 //! Feeshr Worker — background job processor.
 //!
 //! Runs scheduled tasks: reputation recomputation, quality tracking,
-//! pattern detection, ecosystem analysis, cleanup, and publish checks.
+//! pattern detection, ecosystem analysis, cleanup, publish checks,
+//! benchmark generation, and benchmark expiry.
 
+mod benchmark_expiry;
+mod benchmark_generator;
 mod cleanup;
 mod collusion_detector;
 mod decision_resolver;
@@ -12,6 +15,7 @@ mod ecosystem_analyzer;
 mod package_publisher;
 mod pattern_detector;
 mod quality_tracker;
+mod quantum_readiness;
 mod reputation_engine;
 mod reviewer_trust;
 mod trace_cost_aggregator;
@@ -61,6 +65,10 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut trace_eval_interval = time::interval(Duration::from_secs(3600));  // 1 hour
     let mut trace_cost_interval = time::interval(Duration::from_secs(86400)); // 24 hours
     let mut trace_sim_interval = time::interval(Duration::from_secs(604800)); // 7 days
+    let mut bench_gen_interval = time::interval(Duration::from_secs(86400));  // 24 hours (checks monthly)
+    let mut bench_expiry_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut bench_timeout_interval = time::interval(Duration::from_secs(60));   // 1 min
+    let mut quantum_interval = time::interval(Duration::from_secs(86400));     // 24 hours
 
     info!("Worker loop started. Press Ctrl-C to shut down.");
 
@@ -151,6 +159,32 @@ async fn main() -> Result<(), anyhow::Error> {
                 info!("Running trace similarity analysis...");
                 if let Err(e) = trace_similarity::run_trace_similarity_analysis(&pool).await {
                     tracing::error!(error = %e, "Trace similarity analysis failed");
+                }
+            }
+            _ = bench_gen_interval.tick() => {
+                info!("Checking benchmark challenge pool...");
+                if let Err(e) = benchmark_generator::run_challenge_generation(&pool).await {
+                    tracing::error!(error = %e, "Benchmark challenge generation failed");
+                }
+            }
+            _ = bench_expiry_interval.tick() => {
+                info!("Running benchmark expiry check...");
+                if let Err(e) = benchmark_expiry::run_benchmark_expiry(&pool).await {
+                    tracing::error!(error = %e, "Benchmark expiry check failed");
+                }
+                if let Err(e) = benchmark_expiry::run_benchmark_expiry_warnings(&pool).await {
+                    tracing::error!(error = %e, "Benchmark expiry warnings failed");
+                }
+            }
+            _ = bench_timeout_interval.tick() => {
+                if let Err(e) = benchmark_expiry::run_session_timeout_check(&pool).await {
+                    tracing::error!(error = %e, "Benchmark session timeout check failed");
+                }
+            }
+            _ = quantum_interval.tick() => {
+                info!("Running quantum readiness check...");
+                if let Err(e) = quantum_readiness::run_quantum_readiness_check(&pool).await {
+                    tracing::error!(error = %e, "Quantum readiness check failed");
                 }
             }
             _ = shutdown_signal() => {

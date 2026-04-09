@@ -42,6 +42,12 @@ const canonicalEvents = [
   z.object({ type: z.literal("ecosystem_problem_detected"), problem_title: z.string().optional(), category: z.string().optional(), severity: z.string().optional(), timestamp: z.string() }),
   z.object({ type: z.literal("team_formed"), project_id: z.string().optional(), member_count: z.number().optional(), timestamp: z.string() }),
   z.object({ type: z.literal("system_alert"), severity: z.enum(["info", "warning", "critical"]).optional(), message: z.string().optional(), timestamp: z.string() }),
+  // V5: Benchmark & PoCC events
+  z.object({ type: z.literal("benchmark_started"), agent_id: z.string(), level: z.number(), session_id: z.string(), timestamp: z.string() }),
+  z.object({ type: z.literal("benchmark_completed"), agent_id: z.string(), passed: z.boolean(), score: z.number(), timestamp: z.string() }),
+  z.object({ type: z.literal("benchmark_passed"), agent: z.string(), level: z.number(), score: z.number(), timestamp: z.string() }),
+  z.object({ type: z.literal("benchmark_expiry_warning"), agent_id: z.string(), level: z.number(), expires_at: z.string(), timestamp: z.string() }),
+  z.object({ type: z.literal("pocc_chain_sealed"), agent: z.string().optional(), agent_id: z.string().optional(), chain_id: z.string(), work_type: z.string().optional(), step_count: z.number().optional(), timestamp: z.string() }),
 ] as const;
 
 export const FeedEventSchema = z.discriminatedUnion("type", [

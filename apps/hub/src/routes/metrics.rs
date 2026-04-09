@@ -114,6 +114,82 @@ pub async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse
     lines.push("# TYPE feeshr_trace_ingest_failures_total counter".into());
     lines.push("feeshr_trace_ingest_failures_total 0".to_string());
 
+    // Benchmark metrics
+    lines.push("# HELP feeshr_benchmark_attempts_total Total benchmark attempts".into());
+    lines.push("# TYPE feeshr_benchmark_attempts_total counter".into());
+    lines.push("feeshr_benchmark_attempts_total{level=\"1\"} 0".to_string());
+    lines.push("feeshr_benchmark_attempts_total{level=\"2\"} 0".to_string());
+    lines.push("feeshr_benchmark_attempts_total{level=\"3\"} 0".to_string());
+
+    lines.push("# HELP feeshr_benchmark_passes_total Total benchmark passes".into());
+    lines.push("# TYPE feeshr_benchmark_passes_total counter".into());
+    lines.push("feeshr_benchmark_passes_total{level=\"1\"} 0".to_string());
+    lines.push("feeshr_benchmark_passes_total{level=\"2\"} 0".to_string());
+    lines.push("feeshr_benchmark_passes_total{level=\"3\"} 0".to_string());
+
+    lines.push("# HELP feeshr_benchmark_failures_total Total benchmark failures".into());
+    lines.push("# TYPE feeshr_benchmark_failures_total counter".into());
+    lines.push("feeshr_benchmark_failures_total{level=\"1\"} 0".to_string());
+    lines.push("feeshr_benchmark_failures_total{level=\"2\"} 0".to_string());
+    lines.push("feeshr_benchmark_failures_total{level=\"3\"} 0".to_string());
+
+    lines.push("# HELP feeshr_benchmark_pass_rate Benchmark pass rate".into());
+    lines.push("# TYPE feeshr_benchmark_pass_rate gauge".into());
+
+    lines.push("# HELP feeshr_benchmark_avg_score Average benchmark score".into());
+    lines.push("# TYPE feeshr_benchmark_avg_score gauge".into());
+
+    lines.push("# HELP feeshr_benchmark_timeout_total Benchmark timeouts".into());
+    lines.push("# TYPE feeshr_benchmark_timeout_total counter".into());
+    lines.push("feeshr_benchmark_timeout_total 0".to_string());
+
+    lines.push("# HELP feeshr_benchmark_cooldown_active_total Active cooldowns".into());
+    lines.push("# TYPE feeshr_benchmark_cooldown_active_total gauge".into());
+
+    lines.push("# HELP feeshr_benchmark_expiry_total Expired benchmarks".into());
+    lines.push("# TYPE feeshr_benchmark_expiry_total counter".into());
+    lines.push("feeshr_benchmark_expiry_total 0".to_string());
+
+    lines.push("# HELP feeshr_benchmark_challenge_pool_size Active challenge pool size".into());
+    lines.push("# TYPE feeshr_benchmark_challenge_pool_size gauge".into());
+
+    // PoCC metrics
+    lines.push("# HELP feeshr_pocc_chains_created_total Total PoCC chains created".into());
+    lines.push("# TYPE feeshr_pocc_chains_created_total counter".into());
+    lines.push("feeshr_pocc_chains_created_total 0".to_string());
+
+    lines.push("# HELP feeshr_pocc_chains_sealed_total Total PoCC chains sealed".into());
+    lines.push("# TYPE feeshr_pocc_chains_sealed_total counter".into());
+    lines.push("feeshr_pocc_chains_sealed_total 0".to_string());
+
+    lines.push("# HELP feeshr_pocc_chains_invalid_total Total invalid PoCC chains".into());
+    lines.push("# TYPE feeshr_pocc_chains_invalid_total counter".into());
+    lines.push("feeshr_pocc_chains_invalid_total 0".to_string());
+
+    lines.push("# HELP feeshr_pocc_steps_total Total PoCC steps".into());
+    lines.push("# TYPE feeshr_pocc_steps_total counter".into());
+    lines.push("feeshr_pocc_steps_total 0".to_string());
+
+    lines.push("# HELP feeshr_pocc_consistency_failures_total Steps with is_consistent=false".into());
+    lines.push("# TYPE feeshr_pocc_consistency_failures_total counter".into());
+    lines.push("feeshr_pocc_consistency_failures_total 0".to_string());
+
+    lines.push("# HELP feeshr_pocc_verification_requests_total Verification requests".into());
+    lines.push("# TYPE feeshr_pocc_verification_requests_total counter".into());
+    lines.push("feeshr_pocc_verification_requests_total 0".to_string());
+
+    lines.push("# HELP feeshr_pocc_verification_pass_rate Verification pass rate".into());
+    lines.push("# TYPE feeshr_pocc_verification_pass_rate gauge".into());
+
+    // Proof of Work Ledger metrics
+    lines.push("# HELP feeshr_pow_ledger_entries_total Total ledger entries".into());
+    lines.push("# TYPE feeshr_pow_ledger_entries_total counter".into());
+    lines.push("feeshr_pow_ledger_entries_total 0".to_string());
+
+    lines.push("# HELP feeshr_pow_ledger_chain_length Total ledger chain length".into());
+    lines.push("# TYPE feeshr_pow_ledger_chain_length gauge".into());
+    lines.push("feeshr_pow_ledger_chain_length 0".to_string());
+
     // Histogram placeholders (proper histograms require prometheus crate)
     lines.push("# HELP feeshr_http_request_duration_seconds HTTP request duration".into());
     lines.push("# TYPE feeshr_http_request_duration_seconds histogram".into());
@@ -123,6 +199,9 @@ pub async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse
 
     lines.push("# HELP feeshr_review_turnaround_seconds Review turnaround time".into());
     lines.push("# TYPE feeshr_review_turnaround_seconds histogram".into());
+
+    lines.push("# HELP feeshr_benchmark_completion_seconds Benchmark completion time".into());
+    lines.push("# TYPE feeshr_benchmark_completion_seconds histogram".into());
 
     let body = lines.join("\n") + "\n";
 

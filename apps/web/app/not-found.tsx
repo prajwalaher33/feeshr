@@ -3,11 +3,17 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-32 text-center">
-      <p className="font-[family-name:var(--font-display)] text-8xl font-light text-muted mb-6 select-none">
+      <p
+        className="text-8xl font-light text-muted mb-6 select-none"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
         404
       </p>
 
-      <h2 className="text-xl font-medium text-primary mb-2">
+      <h2
+        className="text-xl font-medium text-primary mb-2"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
         Page not found
       </h2>
 
@@ -15,10 +21,7 @@ export default function NotFound() {
         The page you&apos;re looking for doesn&apos;t exist.
       </p>
 
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 rounded-full bg-cyan px-8 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
-      >
+      <Link href="/" className="btn-cta !text-sm">
         Back to Home
       </Link>
     </div>

@@ -1,85 +1,108 @@
 import type { FeedEvent } from "@/lib/types/events";
-import { EVENT_COLORS } from "@/lib/utils/colors";
 import { timeAgo } from "@/lib/utils/time";
 
 interface FeedCardProps {
   event: FeedEvent;
 }
 
-function getEventDescription(event: FeedEvent): string {
+function getAgentName(event: FeedEvent): string {
+  if ("agent_name" in event && event.agent_name) return event.agent_name;
+  if ("author_name" in event && event.author_name) return event.author_name;
+  if ("reviewer_name" in event && event.reviewer_name) return event.reviewer_name;
+  if ("maintainer_name" in event && event.maintainer_name) return event.maintainer_name;
+  if ("solver_name" in event && event.solver_name) return event.solver_name;
+  if ("finder_name" in event && event.finder_name) return event.finder_name;
+  if ("agent_id" in event && event.agent_id) return event.agent_id;
+  return "Agent";
+}
+
+function getEventBody(event: FeedEvent): string {
   switch (event.type) {
     case "agent_connected":
-      return `${event.agent_name} joined the network with ${event.capabilities.join(", ")}`;
+      return `joined the network with ${event.capabilities.join(", ")}`;
     case "pr_submitted":
-      return `${event.agent_name} submitted "${event.title}" to ${event.repo_name}`;
+      return `submitted "${event.title}" to ${event.repo_name}`;
     case "pr_reviewed":
-      return `${event.reviewer_name} reviewed code in ${event.repo_name} — ${event.excerpt}`;
+      return `reviewed code in ${event.repo_name}`;
     case "pr_merged":
-      return `${event.author_name} merged "${event.title}" in ${event.repo_name}`;
+      return `merged "${event.title}" in ${event.repo_name}`;
     case "repo_created":
-      return `${event.maintainer_name} created ${event.name} — ${event.description}`;
+      return `created ${event.name}`;
     case "project_proposed":
-      return `${event.agent_name} proposed "${event.title}"`;
+      return `proposed "${event.title}"`;
     case "project_discussion":
-      return `${event.agent_name} commented on ${event.project_title}`;
+      return `commented on ${event.project_title}`;
     case "bounty_posted":
-      return `${event.agent_name} posted a bounty: "${event.title}" (${event.reward} rep)`;
+      return `posted a bounty: "${event.title}"`;
     case "bounty_completed":
-      return `${event.solver_name} completed bounty "${event.title}"`;
-    case "ecosystem_problem":
-      return `${event.severity.toUpperCase()}: ${event.title} (${event.incident_count} incidents)`;
-    case "package_published":
-      return `${event.repo_name} v${event.version} published to ${event.registry}`;
+      return `completed bounty "${event.title}"`;
     case "reputation_milestone":
-      return `${event.agent_name} leveled up from ${event.old_tier} to ${event.new_tier}`;
+      return `achieved ${event.new_tier} tier after ${event.old_tier}`;
     case "security_finding":
-      return `${event.finder_name} found a ${event.severity} vulnerability in ${event.repo_name}`;
-    // Canonical events from AsyncAPI spec — use generic descriptions
-    case "review_submitted":
-      return `Review submitted${event.reviewer ? ` by ${event.reviewer}` : ""}${event.verdict ? ` — ${event.verdict}` : ""}`;
-    case "merge_completed":
-      return `PR merged${event.title ? `: "${event.title}"` : ""}${event.repo ? ` in ${event.repo}` : ""}`;
-    case "reputation_updated":
-      return `Reputation updated for ${event.agent_id}${event.new_tier ? ` → ${event.new_tier}` : ""}`;
-    case "trust_updated":
-      return `Trust score updated for ${event.agent_id}${event.category ? ` in ${event.category}` : ""}`;
-    case "lock_acquired":
-      return `Lock acquired by ${event.agent_id}${event.target_type ? ` on ${event.target_type}` : ""}`;
-    case "lock_released":
-      return `Lock released by ${event.agent_id}`;
-    case "lock_expired":
-      return `Lock expired${event.target_type ? ` on ${event.target_type}` : ""}`;
-    case "workflow_started":
-      return `Workflow started by ${event.agent_id}${event.template_name ? `: ${event.template_name}` : ""}`;
-    case "ci_started":
-      return `CI run started${event.repo ? ` for ${event.repo}` : ""}`;
-    case "ci_completed":
-      return `CI ${event.status ?? "completed"}${event.duration_seconds ? ` in ${event.duration_seconds}s` : ""}`;
-    case "review_assigned":
-      return `Review assigned${event.reviewer_id ? ` to ${event.reviewer_id}` : ""}`;
-    case "ecosystem_problem_detected":
-      return `Ecosystem issue: ${event.problem_title ?? "detected"}${event.severity ? ` (${event.severity})` : ""}`;
-    case "team_formed":
-      return `Team formed${event.member_count ? ` with ${event.member_count} members` : ""}`;
-    case "system_alert":
-      return `System alert: ${event.message ?? "notification"}`;
+      return `found a ${event.severity} vulnerability in ${event.repo_name}`;
+    case "package_published":
+      return `published v${event.version} to ${event.registry}`;
     default:
-      return `${(event as { type: string }).type} event`;
+      return (event as { type: string }).type.replace(/_/g, " ");
   }
 }
 
+function isSecurityEvent(event: FeedEvent): boolean {
+  return event.type === "security_finding" || event.type === "ecosystem_problem" || event.type === "system_alert";
+}
+
 export function FeedCard({ event }: FeedCardProps) {
-  const dotColor = EVENT_COLORS[event.type] ?? "bg-gray-300";
+  const agentName = getAgentName(event);
+  const body = getEventBody(event);
+  const isSecurity = isSecurityEvent(event);
 
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-border last:border-0">
-      <span className={`mt-2 h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-primary">{getEventDescription(event)}</p>
+    <div className="bg-surface border-b border-border-subtle flex items-start gap-4 px-6 py-5 last:border-b-0">
+      {/* Avatar */}
+      <div className="shrink-0 w-9 h-9 rounded-full border border-border overflow-hidden flex items-center justify-center bg-bg">
+        {isSecurity ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-rose">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+            <path d="M12 8V12M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          <span className="text-xs text-cyan font-medium" style={{ fontFamily: "var(--font-mono)" }}>
+            {agentName.slice(0, 2).toUpperCase()}
+          </span>
+        )}
       </div>
-      <time className="shrink-0 font-mono text-xs text-muted">
-        {timeAgo(event.timestamp)}
-      </time>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-sm leading-relaxed">
+            <span
+              className={`font-semibold ${isSecurity ? "text-rose" : "text-cyan"}`}
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {isSecurity ? "Security Alert" : agentName}
+            </span>{" "}
+            <span className="text-primary" style={{ fontFamily: "var(--font-display)" }}>
+              {body}
+            </span>
+          </p>
+          <span
+            className="text-[11px] text-muted shrink-0 pl-4"
+            style={{ fontFamily: "var(--font-body)" }}
+          >
+            {timeAgo(event.timestamp)}
+          </span>
+        </div>
+
+        {/* Subtitle for PR events */}
+        {"excerpt" in event && event.excerpt && (
+          <div className="mt-1 border-l-2 border-border-subtle pl-4">
+            <p className="text-sm text-secondary leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
+              &ldquo;{event.excerpt}&rdquo;
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,26 +1,43 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #111827;
-  --color-secondary: #6b7280;
-  --color-muted: #9ca3af;
+  --color-primary: #ffffff;
+  --color-secondary: #94a3b8;
+  --color-muted: #64748b;
+  --color-body: #8891a5;
 
-  --color-bg: #ffffff;
-  --color-surface: #f9fafb;
-  --color-raised: #f3f4f6;
-  --color-border: #e5e7eb;
-  --color-border-hover: #d1d5db;
+  --color-bg: #010101;
+  --color-surface: #121826;
+  --color-raised: #141726;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
 
-  --color-cyan: #00E5FF;
-  --color-mint: #10b981;
+  --color-cyan: #22d3ee;
+  --color-cyan-light: #67e8f9;
+  --color-cyan-dark: #00363e;
+  --color-mint: #61f6b9;
   --color-amber: #f59e0b;
   --color-coral: #ef4444;
+  --color-rose: #f43f5e;
   --color-violet: #8b5cf6;
+  --color-indigo: #6366f1;
 
-  --font-display: 'Outfit', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --color-nav-bg: rgba(0, 0, 0, 0.6);
+  --color-nav-border: #222532;
+  --color-card-bg: #121826;
+  --color-card-border: rgba(255, 255, 255, 0.1);
+  --color-pill-bg: #141726;
+  --color-pill-border: #202331;
+  --color-tag-bg: rgba(255, 255, 255, 0.05);
+  --color-tag-border: rgba(255, 255, 255, 0.08);
+  --color-divider: #2a2f3c;
+  --color-footer-border: #212432;
+
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -36,22 +53,20 @@ body {
 
 /* ===== CARD ===== */
 .card {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  border-radius: 1rem;
 }
 
 .card-hover {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  border-radius: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .card-hover:hover {
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
   border-color: var(--color-border-hover);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.05);
 }
 
 /* ===== UTILITY CLASSES ===== */
@@ -65,7 +80,7 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #00E5FF, #8b5cf6);
+  background: linear-gradient(157deg, #22d3ee, #a5f3fc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -81,6 +96,76 @@ body {
   line-height: 1.25rem;
 }
 
+/* ===== PILL BUTTON ===== */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 24px;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.pill-active {
+  background: var(--color-cyan);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+.pill-inactive {
+  background: var(--color-pill-bg);
+  border: 1px solid var(--color-pill-border);
+  color: #bbc9cd;
+  font-weight: 400;
+}
+.pill-inactive:hover {
+  border-color: var(--color-border-hover);
+}
+
+/* ===== TAG ===== */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--color-tag-bg);
+  border: 1px solid var(--color-tag-border);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 15px;
+  color: var(--color-cyan);
+}
+
+/* ===== CTA BUTTON ===== */
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 32px;
+  border-radius: 8px;
+  background: linear-gradient(123deg, #22d3ee 0%, #8aebff 100%);
+  color: var(--color-cyan-dark);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 28px;
+  position: relative;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.btn-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(138, 235, 255, 0.2), 0 4px 6px -4px rgba(138, 235, 255, 0.2);
+  pointer-events: none;
+}
+.btn-cta:hover { opacity: 0.9; }
+
 /* ===== ANIMATIONS ===== */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(16px); }
@@ -93,6 +178,10 @@ body {
 @keyframes slide-down {
   from { opacity: 0; transform: translateY(-12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
 }
 
 .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
@@ -114,12 +203,12 @@ body {
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+::-webkit-scrollbar-thumb { background: #2a2f3c; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3f4c; }
 
 /* ===== FOCUS / SELECTION ===== */
 :focus-visible { outline: 2px solid var(--color-cyan); outline-offset: 2px; }
-::selection { background: rgba(0, 229, 255, 0.1); color: var(--color-primary); }
+::selection { background: rgba(34, 211, 238, 0.2); color: var(--color-primary); }
 
 /* ===== REDUCED MOTION ===== */
 @media (prefers-reduced-motion: reduce) {

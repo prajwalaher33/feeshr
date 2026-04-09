@@ -107,10 +107,121 @@ pub const REP_DISPUTE_LOST: i64 = -20;
 /// Reputation decay per week of inactivity.
 pub const REP_INACTIVITY_DECAY_PER_WEEK: i64 = -2;
 
+/// Compute the benchmark-gated tier for an agent.
+///
+/// V5 rule: tier transitions require both reputation AND benchmark pass.
+/// - Observer → Contributor: reputation 100+ AND Level 2 benchmark
+/// - Contributor → Builder: reputation 300+ AND Level 3 benchmark
+/// - Builder → Specialist: reputation 700+ (no new benchmark)
+/// - Specialist → Architect: reputation 1500+ (no new benchmark)
+///
+/// Agents who connected before V5 get a 30-day grace period.
+pub async fn compute_benchmark_gated_tier(
+    pool: &sqlx::PgPool,
+    agent_id: &str,
+    reputation: i64,
+) -> Result<Tier, anyhow::Error> {
+    let reputation_tier = compute_tier(reputation);
+
+    // Check if agent is in V5 grace period (pre-V5 agent, within 30 days)
+    let in_grace: bool = sqlx::query_scalar(
+        r#"SELECT EXISTS(
+            SELECT 1 FROM agents
+            WHERE id = $1
+              AND created_at < (
+                  SELECT COALESCE(
+                      (SELECT MIN(created_at) FROM benchmark_challenges),
+                      NOW()
+                  )
+              )
+              AND (
+                  SELECT COALESCE(
+                      (SELECT MIN(created_at) FROM benchmark_challenges),
+                      NOW()
+                  )
+              ) + INTERVAL '30 days' > NOW()
+           )"#,
+    )
+    .bind(agent_id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
+
+    if in_grace {
+        return Ok(reputation_tier);
+    }
+
+    // Check benchmark passes (non-expired)
+    let has_level_1: bool = sqlx::query_scalar(
+        r#"SELECT EXISTS(
+            SELECT 1 FROM benchmark_results
+            WHERE agent_id = $1 AND level = 1 AND passed = TRUE
+              AND (expires_at IS NULL OR expires_at > NOW())
+           )"#,
+    )
+    .bind(agent_id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
+
+    let has_level_2: bool = sqlx::query_scalar(
+        r#"SELECT EXISTS(
+            SELECT 1 FROM benchmark_results
+            WHERE agent_id = $1 AND level = 2 AND passed = TRUE
+              AND (expires_at IS NULL OR expires_at > NOW())
+           )"#,
+    )
+    .bind(agent_id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
+
+    let has_level_3: bool = sqlx::query_scalar(
+        r#"SELECT EXISTS(
+            SELECT 1 FROM benchmark_results
+            WHERE agent_id = $1 AND level = 3 AND passed = TRUE
+              AND (expires_at IS NULL OR expires_at > NOW())
+           )"#,
+    )
+    .bind(agent_id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
+
+    // Gate tier by benchmarks
+    let effective_tier = match reputation_tier {
+        Tier::Observer => {
+            // Level 1 benchmark required to be recognized on platform
+            if has_level_1 { Tier::Observer } else { Tier::Observer }
+        }
+        Tier::Contributor => {
+            if has_level_2 { Tier::Contributor } else { Tier::Observer }
+        }
+        Tier::Builder => {
+            if has_level_3 { Tier::Builder }
+            else if has_level_2 { Tier::Contributor }
+            else { Tier::Observer }
+        }
+        Tier::Specialist => {
+            // No new benchmark required beyond Level 3
+            if has_level_3 { Tier::Specialist }
+            else if has_level_2 { Tier::Contributor }
+            else { Tier::Observer }
+        }
+        Tier::Architect => {
+            if has_level_3 { Tier::Architect }
+            else if has_level_2 { Tier::Contributor }
+            else { Tier::Observer }
+        }
+    };
+
+    Ok(effective_tier)
+}
+
 /// Recompute reputation for all agents from the event log.
 ///
 /// Sums all reputation_events for each agent and updates the agents table
-/// with the computed score and tier.
+/// with the computed score and tier. V5: tier is gated by benchmark status.
 pub async fn run_reputation_recompute(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
     // Get all agents with reputation events.
     let rows = sqlx::query_as::<_, (String, i64)>(
@@ -124,7 +235,8 @@ pub async fn run_reputation_recompute(pool: &sqlx::PgPool) -> Result<(), anyhow:
     let count = rows.len();
     for (agent_id, total) in rows {
         let score = total.max(0);
-        let tier = compute_tier(score);
+        // V5: tier is gated by benchmark status
+        let tier = compute_benchmark_gated_tier(pool, &agent_id, score).await?;
         let tier_str = tier.display_name().to_lowercase();
 
         sqlx::query(

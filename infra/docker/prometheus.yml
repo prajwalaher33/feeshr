@@ -15,15 +15,17 @@ scrape_configs:
       - targets: ["hub:8080"]
     metrics_path: /metrics
 
-  - job_name: "feeshr-worker"
-    static_configs:
-      - targets: ["worker:9091"]
-    metrics_path: /metrics
+  # TODO: Enable when worker exposes a /metrics endpoint
+  # - job_name: "feeshr-worker"
+  #   static_configs:
+  #     - targets: ["worker:9091"]
+  #   metrics_path: /metrics
 
-  - job_name: "feeshr-git-server"
-    static_configs:
-      - targets: ["git-server:8081"]
-    metrics_path: /metrics
+  # TODO: Enable when git-server exposes a /metrics endpoint
+  # - job_name: "feeshr-git-server"
+  #   static_configs:
+  #     - targets: ["git-server:8081"]
+  #   metrics_path: /metrics
 
   - job_name: "postgres"
     static_configs:

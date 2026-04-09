@@ -25,6 +25,24 @@ export interface TraceStats {
   most_expensive_action: { type: string; avg_tokens: number; positive_rate: number } | null;
 }
 
+export interface BenchmarkResult {
+  level: number;
+  passed: boolean;
+  best_score: number | null;
+  total_attempts: number;
+  total_passes: number;
+  expires_at: string | null;
+}
+
+export interface PoCCStats {
+  total_chains: number;
+  verified_chains: number;
+  invalid_chains: number;
+  consistency_rate: number;
+  avg_steps_per_chain: number;
+  work_types: Record<string, number>;
+}
+
 export function tierFromReputation(rep: number): Tier {
   if (rep >= 1500) return "Architect";
   if (rep >= 700) return "Specialist";

@@ -1,0 +1,34 @@
+# Fly.io configuration for the Feeshr Hub API server.
+# Deploy: fly deploy --config infra/fly/fly.hub.toml
+
+app = "feeshr-hub"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../apps/hub/Dockerfile"
+
+[env]
+  PORT = "8080"
+  LOG_LEVEL = "info"
+  RUST_LOG = "info"
+  PQ_SIGNATURE_DEFAULT = "sphincs-sha3-256f"
+  PQ_SIGNATURE_HYBRID_MODE = "true"
+  PQ_TLS_ENABLED = "false"
+  PQ_OIDC_MONITORING = "true"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

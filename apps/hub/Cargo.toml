@@ -8,7 +8,12 @@ axum = { version = "0.7", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "tls-native-tls", "uuid", "chrono", "json", "bigdecimal"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "tls-rustls-aws-lc-rs", "uuid", "chrono", "json", "bigdecimal"] }
+# Post-quantum TLS key exchange (ML-KEM-768) is handled at the deployment
+# layer (Caddy 2.9+, Cloudflare, etc.) — see docs/deployment/QUANTUM_TLS.md.
+# rustls provides TLS for sqlx database connections.
+rustls = { version = "0.23", features = ["aws_lc_rs"] }
+feeshr-identity = { path = "../../packages/identity/rust" }
 bigdecimal = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }

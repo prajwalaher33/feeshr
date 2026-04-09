@@ -21,6 +21,12 @@ pub struct ConnectRequest {
     pub capabilities: Vec<String>,
     /// Hex-encoded public material for identity derivation.
     pub public_material: String,
+    /// Hex-encoded SPHINCS+ public key (optional, for quantum-safe agents).
+    pub pq_public_key: Option<String>,
+    /// Post-quantum key algorithm (e.g., "sphincs-sha3-256f").
+    pub pq_key_algorithm: Option<String>,
+    /// Signature mode: "hmac", "sphincs", or "hybrid".
+    pub signature_mode: Option<String>,
 }
 
 /// Response body for POST /api/v1/agents/connect.
@@ -31,6 +37,10 @@ pub struct ConnectResponse {
     pub tier: String,
     pub reputation: i64,
     pub websocket_url: String,
+    /// Signature mode this agent is using.
+    pub signature_mode: String,
+    /// Whether this agent has a post-quantum key registered.
+    pub quantum_safe: bool,
 }
 
 /// Pagination query parameters used across list endpoints.
@@ -46,6 +56,30 @@ pub struct PaginationParams {
 
 fn default_limit() -> i64 {
     20
+}
+
+/// GET /api/v1/agents — list all agents ordered by reputation.
+pub async fn list_agents(
+    State(state): State<AppState>,
+    Query(params): Query<PaginationParams>,
+) -> Result<impl IntoResponse, AppError> {
+    let limit = params.limit.min(100);
+    let rows: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(a) FROM (
+               SELECT id, display_name, capabilities, reputation, tier,
+                      prs_merged, prs_submitted, repos_maintained,
+                      bounties_completed, is_connected, connected_at, created_at
+               FROM agents
+               ORDER BY reputation DESC
+               LIMIT $1 OFFSET $2
+           ) a"#,
+    )
+    .bind(limit)
+    .bind(params.offset)
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(json!({ "agents": rows, "total": rows.len() })))
 }
 
 /// POST /api/v1/agents/connect — register a new agent identity.
@@ -88,30 +122,104 @@ pub async fn connect(
         )));
     }
 
-    // Insert agent record.
+    // Determine signature mode and validate PQ key if provided.
+    let sig_mode = body.signature_mode.as_deref().unwrap_or("hmac");
+    let has_pq_key = body.pq_public_key.is_some();
+
+    // Validate signature_mode constraints.
+    match sig_mode {
+        "sphincs" if !has_pq_key => {
+            return Err(AppError::Validation(
+                "pq_public_key required when signature_mode is 'sphincs'".into(),
+            ));
+        }
+        "hybrid" if !has_pq_key => {
+            return Err(AppError::Validation(
+                "pq_public_key required when signature_mode is 'hybrid'".into(),
+            ));
+        }
+        "hmac" | "sphincs" | "hybrid" => {}
+        _ => {
+            return Err(AppError::Validation(
+                "signature_mode must be 'hmac', 'sphincs', or 'hybrid'".into(),
+            ));
+        }
+    }
+
+    // Decode PQ public key if provided.
+    let pq_pk_bytes: Option<Vec<u8>> = match &body.pq_public_key {
+        Some(hex_str) => Some(
+            hex::decode(hex_str)
+                .map_err(|_| AppError::Validation("pq_public_key must be valid hex".into()))?,
+        ),
+        None => None,
+    };
+
+    let pq_algorithm = body.pq_key_algorithm.as_deref()
+        .unwrap_or("sphincs-sha3-256f");
+
+    // Insert agent record with PQ fields.
     sqlx::query(
         r#"INSERT INTO agents
-           (id, display_name, capabilities, tier, reputation, is_connected, connected_at)
-           VALUES ($1, $2, $3, 'observer', 0, TRUE, NOW())"#,
+           (id, display_name, capabilities, tier, reputation, is_connected, connected_at,
+            public_material, pq_public_key, pq_key_algorithm, pq_key_created_at, signature_mode)
+           VALUES ($1, $2, $3, 'observer', 0, TRUE, NOW(),
+                   $7, $4, $5, CASE WHEN $4 IS NOT NULL THEN NOW() ELSE NULL END, $6)"#,
     )
     .bind(&agent_id)
     .bind(&body.display_name)
     .bind(&body.capabilities)
+    .bind(&pq_pk_bytes)
+    .bind(if has_pq_key { Some(pq_algorithm) } else { None })
+    .bind(sig_mode)
+    .bind(&body.public_material)
     .execute(&state.db)
     .await?;
 
-    // Append to action log.
-    let payload = json!({
+    // Create pq_key_history entry if PQ key provided.
+    if let Some(ref pk_bytes) = pq_pk_bytes {
+        sqlx::query(
+            r#"INSERT INTO pq_key_history
+               (agent_id, algorithm, public_key, status, activated_at)
+               VALUES ($1, $2, $3, 'active', NOW())"#,
+        )
+        .bind(&agent_id)
+        .bind(pq_algorithm)
+        .bind(pk_bytes)
+        .execute(&state.db)
+        .await?;
+
+        // Log quantum readiness event.
+        let event_type = "agent_created_with_sphincs";
+        sqlx::query(
+            r#"INSERT INTO quantum_readiness_log (event_type, agent_id, details)
+               VALUES ($1, $2, $3)"#,
+        )
+        .bind(event_type)
+        .bind(&agent_id)
+        .bind(json!({
+            "algorithm": pq_algorithm,
+            "signature_mode": sig_mode,
+        }))
+        .execute(&state.db)
+        .await?;
+    }
+
+    // Append to action log with signature algorithm.
+    let action_payload = json!({
         "display_name": body.display_name,
         "capabilities": body.capabilities,
+        "signature_mode": sig_mode,
+        "quantum_safe": has_pq_key,
     });
     sqlx::query(
-        r#"INSERT INTO action_log (agent_id, action_type, payload, signature)
-           VALUES ($1, 'agent_connect', $2, $3)"#,
+        r#"INSERT INTO action_log (agent_id, action_type, payload, signature, signature_algorithm)
+           VALUES ($1, 'agent_connect', $2, $3, $4)"#,
     )
     .bind(&agent_id)
-    .bind(&payload)
+    .bind(&action_payload)
     .bind("0".repeat(64))
+    .bind(if has_pq_key { pq_algorithm } else { "hmac-sha3-256" })
     .execute(&state.db)
     .await?;
 
@@ -121,6 +229,8 @@ pub async fn connect(
         tier: "observer".into(),
         reputation: 0,
         agent_id,
+        signature_mode: sig_mode.to_string(),
+        quantum_safe: has_pq_key,
     };
     Ok((StatusCode::CREATED, Json(resp)))
 }

@@ -35,8 +35,11 @@ class FeeshrTransport:
         """
         Register a new agent identity with the hub.
 
+        Supports both legacy HMAC identities and quantum-safe SPHINCS+ identities.
+        The identity type is auto-detected from the identity object.
+
         Args:
-            identity: AgentIdentity with agent_id, public_material, display_name, capabilities
+            identity: AgentIdentity or PqAgentIdentity with agent_id, display_name, capabilities
 
         Returns:
             AgentRegistration with profile_url, tier, reputation, websocket_url
@@ -44,11 +47,34 @@ class FeeshrTransport:
         Raises:
             TransportError: If registration fails (network error, duplicate agent_id, etc.)
         """
-        payload = json.dumps({
-            "display_name": identity.display_name,
-            "capabilities": identity.capabilities,
-            "public_material": identity.public_material.hex(),
-        }).encode()
+        # Detect if this is a PQ identity using isinstance with import fallback
+        try:
+            from feeshr_identity.pq_identity import PqAgentIdentity
+            is_pq = isinstance(identity, PqAgentIdentity)
+        except ImportError:
+            is_pq = (
+                hasattr(identity, 'algorithm')
+                and isinstance(getattr(identity, 'algorithm', None), str)
+                and identity.algorithm.startswith('sphincs')
+            )
+
+        if is_pq:
+            reg_data = {
+                "display_name": identity.display_name,
+                "capabilities": identity.capabilities,
+                "public_material": identity.public_key.hex(),
+                "pq_public_key": identity.public_key.hex(),
+                "pq_key_algorithm": identity.algorithm,
+                "signature_mode": "hybrid",
+            }
+        else:
+            reg_data = {
+                "display_name": identity.display_name,
+                "capabilities": identity.capabilities,
+                "public_material": identity.public_material.hex(),
+            }
+
+        payload = json.dumps(reg_data).encode()
         response = self._post("/api/v1/agents/connect", payload)
         return AgentRegistration(**response)
 

@@ -17,6 +17,16 @@ pub struct Config {
     pub qdrant_url: String,
     /// Internal git server URL.
     pub git_server_url: String,
+    /// Default post-quantum signature algorithm for new agents.
+    pub pq_signature_default: String,
+    /// Whether to accept both HMAC and SPHINCS+ signatures (hybrid mode).
+    pub pq_hybrid_mode: bool,
+    /// Optional deadline after which HMAC-only signatures are rejected.
+    pub pq_hmac_deprecation_date: Option<chrono::DateTime<chrono::Utc>>,
+    /// Whether to enable post-quantum TLS (ML-KEM-768).
+    pub pq_tls_enabled: bool,
+    /// Whether to monitor OIDC token algorithms for quantum safety.
+    pub pq_oidc_monitoring: bool,
 }
 
 impl Config {
@@ -46,6 +56,30 @@ impl Config {
         let git_server_url = env::var("GIT_SERVER_URL")
             .unwrap_or_else(|_| "http://localhost:8081".to_string());
 
+        let pq_signature_default = env::var("PQ_SIGNATURE_DEFAULT")
+            .unwrap_or_else(|_| "sphincs-sha3-256f".to_string());
+
+        let pq_hybrid_mode = env::var("PQ_SIGNATURE_HYBRID_MODE")
+            .unwrap_or_else(|_| "true".to_string())
+            .parse::<bool>()
+            .unwrap_or(true);
+
+        let pq_hmac_deprecation_date = env::var("PQ_HMAC_DEPRECATION_DATE")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).ok())
+            .map(|dt| dt.with_timezone(&chrono::Utc));
+
+        let pq_tls_enabled = env::var("PQ_TLS_ENABLED")
+            .unwrap_or_else(|_| "true".to_string())
+            .parse::<bool>()
+            .unwrap_or(true);
+
+        let pq_oidc_monitoring = env::var("PQ_OIDC_MONITORING")
+            .unwrap_or_else(|_| "true".to_string())
+            .parse::<bool>()
+            .unwrap_or(true);
+
         Ok(Self {
             database_url,
             redis_url,
@@ -53,6 +87,11 @@ impl Config {
             log_level,
             qdrant_url,
             git_server_url,
+            pq_signature_default,
+            pq_hybrid_mode,
+            pq_hmac_deprecation_date,
+            pq_tls_enabled,
+            pq_oidc_monitoring,
         })
     }
 }

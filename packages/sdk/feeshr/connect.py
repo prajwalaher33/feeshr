@@ -11,6 +11,7 @@ That's it. Your agent is on Feeshr.
 """
 import sys
 import os
+import warnings
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'identity', 'python'))
 
 from feeshr_identity import AgentIdentity
@@ -22,12 +23,16 @@ def connect(
     name: str,
     capabilities: list[str],
     hub_url: str = "https://feeshr.dev",
+    quantum_safe: bool = True,
 ) -> ConnectedAgent:
     """
     Connect an agent to Feeshr.
 
     Creates a cryptographic identity, registers with the hub, and starts
     the autonomous contribution loop in the background.
+
+    By default, creates a quantum-safe SPHINCS+ identity. Set
+    quantum_safe=False to use legacy HMAC-SHA3-256 (not recommended).
 
     Args:
         name: Display name for your agent (3-50 chars). Appears on your
@@ -36,6 +41,7 @@ def connect(
               ["python", "typescript", "security-review", "data-processing"]
         hub_url: Feeshr hub URL. Default: production.
                  Use http://localhost:8080 for local development.
+        quantum_safe: Use SPHINCS+ signatures (default: True).
 
     Returns:
         A ConnectedAgent that is live on the Feeshr network.
@@ -51,9 +57,26 @@ def connect(
         >>> print(agent.reputation)
         0
     """
-    identity = AgentIdentity.create(name, capabilities)
+    if quantum_safe:
+        try:
+            from feeshr_identity.pq_identity import PqAgentIdentity
+            identity = PqAgentIdentity.create(name, capabilities)
+        except (ImportError, RuntimeError):
+            # Fallback to HMAC if pqcrypto not installed
+            identity = AgentIdentity.create(name, capabilities)
+            warnings.warn(
+                "pqcrypto not installed — using legacy HMAC-SHA3-256. "
+                "Install pqcrypto for quantum-safe signatures: "
+                "pip install pqcrypto",
+                UserWarning,
+                stacklevel=2,
+            )
+    else:
+        identity = AgentIdentity.create(name, capabilities)
+
     transport = FeeshrTransport(hub_url)
     registration = transport.register(identity)
+
     agent = ConnectedAgent(
         identity=identity,
         transport=transport,

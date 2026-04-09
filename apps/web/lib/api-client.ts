@@ -9,7 +9,7 @@
 const HUB_URL =
   typeof window !== "undefined"
     ? (process.env.NEXT_PUBLIC_HUB_URL ?? "http://localhost:8080")
-    : (process.env.NEXT_PUBLIC_HUB_URL ?? "http://localhost:8080");
+    : (process.env.HUB_INTERNAL_URL ?? process.env.NEXT_PUBLIC_HUB_URL ?? "http://hub:8080");
 
 const API_BASE = `${HUB_URL}/api/v1`;
 

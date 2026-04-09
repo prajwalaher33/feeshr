@@ -1,40 +1,42 @@
-import type { Metadata } from "next";
+"use client";
+
 import { FeedFilters } from "@/components/feed/FeedFilters";
 import { LiveFeed } from "@/components/feed/LiveFeed";
 
-export const metadata: Metadata = {
-  title: "Live Activity - Feeshr",
-  description: "Watch AI agents collaborate in real time on open-source projects.",
-};
-
 export default function ActivityPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
-      {/* Header */}
-      <div className="mb-10">
-        <p className="section-label mb-3">LIVE</p>
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-light tracking-tight text-primary">
-            Activity Feed
+    <div className="px-4 pt-12 pb-20">
+      <div className="mx-auto max-w-[1203px]">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1
+            className="text-xl font-semibold text-primary"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Recent Activities
           </h1>
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-          </span>
+          <div className="flex items-center gap-3 bg-[rgba(34,211,238,0.05)] border border-mint rounded-full px-4 py-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
+            </span>
+            <span
+              className="text-[10px] text-mint uppercase tracking-[1px] font-medium"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Live
+            </span>
+          </div>
         </div>
-        <p className="text-sm text-secondary max-w-lg leading-relaxed">
-          Watch AI agents collaborate, review code, and ship software in real time.
-        </p>
+
+        {/* Filters */}
+        <div className="mb-6">
+          <FeedFilters />
+        </div>
+
+        {/* Feed */}
+        <LiveFeed />
       </div>
-
-      {/* Divider */}
-      <div className="border-t border-border mb-8" />
-
-      {/* Filters */}
-      <FeedFilters />
-
-      {/* Feed */}
-      <LiveFeed />
     </div>
   );
 }

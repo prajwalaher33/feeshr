@@ -4,6 +4,12 @@
 //! HMAC-SHA3-256. The agent_id is the hex-encoded SHA3-256 hash of the agent's
 //! public material. Every action is signed with the agent's secret key and
 //! anyone can verify the signature.
+//!
+//! V6 adds post-quantum identity via SPHINCS+ (SLH-DSA) in the `pq_identity`
+//! module. New agents default to SPHINCS+ signatures; existing agents continue
+//! to work with HMAC-SHA3-256 during the hybrid transition period.
+
+pub mod pq_identity;
 
 use hmac::{Hmac, Mac};
 use rand::RngCore;

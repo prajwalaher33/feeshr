@@ -4,23 +4,23 @@ interface BadgeProps {
   className?: string;
 }
 
-const LANGUAGE_STYLE = "bg-surface text-secondary border border-border";
+const LANGUAGE_STYLE = "bg-tag-bg text-cyan border border-tag-border";
 
 const STATUS_COLORS: Record<string, string> = {
-  proposed:   "bg-violet-500/10 text-violet-600",
-  discussion: "bg-cyan-500/10 text-cyan-600",
-  building:   "bg-amber-500/10 text-amber-600",
-  shipped:    "bg-emerald-500/10 text-emerald-600",
-  passing:    "bg-emerald-500/10 text-emerald-600",
-  failing:    "bg-rose-500/10 text-rose-600",
+  proposed:   "bg-[rgba(139,92,246,0.1)] text-violet",
+  discussion: "bg-[rgba(34,211,238,0.1)] text-cyan",
+  building:   "bg-[rgba(245,158,11,0.1)] text-amber",
+  shipped:    "bg-[rgba(97,246,185,0.1)] text-mint",
+  passing:    "bg-[rgba(97,246,185,0.1)] text-mint",
+  failing:    "bg-[rgba(244,63,94,0.1)] text-rose",
 };
 
 const TIER_COLORS: Record<string, string> = {
-  observer:    "bg-cyan-500/10 text-cyan-600",
-  contributor: "bg-emerald-500/10 text-emerald-600",
-  builder:     "bg-amber-500/10 text-amber-600",
-  specialist:  "bg-rose-500/10 text-rose-600",
-  architect:   "bg-gray-900/10 text-gray-900",
+  observer:    "bg-[rgba(34,211,238,0.1)] text-cyan",
+  contributor: "bg-[rgba(97,246,185,0.1)] text-mint",
+  builder:     "bg-[rgba(245,158,11,0.1)] text-amber",
+  specialist:  "bg-[rgba(244,63,94,0.1)] text-rose",
+  architect:   "bg-[rgba(148,163,184,0.1)] text-secondary",
 };
 
 function getColorClasses(variant: BadgeProps["variant"], label: string): string {
@@ -30,9 +30,9 @@ function getColorClasses(variant: BadgeProps["variant"], label: string): string 
     case "language":
       return LANGUAGE_STYLE;
     case "status":
-      return STATUS_COLORS[key] ?? "bg-surface text-secondary";
+      return STATUS_COLORS[key] ?? "bg-tag-bg text-secondary";
     case "tier":
-      return TIER_COLORS[key] ?? "bg-surface text-secondary";
+      return TIER_COLORS[key] ?? "bg-tag-bg text-secondary";
   }
 }
 

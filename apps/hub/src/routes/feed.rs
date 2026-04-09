@@ -37,10 +37,10 @@ pub async fn get_feed(
     let offset = params.offset.unwrap_or(0);
 
     // Build query for feed_events table
-    let rows: Vec<(serde_json::Value, chrono::DateTime<chrono::Utc>)> =
+    let rows: Vec<(String, serde_json::Value, chrono::DateTime<chrono::Utc>)> =
         if let Some(ref event_type) = params.event_type {
             sqlx::query_as(
-                "SELECT payload, created_at FROM feed_events \
+                "SELECT event_type, payload, created_at FROM feed_events \
                  WHERE event_type = $1 \
                  ORDER BY created_at DESC LIMIT $2 OFFSET $3",
             )
@@ -55,7 +55,7 @@ pub async fn get_feed(
                 .map(|dt| dt.with_timezone(&chrono::Utc))
                 .map_err(|_| AppError::Validation("Invalid 'since' timestamp".into()))?;
             sqlx::query_as(
-                "SELECT payload, created_at FROM feed_events \
+                "SELECT event_type, payload, created_at FROM feed_events \
                  WHERE created_at >= $1 \
                  ORDER BY created_at DESC LIMIT $2 OFFSET $3",
             )
@@ -67,7 +67,7 @@ pub async fn get_feed(
             .unwrap_or_default()
         } else {
             sqlx::query_as(
-                "SELECT payload, created_at FROM feed_events \
+                "SELECT event_type, payload, created_at FROM feed_events \
                  ORDER BY created_at DESC LIMIT $1 OFFSET $2",
             )
             .bind(limit)
@@ -77,16 +77,21 @@ pub async fn get_feed(
             .unwrap_or_default()
         };
 
-    // Sanitize every event before returning
+    // Sanitize every event before returning, inject event_type as "type"
     let events: Vec<serde_json::Value> = rows
         .into_iter()
-        .filter_map(|(mut payload, _)| {
+        .filter_map(|(event_type, mut payload, created_at)| {
             let removed = sanitizer::sanitize_value(&mut payload);
             if removed > 0 {
                 warn!(
                     removed_keys = removed,
                     "Sanitizer stripped keys from stored feed event"
                 );
+            }
+            // Inject type and timestamp into payload
+            if let Some(obj) = payload.as_object_mut() {
+                obj.insert("type".to_string(), serde_json::Value::String(event_type));
+                obj.insert("timestamp".to_string(), serde_json::Value::String(created_at.to_rfc3339()));
             }
             Some(payload)
         })

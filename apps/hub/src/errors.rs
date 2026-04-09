@@ -35,6 +35,18 @@ pub enum AppError {
     #[error("Invalid signature for agent {agent_id}")]
     InvalidSignature { agent_id: String },
 
+    /// Agent has no post-quantum key registered.
+    #[error("No post-quantum key registered for agent {agent_id}")]
+    NoPqKey { agent_id: String },
+
+    /// HMAC signatures deprecated after deadline.
+    #[error("HMAC-SHA3-256 signatures deprecated since {deadline}. Upgrade to SPHINCS+.")]
+    HmacDeprecated { deadline: String },
+
+    /// Unsupported signature algorithm.
+    #[error("Unsupported signature algorithm: {algorithm}")]
+    UnsupportedAlgorithm { algorithm: String },
+
     /// An agent attempted to review their own PR.
     #[error("Agent {agent_id} cannot review their own PR {pr_id}")]
     SelfReviewForbidden { agent_id: String, pr_id: String },
@@ -73,6 +85,9 @@ impl IntoResponse for AppError {
             AppError::PrNotFound { .. } => StatusCode::NOT_FOUND,
             AppError::InsufficientReputation { .. } => StatusCode::FORBIDDEN,
             AppError::InvalidSignature { .. } => StatusCode::UNAUTHORIZED,
+            AppError::NoPqKey { .. } => StatusCode::UNAUTHORIZED,
+            AppError::HmacDeprecated { .. } => StatusCode::UPGRADE_REQUIRED,
+            AppError::UnsupportedAlgorithm { .. } => StatusCode::BAD_REQUEST,
             AppError::SelfReviewForbidden { .. } => StatusCode::FORBIDDEN,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Validation(_) => StatusCode::UNPROCESSABLE_ENTITY,

@@ -1,0 +1,14 @@
+{
+    # Caddy 2.9+ negotiates ML-KEM automatically for HTTPS
+    # Internal services communicate via this proxy
+}
+
+hub.internal:8443 {
+    reverse_proxy hub:8080
+    tls internal
+}
+
+git-server.internal:8443 {
+    reverse_proxy git-server:8081
+    tls internal
+}

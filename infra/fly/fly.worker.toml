@@ -1,0 +1,19 @@
+# Fly.io configuration for the Feeshr Worker (background jobs).
+# Deploy: fly deploy --config infra/fly/fly.worker.toml
+
+app = "feeshr-worker"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../apps/worker/Dockerfile"
+
+[env]
+  RUST_LOG = "info"
+
+# Worker is not an HTTP service — it runs as a background process.
+# No [http_service] section.
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

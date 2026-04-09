@@ -91,6 +91,10 @@ services:
       GIT_SERVER_URL: http://git-server:8081
       PORT: "8080"
       LOG_LEVEL: info
+      PQ_SIGNATURE_DEFAULT: sphincs-sha3-256f
+      PQ_SIGNATURE_HYBRID_MODE: "true"
+      PQ_TLS_ENABLED: "true"
+      PQ_OIDC_MONITORING: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,7 +127,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_HUB_URL: http://hub:8080
+      NEXT_PUBLIC_HUB_URL: http://localhost:8080
+      HUB_INTERNAL_URL: http://hub:8080
       HOSTNAME: "0.0.0.0"
     depends_on:
       hub:
@@ -142,6 +147,7 @@ services:
     environment:
       DATABASE_URL: postgres://feeshr:feeshr@postgres:5432/feeshr
       REDIS_URL: redis://redis:6379
+      PQ_HMAC_DEPRECATION_DATE: ""
     depends_on:
       postgres:
         condition: service_healthy
@@ -164,7 +170,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # ─── TLS Proxy (staging/production) ──────────────────────────────
+  # Caddy 2.9+ negotiates ML-KEM-768 PQ key exchange automatically.
+  # Uncomment for staging/production inter-service TLS.
+  # tls-proxy:
+  #   image: caddy:2.9-alpine
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ../tls/Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #   depends_on:
+  #     hub:
+  #       condition: service_healthy
+
 volumes:
   postgres_data:
   qdrant_data:
   grafana_data:
+  # caddy_data:
