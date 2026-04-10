@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#010101"/>
+      <stop offset="40%" stop-color="#060a14"/>
+      <stop offset="100%" stop-color="#0a1020"/>
+    </linearGradient>
+
+    <!-- Cyan glow gradient -->
+    <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8aebff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#8aebff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Text gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#8aebff"/>
+    </linearGradient>
+
+    <!-- Tagline gradient -->
+    <linearGradient id="tagGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+
+    <!-- Line gradient -->
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#22d3ee" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Grid pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+    </pattern>
+
+    <!-- Fish icon gradient -->
+    <linearGradient id="fishGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+
+    <!-- Glow filter -->
+    <filter id="cyanGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#22d3ee" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Strong glow for fish -->
+    <filter id="fishGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#22d3ee" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#bg)"/>
+  <rect width="1200" height="400" fill="url(#grid)"/>
+
+  <!-- Ambient glow effects -->
+  <ellipse cx="600" cy="180" rx="400" ry="200" fill="url(#glow1)"/>
+  <ellipse cx="350" cy="200" rx="250" ry="150" fill="url(#glow2)"/>
+  <ellipse cx="850" cy="200" rx="250" ry="150" fill="url(#glow2)"/>
+
+  <!-- Floating particles -->
+  <circle cx="150" cy="80" r="1.5" fill="#22d3ee" opacity="0.4"/>
+  <circle cx="300" cy="320" r="1" fill="#22d3ee" opacity="0.3"/>
+  <circle cx="450" cy="60" r="1.2" fill="#67e8f9" opacity="0.3"/>
+  <circle cx="750" cy="340" r="1.5" fill="#22d3ee" opacity="0.4"/>
+  <circle cx="900" cy="70" r="1" fill="#67e8f9" opacity="0.35"/>
+  <circle cx="1050" cy="300" r="1.3" fill="#22d3ee" opacity="0.3"/>
+  <circle cx="200" cy="250" r="0.8" fill="#8aebff" opacity="0.25"/>
+  <circle cx="1000" cy="150" r="1.1" fill="#8aebff" opacity="0.3"/>
+  <circle cx="550" cy="350" r="0.9" fill="#22d3ee" opacity="0.2"/>
+  <circle cx="680" cy="50" r="1.4" fill="#67e8f9" opacity="0.25"/>
+
+  <!-- Horizontal accent lines -->
+  <line x1="100" y1="130" x2="350" y2="130" stroke="url(#lineGrad)" stroke-width="0.5" opacity="0.3"/>
+  <line x1="850" y1="130" x2="1100" y2="130" stroke="url(#lineGrad)" stroke-width="0.5" opacity="0.3"/>
+  <line x1="150" y1="280" x2="400" y2="280" stroke="url(#lineGrad)" stroke-width="0.5" opacity="0.2"/>
+  <line x1="800" y1="280" x2="1050" y2="280" stroke="url(#lineGrad)" stroke-width="0.5" opacity="0.2"/>
+
+  <!-- Fish icon (simplified, centered above text) -->
+  <g transform="translate(555, 55) scale(0.7)" filter="url(#fishGlow)">
+    <!-- Fish body -->
+    <path d="M 60 10 C 30 10, 5 35, 5 65 C 5 80, 15 95, 30 100 L 15 120 L 40 105 C 50 108, 55 105, 60 100 C 85 95, 105 75, 105 50 C 105 25, 85 10, 60 10 Z"
+          fill="none" stroke="url(#fishGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Fish eye -->
+    <circle cx="55" cy="45" r="5" fill="#0a1020" stroke="#22d3ee" stroke-width="2"/>
+    <circle cx="56" cy="44" r="2" fill="#67e8f9"/>
+    <!-- Fish fin lines -->
+    <path d="M 45 35 C 35 45, 35 55, 40 65" fill="none" stroke="url(#fishGrad)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <path d="M 50 30 C 40 42, 38 58, 45 70" fill="none" stroke="url(#fishGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+    <!-- Bubbles -->
+    <circle cx="65" cy="5" r="4" fill="none" stroke="#22d3ee" stroke-width="1.5" opacity="0.7"/>
+    <circle cx="75" cy="15" r="2.5" fill="none" stroke="#67e8f9" stroke-width="1" opacity="0.5"/>
+  </g>
+
+  <!-- "feeshr" text -->
+  <text x="600" y="225" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif" font-size="72" font-weight="700" letter-spacing="-3" fill="url(#textGrad)" filter="url(#cyanGlow)">
+    feeshr
+  </text>
+
+  <!-- Divider line -->
+  <rect x="480" y="248" width="240" height="1" rx="0.5" fill="url(#lineGrad)" opacity="0.5"/>
+
+  <!-- Tagline -->
+  <text x="600" y="285" text-anchor="middle" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="16" letter-spacing="6" fill="url(#tagGrad)" text-transform="uppercase">
+    OPERATING ENGINE FOR AI AGENTS
+  </text>
+
+  <!-- Bottom accent dots -->
+  <g opacity="0.4">
+    <circle cx="520" cy="330" r="2" fill="#22d3ee"/>
+    <circle cx="560" cy="330" r="2" fill="#22d3ee" opacity="0.7"/>
+    <circle cx="600" cy="330" r="2" fill="#8aebff"/>
+    <circle cx="640" cy="330" r="2" fill="#22d3ee" opacity="0.7"/>
+    <circle cx="680" cy="330" r="2" fill="#22d3ee"/>
+  </g>
+
+  <!-- Corner accents -->
+  <path d="M 30 30 L 30 60" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 30 30 L 60 30" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 1170 30 L 1170 60" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 1170 30 L 1140 30" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 30 370 L 30 340" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 30 370 L 60 370" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 1170 370 L 1170 340" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M 1170 370 L 1140 370" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+
+  <!-- Subtle border -->
+  <rect x="0.5" y="0.5" width="1199" height="399" rx="8" fill="none" stroke="rgba(34,211,238,0.1)" stroke-width="1"/>
+</svg>
