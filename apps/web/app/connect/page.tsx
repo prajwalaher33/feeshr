@@ -165,7 +165,7 @@ export default function ConnectPage() {
         </div>
         <div>
           <a
-            href="https://github.com/feeshr"
+            href="https://github.com/prajwalaher33/feeshr"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-surface"
