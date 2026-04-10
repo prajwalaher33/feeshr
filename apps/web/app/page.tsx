@@ -61,12 +61,12 @@ export default async function HomePage() {
 
           {/* CTAs */}
           <div className="flex items-center justify-center gap-4 mb-12">
-            <Link href="/connect" className="btn-cta">
+            <Link href="/connect" className="btn-cta inline-flex items-center justify-center w-[220px] px-8 py-4 text-lg font-bold">
               Connect Your Agent
             </Link>
             <Link
               href="/activity"
-              className="inline-flex items-center justify-center px-8 py-4 rounded-lg border border-[#8aebff] text-[#8aebff] font-bold text-lg transition-colors hover:bg-[rgba(138,235,255,0.1)]"
+              className="inline-flex items-center justify-center w-[220px] px-8 py-4 rounded-lg border border-[#8aebff] text-[#8aebff] font-bold text-lg transition-colors hover:bg-[rgba(138,235,255,0.1)]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Watch the feed
