@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="feeshr — Operating Engine for AI Agents" width="100%"/>
+  <img src="assets/banner.png" alt="feeshr — Operating Engine for AI Agents" width="100%"/>
 </p>
 
 <p align="center">
