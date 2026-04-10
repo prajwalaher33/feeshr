@@ -43,13 +43,7 @@
       <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
     </pattern>
 
-    <!-- Fish icon gradient -->
-    <linearGradient id="fishGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="100%" stop-color="#67e8f9"/>
-    </linearGradient>
-
-    <!-- Glow filter -->
+    <!-- Glow filter for text -->
     <filter id="cyanGlow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="3" result="blur"/>
       <feFlood flood-color="#22d3ee" flood-opacity="0.4"/>
@@ -60,10 +54,10 @@
       </feMerge>
     </filter>
 
-    <!-- Strong glow for fish -->
-    <filter id="fishGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feFlood flood-color="#22d3ee" flood-opacity="0.3"/>
+    <!-- Logo glow -->
+    <filter id="logoGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feFlood flood-color="#22d3ee" flood-opacity="0.2"/>
       <feComposite in2="blur" operator="in"/>
       <feMerge>
         <feMergeNode/>
@@ -99,32 +93,14 @@
   <line x1="150" y1="280" x2="400" y2="280" stroke="url(#lineGrad)" stroke-width="0.5" opacity="0.2"/>
   <line x1="800" y1="280" x2="1050" y2="280" stroke="url(#lineGrad)" stroke-width="0.5" opacity="0.2"/>
 
-  <!-- Fish icon (simplified, centered above text) -->
-  <g transform="translate(555, 55) scale(0.7)" filter="url(#fishGlow)">
-    <!-- Fish body -->
-    <path d="M 60 10 C 30 10, 5 35, 5 65 C 5 80, 15 95, 30 100 L 15 120 L 40 105 C 50 108, 55 105, 60 100 C 85 95, 105 75, 105 50 C 105 25, 85 10, 60 10 Z"
-          fill="none" stroke="url(#fishGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Fish eye -->
-    <circle cx="55" cy="45" r="5" fill="#0a1020" stroke="#22d3ee" stroke-width="2"/>
-    <circle cx="56" cy="44" r="2" fill="#67e8f9"/>
-    <!-- Fish fin lines -->
-    <path d="M 45 35 C 35 45, 35 55, 40 65" fill="none" stroke="url(#fishGrad)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
-    <path d="M 50 30 C 40 42, 38 58, 45 70" fill="none" stroke="url(#fishGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-    <!-- Bubbles -->
-    <circle cx="65" cy="5" r="4" fill="none" stroke="#22d3ee" stroke-width="1.5" opacity="0.7"/>
-    <circle cx="75" cy="15" r="2.5" fill="none" stroke="#67e8f9" stroke-width="1" opacity="0.5"/>
-  </g>
-
-  <!-- "feeshr" text -->
-  <text x="600" y="225" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif" font-size="72" font-weight="700" letter-spacing="-3" fill="url(#textGrad)" filter="url(#cyanGlow)">
-    feeshr
-  </text>
+  <!-- Logo -->
+  <image href="logo.png" x="350" y="30" width="500" height="260" filter="url(#logoGlow)" preserveAspectRatio="xMidYMid meet"/>
 
   <!-- Divider line -->
-  <rect x="480" y="248" width="240" height="1" rx="0.5" fill="url(#lineGrad)" opacity="0.5"/>
+  <rect x="420" y="305" width="360" height="1" rx="0.5" fill="url(#lineGrad)" opacity="0.5"/>
 
   <!-- Tagline -->
-  <text x="600" y="285" text-anchor="middle" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="16" letter-spacing="6" fill="url(#tagGrad)" text-transform="uppercase">
+  <text x="600" y="340" text-anchor="middle" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="16" letter-spacing="6" fill="url(#tagGrad)">
     OPERATING ENGINE FOR AI AGENTS
   </text>
 
