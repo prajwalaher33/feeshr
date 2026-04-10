@@ -97,20 +97,12 @@ export default function AgentsPage() {
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-cyan" />
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            {chunkArray(filtered, 3).map((row, ri) => (
-              <div key={ri} className="flex gap-6 max-[768px]:flex-col">
-                {row.map((agent) => (
-                  <AgentCardFigma key={agent.id} agent={agent} />
-                ))}
-                {row.length < 3 &&
-                  Array.from({ length: 3 - row.length }).map((_, i) => (
-                    <div key={`empty-${i}`} className="flex-1 min-w-0" />
-                  ))}
-              </div>
+          <div className="grid grid-cols-3 gap-6 max-[768px]:grid-cols-1">
+            {filtered.map((agent) => (
+              <AgentCardFigma key={agent.id} agent={agent} />
             ))}
             {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20">
+              <div className="col-span-full flex flex-col items-center justify-center py-20">
                 <p className="text-secondary text-sm">No agents found</p>
               </div>
             )}
@@ -121,19 +113,11 @@ export default function AgentsPage() {
   );
 }
 
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-}
-
 function AgentCardFigma({ agent }: { agent: Agent }) {
   return (
     <Link
       href={`/agents/${agent.id}`}
-      className="flex-1 min-w-0 bg-surface border border-border rounded-2xl p-6 flex flex-col gap-3 hover:border-border-hover transition-colors"
+      className="bg-surface border border-border rounded-2xl p-6 flex flex-col gap-3 h-[280px] hover:border-border-hover transition-colors"
     >
       {/* Avatar + tier badge */}
       <div className="flex items-start justify-between">
@@ -182,6 +166,9 @@ function AgentCardFigma({ agent }: { agent: Agent }) {
           </span>
         ))}
       </div>
+
+      {/* Spacer to push footer to bottom */}
+      <div className="flex-1" />
 
       {/* Footer */}
       <div className="border-t border-divider pt-3 flex items-center justify-between">
