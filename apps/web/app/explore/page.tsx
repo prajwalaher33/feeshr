@@ -77,23 +77,14 @@ export default function ExplorePage() {
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-cyan" />
           </div>
         ) : (
-          <div className="flex flex-col gap-5">
+          <div className="grid grid-cols-3 gap-5 max-[768px]:grid-cols-1">
             {activeTab === "projects" && (
               <>
-                {/* 3-col grid */}
-                {chunkArray(projects, 3).map((row, ri) => (
-                  <div key={ri} className="flex gap-5 max-[768px]:flex-col">
-                    {row.map((project) => (
-                      <ProjectCard key={project.id} project={project} />
-                    ))}
-                    {/* Fill empty slots */}
-                    {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => (
-                      <div key={`empty-${i}`} className="flex-1 min-w-0" />
-                    ))}
-                  </div>
+                {projects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
                 ))}
                 {projects.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20">
+                  <div className="col-span-full flex flex-col items-center justify-center py-20">
                     <p className="text-secondary text-sm">No projects found</p>
                   </div>
                 )}
@@ -102,18 +93,11 @@ export default function ExplorePage() {
 
             {activeTab === "repos" && (
               <>
-                {chunkArray(repos, 3).map((row, ri) => (
-                  <div key={ri} className="flex gap-5 max-[768px]:flex-col">
-                    {row.map((repo) => (
-                      <RepoCardFigma key={repo.id} repo={repo} />
-                    ))}
-                    {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => (
-                      <div key={`empty-${i}`} className="flex-1 min-w-0" />
-                    ))}
-                  </div>
+                {repos.map((repo) => (
+                  <RepoCardFigma key={repo.id} repo={repo} />
                 ))}
                 {repos.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20">
+                  <div className="col-span-full flex flex-col items-center justify-center py-20">
                     <p className="text-secondary text-sm">No repos found</p>
                   </div>
                 )}
@@ -126,19 +110,11 @@ export default function ExplorePage() {
   );
 }
 
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-}
-
 function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="flex-1 min-w-0 bg-surface border border-border rounded-2xl p-6 flex flex-col justify-between h-[202px] hover:border-border-hover transition-colors"
+      className="bg-surface border border-border rounded-2xl p-6 flex flex-col h-[220px] hover:border-border-hover transition-colors"
     >
       {/* Top section */}
       <div>
@@ -149,7 +125,7 @@ function ProjectCard({ project }: { project: Project }) {
           >
             {project.title}
           </h3>
-          <span className="tag !rounded-full !px-2.5 !py-1 text-secondary uppercase tracking-[1px] !text-[10px] !border-border !bg-tag-bg">
+          <span className="tag !rounded-full !px-2.5 !py-1 text-secondary uppercase tracking-[1px] !text-[10px] !border-border !bg-tag-bg shrink-0 ml-2">
             {project.status === "shipped" ? "SHIPPED" : project.status === "building" ? "WIP" : "MIT"}
           </span>
         </div>
@@ -162,11 +138,14 @@ function ProjectCard({ project }: { project: Project }) {
       </div>
 
       {/* Tags */}
-      <div className="flex gap-1 mb-auto mt-2">
+      <div className="flex gap-1 mt-2">
         {(project.output_repo ? ["Python", "Rust"] : ["TypeScript"]).map((lang) => (
           <span key={lang} className="tag">{lang}</span>
         ))}
       </div>
+
+      {/* Spacer to push footer to bottom */}
+      <div className="flex-1" />
 
       {/* Footer */}
       <div className="border-t border-divider pt-3 flex items-center justify-between">
@@ -200,7 +179,7 @@ function RepoCardFigma({ repo }: { repo: Repo }) {
   return (
     <Link
       href={`/repos/${repo.id}`}
-      className="flex-1 min-w-0 bg-surface border border-border rounded-2xl p-6 flex flex-col justify-between h-[202px] hover:border-border-hover transition-colors"
+      className="bg-surface border border-border rounded-2xl p-6 flex flex-col h-[220px] hover:border-border-hover transition-colors"
     >
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -211,7 +190,7 @@ function RepoCardFigma({ repo }: { repo: Repo }) {
             {repo.name}
           </h3>
           {repo.published_to && (
-            <span className="tag !rounded-full !px-2.5 !py-1 text-secondary uppercase tracking-[1px] !text-[10px] !border-border !bg-tag-bg">
+            <span className="tag !rounded-full !px-2.5 !py-1 text-secondary uppercase tracking-[1px] !text-[10px] !border-border !bg-tag-bg shrink-0 ml-2">
               {repo.published_to}
             </span>
           )}
@@ -224,11 +203,13 @@ function RepoCardFigma({ repo }: { repo: Repo }) {
         </p>
       </div>
 
-      <div className="flex gap-1 mb-auto mt-2">
+      <div className="flex gap-1 mt-2">
         {repo.languages.slice(0, 3).map((lang) => (
           <span key={lang} className="tag">{lang}</span>
         ))}
       </div>
+
+      <div className="flex-1" />
 
       <div className="border-t border-divider pt-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
