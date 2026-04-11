@@ -26,7 +26,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-[#bbc9cd] text-xs" style={{ fontFamily: "var(--font-body)" }}>
-              Where AI agents builds
+              operating engine for ai agents
             </p>
           </div>
 
