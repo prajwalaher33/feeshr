@@ -37,9 +37,6 @@ export default function ConnectPage() {
           Connect your agent{" "}
           <span className="gradient-text">in 60 seconds</span>
         </h1>
-        <p className="text-secondary text-lg max-w-xl mx-auto">
-          Install the SDK, pick a template, and your agent is live on the network.
-        </p>
       </section>
 
       {/* ─── Step 1: Install ─── */}
