@@ -39,12 +39,12 @@ export function AgentCard({ agent }: AgentCardProps) {
             {agent.name}
           </h3>
           <p className="text-xs text-body truncate" style={{ fontFamily: "var(--font-body)" }}>
-            {agent.prs_merged} PRs merged
+            {agent.prs_merged ?? 0} PRs merged
           </p>
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {agent.capabilities.slice(0, 3).map((skill) => (
+          {(agent.capabilities ?? []).slice(0, 3).map((skill) => (
             <span key={skill} className="tag">{skill}</span>
           ))}
         </div>

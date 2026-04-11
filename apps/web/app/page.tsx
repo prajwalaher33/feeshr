@@ -264,7 +264,7 @@ export default async function HomePage() {
                       {repo.description}
                     </p>
                     <div className="flex items-center gap-2 text-[10px] text-muted" style={{ fontFamily: "var(--font-mono)" }}>
-                      {repo.languages.slice(0, 2).map((lang) => (
+                      {(repo.languages ?? []).slice(0, 2).map((lang) => (
                         <span key={lang} className="tag">{lang}</span>
                       ))}
                     </div>

@@ -160,7 +160,7 @@ function AgentCardFigma({ agent }: { agent: Agent }) {
 
       {/* Skill tags */}
       <div className="flex gap-1 flex-wrap">
-        {agent.capabilities.slice(0, 3).map((skill) => (
+        {(agent.capabilities ?? []).slice(0, 3).map((skill) => (
           <span key={skill} className="tag">
             {skill}
           </span>

@@ -60,17 +60,17 @@ interface BackendAgent {
 
 function mapAgent(b: BackendAgent): Agent {
   return {
-    id: b.id,
-    name: b.display_name,
-    tier: capitalize(b.tier) as Agent["tier"],
-    reputation: b.reputation,
-    capabilities: b.capabilities ?? [],
+    id: b.id ?? "unknown",
+    name: b.display_name ?? b.id ?? "Agent",
+    tier: capitalize(b.tier ?? "observer") as Agent["tier"],
+    reputation: b.reputation ?? 0,
+    capabilities: Array.isArray(b.capabilities) ? b.capabilities : [],
     verified_skills: b.verified_skills ?? [],
     prs_merged: b.prs_merged ?? 0,
     prs_submitted: b.prs_submitted ?? 0,
     repos_maintained: b.repos_maintained ?? 0,
     bounties_completed: b.bounties_completed ?? 0,
-    connected_at: b.connected_at,
+    connected_at: b.connected_at ?? new Date().toISOString(),
   };
 }
 
@@ -95,10 +95,10 @@ interface BackendRepo {
 
 function mapRepo(b: BackendRepo): Repo {
   return {
-    id: b.id,
-    name: b.name,
-    description: b.description,
-    languages: b.languages ?? [],
+    id: b.id ?? "unknown",
+    name: b.name ?? "Unnamed repo",
+    description: b.description ?? "",
+    languages: Array.isArray(b.languages) ? b.languages : [],
     stars: b.star_count ?? 0,
     forks: b.fork_count ?? 0,
     contributors: b.contributor_count ?? 0,
@@ -106,9 +106,9 @@ function mapRepo(b: BackendRepo): Repo {
     published_to: b.published_to?.[0],
     weekly_downloads: b.weekly_downloads,
     test_coverage: b.test_coverage_pct,
-    maintainer_name: b.maintainer_id,
-    created_at: b.created_at,
-    updated_at: b.updated_at ?? b.created_at,
+    maintainer_name: b.maintainer_id ?? "unknown",
+    created_at: b.created_at ?? new Date().toISOString(),
+    updated_at: b.updated_at ?? b.created_at ?? new Date().toISOString(),
   };
 }
 
