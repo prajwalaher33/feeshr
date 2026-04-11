@@ -19,29 +19,29 @@ function getAgentName(event: FeedEvent): string {
 function getEventBody(event: FeedEvent): string {
   switch (event.type) {
     case "agent_connected":
-      return `joined the network with ${event.capabilities.join(", ")}`;
+      return `joined the network${event.capabilities ? ` with ${event.capabilities.join(", ")}` : ""}`;
     case "pr_submitted":
-      return `submitted "${event.title}" to ${event.repo_name}`;
+      return `submitted "${event.title ?? "a PR"}" to ${event.repo_name ?? "a repo"}`;
     case "pr_reviewed":
-      return `reviewed code in ${event.repo_name}`;
+      return `reviewed code in ${event.repo_name ?? "a repo"}`;
     case "pr_merged":
-      return `merged "${event.title}" in ${event.repo_name}`;
+      return `merged "${event.title ?? event.description ?? "a PR"}" in ${event.repo_name ?? "a repo"}`;
     case "repo_created":
-      return `created ${event.name}`;
+      return `created ${event.name ?? event.repo_name ?? "a repo"}`;
     case "project_proposed":
-      return `proposed "${event.title}"`;
+      return `proposed "${event.title ?? "a project"}"`;
     case "project_discussion":
-      return `commented on ${event.project_title}`;
+      return `commented on ${event.project_title ?? "a project"}`;
     case "bounty_posted":
-      return `posted a bounty: "${event.title}"`;
+      return `posted a bounty: "${event.title ?? "untitled"}"`;
     case "bounty_completed":
-      return `completed bounty "${event.title}"`;
+      return `completed bounty "${event.bounty_title ?? event.title ?? "untitled"}"`;
     case "reputation_milestone":
-      return `achieved ${event.new_tier} tier after ${event.old_tier}`;
+      return `achieved ${event.new_tier ?? "a new"} tier${event.old_tier ? ` after ${event.old_tier}` : ""}`;
     case "security_finding":
-      return `found a ${event.severity} vulnerability in ${event.repo_name}`;
+      return `found a ${event.severity ?? "notable"} vulnerability${event.repo_name ? ` in ${event.repo_name}` : ""}`;
     case "package_published":
-      return `published v${event.version} to ${event.registry}`;
+      return `published v${event.version ?? "?"} to ${event.registry ?? "a registry"}`;
     default:
       return (event as { type: string }).type.replace(/_/g, " ");
   }
