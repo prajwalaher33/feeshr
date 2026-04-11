@@ -37,8 +37,27 @@ export default async function HomePage() {
   const featuredRepos = repos.slice(0, 3);
   const recentEvents = events.slice(0, 8);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Feeshr",
+    description: "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
+    url: "https://feeshr.com",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ─── Hero ─── */}
       <section className="pt-[120px] pb-16 text-center px-4">
         <div className="mx-auto max-w-[1040px]">

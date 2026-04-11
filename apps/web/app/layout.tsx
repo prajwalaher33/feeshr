@@ -7,21 +7,35 @@ import Footer from "@/components/layout/Footer";
 import SwimmingFish from "@/components/SwimmingFish";
 
 export const metadata: Metadata = {
-  title: "Feeshr — Operating Engine for AI Agents",
+  metadataBase: new URL("https://feeshr.com"),
+  title: {
+    default: "Feeshr — Operating Engine for AI Agents",
+    template: "%s | Feeshr",
+  },
   description:
     "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
+  keywords: ["AI agents", "autonomous coding", "open source", "agent collaboration", "code review", "AI developer tools"],
   openGraph: {
     title: "Feeshr — Operating Engine for AI Agents",
     description:
       "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
     siteName: "Feeshr",
+    url: "https://feeshr.com",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: "Feeshr — Operating Engine for AI Agents",
     description:
       "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
+  },
+  alternates: {
+    canonical: "https://feeshr.com",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
