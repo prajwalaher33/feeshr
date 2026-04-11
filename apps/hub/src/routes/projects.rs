@@ -11,6 +11,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
+use tracing::{info, warn};
 use crate::errors::AppError;
 use crate::state::AppState;
 
@@ -245,4 +246,143 @@ pub async fn join_project(
     .await?;
 
     Ok(Json(serde_json::json!({ "message": "Joined project team" })))
+}
+
+#[derive(Deserialize)]
+pub struct UpdateStatusRequest {
+    pub agent_id: String,
+    pub status: String,
+}
+
+/// Advance a project's status. The proposer (or any team member) can advance.
+///
+/// PATCH /api/v1/projects/:id/status
+///
+/// Valid transitions: proposed → discussion → building → review → shipped
+/// When transitioning to "building", a git repo is automatically created.
+pub async fn update_project_status(
+    Path(project_id): Path<String>,
+    State(state): State<AppState>,
+    Json(req): Json<UpdateStatusRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let valid_statuses = ["discussion", "building", "review", "shipped"];
+    if !valid_statuses.contains(&req.status.as_str()) {
+        return Err(AppError::Validation(format!(
+            "Invalid status '{}'. Valid: {:?}",
+            req.status, valid_statuses
+        )));
+    }
+
+    let project_uuid = project_id.parse::<Uuid>()
+        .map_err(|_| AppError::Validation("Invalid project_id".to_string()))?;
+
+    // Verify agent is a team member
+    let project: Option<(String, Vec<String>, Option<Uuid>)> = sqlx::query_as(
+        "SELECT status, team_members, output_repo_id FROM projects WHERE id = $1",
+    )
+    .bind(project_uuid)
+    .fetch_optional(&state.db)
+    .await?;
+
+    let (current_status, team_members, existing_repo_id) = project.ok_or_else(|| {
+        AppError::Validation(format!("Project not found: {}", project_id))
+    })?;
+
+    if !team_members.contains(&req.agent_id) {
+        return Err(AppError::Validation("Only team members can update project status".to_string()));
+    }
+
+    // Enforce valid transitions
+    let valid_transition = matches!(
+        (current_status.as_str(), req.status.as_str()),
+        ("proposed", "discussion")
+        | ("discussion", "building")
+        | ("building", "review")
+        | ("review", "shipped")
+    );
+    if !valid_transition {
+        return Err(AppError::Validation(format!(
+            "Cannot transition from '{}' to '{}'",
+            current_status, req.status
+        )));
+    }
+
+    // Auto-create repo when transitioning to "building"
+    let mut repo_id = existing_repo_id;
+    if req.status == "building" && repo_id.is_none() {
+        let new_repo_id = Uuid::new_v4();
+
+        // Get project title for repo name
+        let title: Option<(String,)> = sqlx::query_as(
+            "SELECT title FROM projects WHERE id = $1",
+        )
+        .bind(project_uuid)
+        .fetch_optional(&state.db)
+        .await?;
+
+        let repo_name = title
+            .map(|(t,)| t.to_lowercase().replace(' ', "-"))
+            .unwrap_or_else(|| format!("project-{}", &project_id[..8]));
+
+        sqlx::query(
+            r#"INSERT INTO repos (id, name, description, maintainer_id, origin_type, languages, tags, license)
+               VALUES ($1, $2, $3, $4, 'project_output', '{}', '{}', 'MIT')"#,
+        )
+        .bind(new_repo_id)
+        .bind(&repo_name)
+        .bind(format!("Repository for project: {}", project_id))
+        .bind(&req.agent_id)
+        .execute(&state.db)
+        .await?;
+
+        // Create bare repo on git server
+        let git_url = format!("{}/repos", state.config.git_server_url);
+        let repo_id_str = new_repo_id.to_string();
+        match reqwest::Client::new()
+            .post(&git_url)
+            .json(&serde_json::json!({ "repo_id": repo_id_str }))
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                info!("Auto-created git repo {} for project {}", repo_id_str, project_id);
+            }
+            Ok(resp) => {
+                warn!("Git server returned {} for project repo", resp.status());
+            }
+            Err(e) => {
+                warn!("Failed to create git repo for project: {}", e);
+            }
+        }
+
+        // Link repo to project
+        sqlx::query("UPDATE projects SET output_repo_id = $1 WHERE id = $2")
+            .bind(new_repo_id)
+            .bind(project_uuid)
+            .execute(&state.db)
+            .await?;
+
+        repo_id = Some(new_repo_id);
+    }
+
+    // Update status
+    sqlx::query("UPDATE projects SET status = $1, updated_at = NOW() WHERE id = $2")
+        .bind(&req.status)
+        .bind(project_uuid)
+        .execute(&state.db)
+        .await?;
+
+    let mut response = serde_json::json!({
+        "message": format!("Project status updated to '{}'", req.status),
+        "status": req.status,
+    });
+    if let Some(rid) = repo_id {
+        response["repo_id"] = serde_json::Value::String(rid.to_string());
+        response["git_url"] = serde_json::Value::String(
+            format!("{}/repos/{}", state.config.git_server_url, rid)
+        );
+    }
+
+    Ok(Json(response))
 }

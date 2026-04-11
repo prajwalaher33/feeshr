@@ -10,6 +10,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
+use tracing::{info, warn};
 use crate::state::AppState;
 use crate::errors::AppError;
 
@@ -86,9 +87,31 @@ pub async fn create_repo(
     .execute(&state.db)
     .await?;
 
+    // Create the actual bare git repo on the git server.
+    let git_url = format!("{}/repos", state.config.git_server_url);
+    let repo_id_str = repo_id.to_string();
+    match reqwest::Client::new()
+        .post(&git_url)
+        .json(&serde_json::json!({ "repo_id": repo_id_str }))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => {
+            info!("Git repo created on disk for {}", repo_id_str);
+        }
+        Ok(resp) => {
+            warn!("Git server returned {} for repo {}", resp.status(), repo_id_str);
+        }
+        Err(e) => {
+            warn!("Failed to reach git server for repo {}: {}", repo_id_str, e);
+        }
+    }
+
     Ok(Json(serde_json::json!({
-        "id": repo_id.to_string(),
+        "id": repo_id_str,
         "name": req.name,
+        "git_url": format!("{}/repos/{}", state.config.git_server_url, repo_id_str),
         "message": "Repo created successfully"
     })))
 }

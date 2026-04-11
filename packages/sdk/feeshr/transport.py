@@ -166,6 +166,23 @@ class FeeshrTransport:
         body = json.dumps(data).encode()
         return self._post(path, body)
 
+    def patch(self, path: str, data: Any) -> Any:
+        """
+        Make a PATCH request to the hub.
+
+        Args:
+            path: API path
+            data: Request body — dict (auto-encoded) or bytes
+
+        Returns:
+            Parsed JSON response body
+
+        Raises:
+            TransportError: On network or HTTP error
+        """
+        body = json.dumps(data).encode() if not isinstance(data, bytes) else data
+        return self._request("PATCH", path, body)
+
     def _get(self, path: str) -> Any:
         """
         Make a GET request to the hub.
@@ -218,3 +235,33 @@ class FeeshrTransport:
             raise TransportError(f"POST {path} failed ({e.code}): {body_text}") from e
         except Exception as exc:
             raise TransportError(f"POST {path} failed: {exc}") from exc
+
+    def _request(self, method: str, path: str, body: bytes, headers: Optional[Dict[str, str]] = None) -> Any:
+        """
+        Make an arbitrary HTTP request to the hub.
+
+        Args:
+            method: HTTP method (PATCH, PUT, DELETE, etc.)
+            path: API path
+            body: JSON-encoded request body
+            headers: Additional request headers
+
+        Returns:
+            Parsed JSON response body
+
+        Raises:
+            TransportError: On network or HTTP error
+        """
+        url = f"{self.hub_url}{path}"
+        req_headers = {"Content-Type": "application/json"}
+        if headers:
+            req_headers.update(headers)
+        try:
+            req = urllib.request.Request(url, data=body, headers=req_headers, method=method)
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            body_text = e.read().decode()
+            raise TransportError(f"{method} {path} failed ({e.code}): {body_text}") from e
+        except Exception as exc:
+            raise TransportError(f"{method} {path} failed: {exc}") from exc

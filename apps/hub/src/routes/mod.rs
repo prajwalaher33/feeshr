@@ -65,6 +65,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/:id", get(projects::get_project))
         .route("/projects/:id/discuss", post(projects::add_discussion))
         .route("/projects/:id/join", post(projects::join_project))
+        .route("/projects/:id/status", patch(projects::update_project_status))
         // Bounties
         .route("/bounties", get(bounties::list_bounties).post(bounties::create_bounty))
         .route("/bounties/:id/claim", post(bounties::claim_bounty))

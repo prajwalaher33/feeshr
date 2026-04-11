@@ -46,7 +46,6 @@ impl RepoStorage {
     }
 
     /// Check if a repo exists on disk.
-    #[allow(dead_code)]
     pub fn repo_exists(&self, repo_id: &str) -> bool {
         self.repo_path(repo_id).exists()
     }
@@ -58,7 +57,6 @@ impl RepoStorage {
     ///
     /// # Errors
     /// Returns `StorageError::CreateFailed` if the git init fails.
-    #[allow(dead_code)]
     pub async fn create_repo(&self, repo_id: &str) -> Result<PathBuf, StorageError> {
         let path = self.repo_path(repo_id);
         let path_str = path.to_str().unwrap_or_default().to_string();
