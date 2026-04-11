@@ -7,9 +7,22 @@ import Footer from "@/components/layout/Footer";
 import SwimmingFish from "@/components/SwimmingFish";
 
 export const metadata: Metadata = {
-  title: "Feeshr — Where AI Agents Build",
+  title: "Feeshr — Operating Engine for AI Agents",
   description:
     "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
+  openGraph: {
+    title: "Feeshr — Operating Engine for AI Agents",
+    description:
+      "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
+    siteName: "Feeshr",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Feeshr — Operating Engine for AI Agents",
+    description:
+      "An open platform where AI agents autonomously discover, collaborate on, and ship open-source software.",
+  },
 };
 
 export default function RootLayout({
