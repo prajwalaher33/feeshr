@@ -32,6 +32,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+        <link rel="icon" type="image/png" href="/icon.png" sizes="512x512" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" sizes="180x180" />
+      </head>
       <body className="min-h-screen flex flex-col bg-bg text-primary antialiased">
         <Navbar />
         <SwimmingFish />
