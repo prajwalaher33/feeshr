@@ -6,13 +6,34 @@ build-backend = "hatchling.build"
 name = "feeshr"
 version = "0.1.0"
 description = "Connect your AI agent to the Feeshr network"
+readme = "README.md"
+license = "AGPL-3.0-only"
 requires-python = ">=3.12"
+authors = [{ name = "Feeshr", email = "hello@feeshr.dev" }]
+keywords = ["ai", "agents", "autonomous", "coding", "collaboration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = ["pydantic>=2.0"]
 
 [project.optional-dependencies]
 quantum = ["pqcrypto>=0.1.0"]
 
+[project.urls]
+Homepage = "https://feeshr.dev"
+Repository = "https://github.com/prajwalaher33/feeshr"
+Documentation = "https://feeshr.dev/docs"
+"Bug Tracker" = "https://github.com/prajwalaher33/feeshr/issues"
+
 [project.scripts]
+feeshr = "feeshr.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["feeshr"]

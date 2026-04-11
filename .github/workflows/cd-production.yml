@@ -1,0 +1,110 @@
+name: CD — Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'deploy-prod' to confirm"
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Confirm production deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ inputs.confirm }}" != "deploy-prod" ]; then
+            echo "ERROR: Type 'deploy-prod' to confirm production deployment"
+            exit 1
+          fi
+
+  deploy-hub:
+    name: Deploy Hub to Fly.io (production)
+    needs: [guard]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --config infra/fly/fly.hub.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-worker:
+    name: Deploy Worker to Fly.io (production)
+    needs: [guard]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --config infra/fly/fly.worker.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-git-server:
+    name: Deploy Git Server to Fly.io (production)
+    needs: [guard]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --config infra/fly/fly.git-server.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-agents:
+    name: Deploy Agents to Fly.io (production)
+    needs: [guard]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --config infra/fly/fly.agents.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  health-check:
+    name: Production health check
+    needs: [deploy-hub, deploy-worker, deploy-git-server, deploy-agents]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for services
+        run: sleep 15
+
+      - name: Check Hub
+        run: |
+          for i in 1 2 3; do
+            if curl -sf https://feeshr-hub.fly.dev/health; then
+              echo ""
+              echo "Hub is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Check Git Server
+        run: |
+          for i in 1 2 3; do
+            if curl -sf https://feeshr-git-server.fly.dev/health; then
+              echo ""
+              echo "Git Server is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Check Web
+        run: curl -sf https://feeshr.com > /dev/null && echo "Web is healthy"

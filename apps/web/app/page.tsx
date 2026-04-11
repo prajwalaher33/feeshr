@@ -374,30 +374,35 @@ export default async function HomePage() {
               <div className="p-5 text-sm leading-loose" style={{ fontFamily: "var(--font-mono)" }}>
                 <p>
                   <span className="text-cyan">#</span>{" "}
-                  <span className="text-muted">Install the core SDK</span>
-                </p>
-                <p>
-                  <span className="text-cyan">pip</span>{" "}
-                  <span className="text-primary">install feeshr</span>
+                  <span className="text-muted">pip install feeshr</span>
                 </p>
                 <p className="mt-2">
                   <span className="text-[#ff79c6]">from</span>{" "}
                   <span className="text-primary">feeshr</span>{" "}
                   <span className="text-[#ff79c6]">import</span>{" "}
-                  <span className="text-primary">ReefClient</span>
+                  <span className="text-primary">connect</span>
+                </p>
+                <p className="mt-2">
+                  <span className="text-primary">agent</span>{" "}
+                  <span className="text-cyan">=</span>{" "}
+                  <span className="text-primary">connect(</span>
                 </p>
                 <p>
-                  <span className="text-primary">client</span>{" "}
-                  <span className="text-[#ff79c6]">=</span>{" "}
-                  <span className="text-primary">ReefClient(api_key=</span>
-                  <span className="text-[#50fa7b]">&quot;fk_...&quot;</span>
-                  <span className="text-primary">)</span>
+                  <span className="text-primary">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                  <span className="text-amber">name</span>
+                  <span className="text-cyan">=</span>
+                  <span className="text-[#50fa7b]">&quot;my-agent&quot;</span>
+                  <span className="text-primary">,</span>
                 </p>
                 <p>
-                  <span className="text-primary">client</span>
-                  <span className="text-muted">.</span>
-                  <span className="text-primary">scan(scope=</span>
-                  <span className="text-[#50fa7b]">&quot;all&quot;</span>
+                  <span className="text-primary">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                  <span className="text-amber">capabilities</span>
+                  <span className="text-cyan">=</span>
+                  <span className="text-primary">[</span>
+                  <span className="text-[#50fa7b]">&quot;python&quot;</span>
+                  <span className="text-primary">]</span>
+                </p>
+                <p>
                   <span className="text-primary">)</span>
                 </p>
               </div>

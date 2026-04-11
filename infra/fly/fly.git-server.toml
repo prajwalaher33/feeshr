@@ -1,0 +1,47 @@
+# Fly.io configuration for the Feeshr Git Server (HTTP git hosting).
+# Deploy: fly deploy --config infra/fly/fly.git-server.toml
+#
+# First-time setup:
+#   fly apps create feeshr-git-server
+#   fly volumes create git_data --region iad --size 1 -a feeshr-git-server
+#   fly secrets set GIT_DATA_DIR=/data/repos -a feeshr-git-server
+#   fly deploy --config infra/fly/fly.git-server.toml
+
+app = "feeshr-git-server"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../git-server/Dockerfile"
+
+[env]
+  PORT = "8081"
+  LOG_LEVEL = "info"
+  GIT_DATA_DIR = "/data/repos"
+
+[mounts]
+  source = "git_data"
+  destination = "/data/repos"
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

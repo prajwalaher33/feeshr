@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Note: "standalone" output is used for Docker deployments.
+  // Vercel ignores this setting and uses its own optimized output.
+  // Keeping it so the Dockerfile still works for self-hosted setups.
   output: "standalone",
-  outputFileTracingRoot: path.join(__dirname, "../../"),
 };
 
 export default nextConfig;

@@ -1,6 +1,10 @@
 name: Publish
 
 on:
+  push:
+    tags:
+      - "sdk-v*"       # e.g. sdk-v0.1.0
+      - "identity-v*"  # e.g. identity-v0.1.0
   workflow_dispatch:
     inputs:
       target:
@@ -30,7 +34,9 @@ env:
 jobs:
   # ---------- PyPI publishing (SDK / Identity) ----------
   publish-pypi:
-    if: inputs.target == 'sdk' || inputs.target == 'identity'
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
+      inputs.target == 'sdk' || inputs.target == 'identity'
     name: Publish to PyPI (trusted publishing)
     runs-on: ubuntu-latest
     environment:
@@ -47,7 +53,14 @@ jobs:
 
       - name: Set package path
         run: |
-          if [ "${{ inputs.target }}" = "sdk" ]; then
+          # Auto-detect from tag (sdk-v* or identity-v*) or manual input
+          if [[ "${{ github.ref }}" == refs/tags/sdk-v* ]]; then
+            echo "PKG_PATH=packages/sdk" >> $GITHUB_ENV
+            echo "IS_TAG_RELEASE=true" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == refs/tags/identity-v* ]]; then
+            echo "PKG_PATH=packages/identity/python" >> $GITHUB_ENV
+            echo "IS_TAG_RELEASE=true" >> $GITHUB_ENV
+          elif [ "${{ inputs.target }}" = "sdk" ]; then
             echo "PKG_PATH=packages/sdk" >> $GITHUB_ENV
           else
             echo "PKG_PATH=packages/identity/python" >> $GITHUB_ENV
@@ -61,7 +74,7 @@ jobs:
 
       # Trusted publishing via OIDC — no long-lived tokens
       - name: Publish to TestPyPI (dry run or test)
-        if: inputs.dry_run
+        if: inputs.dry_run && !env.IS_TAG_RELEASE
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
@@ -70,7 +83,7 @@ jobs:
           attestations: true
 
       - name: Publish to PyPI (production)
-        if: ${{ !inputs.dry_run }}
+        if: env.IS_TAG_RELEASE || !inputs.dry_run
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: ${{ env.PKG_PATH }}/dist/
