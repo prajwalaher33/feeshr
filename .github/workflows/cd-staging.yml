@@ -1,35 +1,121 @@
-name: CD Staging
+name: CD — Deploy to Staging
+
 on:
   push:
-    branches: [main]
+    branches: [main, master]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
-    name: Build and deploy to staging
+  # ─── Fly.io: Hub API ───────────────────────────────────────────────
+  deploy-hub:
+    name: Deploy Hub to Fly.io
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Hub
+        run: flyctl deploy --config infra/fly/fly.hub.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Set image tag
-        run: echo "IMAGE_TAG=sha-${GITHUB_SHA::8}" >> $GITHUB_ENV
+  # ─── Fly.io: Worker ────────────────────────────────────────────────
+  deploy-worker:
+    name: Deploy Worker to Fly.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Worker
+        run: flyctl deploy --config infra/fly/fly.worker.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Build hub image
-        run: docker build -t feeshr/hub:${{ env.IMAGE_TAG }} -f apps/hub/Dockerfile .
+  # ─── Fly.io: Git Server ────────────────────────────────────────────
+  deploy-git-server:
+    name: Deploy Git Server to Fly.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Git Server
+        run: flyctl deploy --config infra/fly/fly.git-server.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Build worker image
-        run: docker build -t feeshr/worker:${{ env.IMAGE_TAG }} -f apps/worker/Dockerfile .
+  # ─── Fly.io: Agents ────────────────────────────────────────────────
+  deploy-agents:
+    name: Deploy Agents to Fly.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Agents
+        run: flyctl deploy --config infra/fly/fly.agents.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Build web image
-        run: docker build -t feeshr/web:${{ env.IMAGE_TAG }} -f apps/web/Dockerfile .
+  # ─── Vercel: Web Dashboard ─────────────────────────────────────────
+  # Vercel auto-deploys from GitHub on push to main/master.
+  # This job verifies the build succeeds.
+  verify-web:
+    name: Verify Web Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx -w apps/web tsc --noEmit
+      - name: Build
+        run: npm run -w apps/web build
 
-      - name: Build git-server image
-        run: docker build -t feeshr/git-server:${{ env.IMAGE_TAG }} -f git-server/Dockerfile .
+  # ─── Post-deploy health check ──────────────────────────────────────
+  health-check:
+    name: Post-deploy health check
+    needs: [deploy-hub, deploy-worker, deploy-git-server, deploy-agents, verify-web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for services to stabilize
+        run: sleep 15
 
-      - name: Build agents image
-        run: docker build -t feeshr/agents:${{ env.IMAGE_TAG }} -f apps/agents/Dockerfile .
-
-      - name: Deploy to staging
+      - name: Check Hub health
         run: |
-          echo "Staging deployment would happen here"
-          echo "Images tagged with: ${{ env.IMAGE_TAG }}"
-          echo "Deploy targets: hub, worker, web, git-server, agents"
+          for i in 1 2 3; do
+            if curl -sf https://feeshr-hub.fly.dev/health; then
+              echo ""
+              echo "Hub is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          echo "Hub health check failed after 3 attempts"
+          exit 1
+
+      - name: Check Git Server health
+        run: |
+          for i in 1 2 3; do
+            if curl -sf https://feeshr-git-server.fly.dev/health; then
+              echo ""
+              echo "Git Server is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          echo "Git Server health check failed"
+          exit 1
+
+      - name: Check Web
+        run: |
+          if curl -sf https://feeshr.com > /dev/null; then
+            echo "Web is healthy"
+          else
+            echo "Warning: Web may still be deploying on Vercel"
+          fi

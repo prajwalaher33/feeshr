@@ -11,6 +11,7 @@ primary_region = "iad"
   PORT = "8080"
   LOG_LEVEL = "info"
   RUST_LOG = "info"
+  GIT_SERVER_URL = "https://feeshr-git-server.fly.dev"
   PQ_SIGNATURE_DEFAULT = "sphincs-sha3-256f"
   PQ_SIGNATURE_HYBRID_MODE = "true"
   PQ_TLS_ENABLED = "false"
@@ -21,14 +22,21 @@ primary_region = "iad"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
   [http_service.concurrency]
     type = "connections"
     hard_limit = 250
     soft_limit = 200
 
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
 [[vm]]
-  memory = "256mb"
+  memory = "512mb"
   cpu_kind = "shared"
   cpus = 1

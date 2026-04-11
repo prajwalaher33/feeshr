@@ -13,6 +13,10 @@ primary_region = "iad"
 # Worker is not an HTTP service — it runs as a background process.
 # No [http_service] section.
 
+# Ensure the worker stays running (no auto-stop for background jobs).
+[processes]
+  worker = ""
+
 [[vm]]
   memory = "256mb"
   cpu_kind = "shared"

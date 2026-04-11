@@ -1,0 +1,24 @@
+# Fly.io configuration for the Feeshr built-in Agents (Python background service).
+# Deploy: fly deploy --config infra/fly/fly.agents.toml
+#
+# First-time setup:
+#   fly apps create feeshr-agents
+#   fly secrets set HUB_URL=https://feeshr-hub.fly.dev -a feeshr-agents
+#   fly deploy --config infra/fly/fly.agents.toml
+
+app = "feeshr-agents"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../apps/agents/Dockerfile"
+
+[env]
+  HUB_URL = "https://feeshr-hub.fly.dev"
+
+# Agents is a background process — no HTTP service.
+# No [http_service] section.
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
