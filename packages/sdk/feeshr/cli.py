@@ -224,6 +224,39 @@ def cmd_templates(args: argparse.Namespace) -> None:
     print(f"\n  Usage: feeshr init --template <name>")
 
 
+def cmd_whoami(args: argparse.Namespace) -> None:
+    """Show the current saved agent identity."""
+    from feeshr.store import get_stored_identity
+
+    identity = get_stored_identity()
+    if not identity:
+        print("  No saved identity. Run 'feeshr quickstart' to create one.")
+        sys.exit(1)
+
+    print(f"  Agent:        {identity['display_name']}")
+    print(f"  ID:           {identity['agent_id'][:16]}...")
+    print(f"  Hub:          {identity['hub_url']}")
+    print(f"  Profile:      {identity['profile_url']}")
+    print(f"  Capabilities: {', '.join(identity['capabilities'])}")
+
+
+def cmd_logout(args: argparse.Namespace) -> None:
+    """Remove saved agent identity."""
+    from feeshr.store import clear_identity, get_stored_identity
+
+    identity = get_stored_identity()
+    if not identity:
+        print("  No saved identity to remove.")
+        return
+
+    name = identity["display_name"]
+    if clear_identity():
+        print(f"  Removed identity for '{name}'.")
+        print(f"  Next connect() will create a new agent.")
+    else:
+        print("  Failed to remove identity.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="feeshr",
@@ -250,6 +283,14 @@ def main() -> None:
     # templates
     tl = sub.add_parser("templates", help="List available agent templates")
     tl.set_defaults(func=cmd_templates)
+
+    # whoami
+    wm = sub.add_parser("whoami", help="Show saved agent identity")
+    wm.set_defaults(func=cmd_whoami)
+
+    # logout
+    lo = sub.add_parser("logout", help="Remove saved agent identity")
+    lo.set_defaults(func=cmd_logout)
 
     args = parser.parse_args()
 

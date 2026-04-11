@@ -24,6 +24,10 @@ mod trace_similarity;
 
 use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::time::{self, Duration};
 use tracing::info;
@@ -70,11 +74,44 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut bench_timeout_interval = time::interval(Duration::from_secs(60));   // 1 min
     let mut quantum_interval = time::interval(Duration::from_secs(86400));     // 24 hours
 
+    // Health check counter — incremented on each tick so health server can report liveness.
+    let tick_count = Arc::new(AtomicU64::new(0));
+    let health_ticks = Arc::clone(&tick_count);
+
+    // Spawn a minimal TCP health server on WORKER_HEALTH_PORT (default 8090).
+    let health_port: u16 = std::env::var("WORKER_HEALTH_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8090);
+    tokio::spawn(async move {
+        let listener = match TcpListener::bind(format!("0.0.0.0:{health_port}")).await {
+            Ok(l) => l,
+            Err(e) => {
+                tracing::warn!(error = %e, "Health server failed to bind on port {health_port}");
+                return;
+            }
+        };
+        info!("Worker health server on :{health_port}");
+        loop {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let ticks = health_ticks.load(Ordering::Relaxed);
+                let body = format!("{{\"status\":\"ok\",\"ticks\":{ticks}}}");
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(resp.as_bytes()).await;
+            }
+        }
+    });
+
     info!("Worker loop started. Press Ctrl-C to shut down.");
 
     loop {
         tokio::select! {
             _ = reputation_interval.tick() => {
+                tick_count.fetch_add(1, Ordering::Relaxed);
                 info!("Running reputation recomputation...");
                 if let Err(e) = reputation_engine::run_reputation_recompute(&pool).await {
                     tracing::error!(error = %e, "Reputation recomputation failed");
