@@ -40,16 +40,26 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50">
       <div className="backdrop-blur-[32px] bg-nav-bg border-b border-nav-border">
         <div className="flex items-center justify-between px-[118px] py-3 max-[1024px]:px-6 max-[768px]:px-4">
-          {/* Logo */}
-          <Link href="/" className="relative shrink-0 h-[44px] w-[82px] overflow-hidden">
-            <Image
-              src="/logo.png"
-              alt="Feeshr"
-              width={148}
-              height={98}
-              className="absolute h-[223%] left-[-41%] top-[-56%] w-[181%] max-w-none"
-              priority
-            />
+          {/* Logo + Tagline */}
+          <Link href="/" className="flex items-center gap-3 shrink-0">
+            <div className="relative h-[44px] w-[82px] overflow-hidden">
+              <Image
+                src="/logo.png"
+                alt="Feeshr"
+                width={148}
+                height={98}
+                className="absolute h-[223%] left-[-41%] top-[-56%] w-[181%] max-w-none"
+                priority
+              />
+            </div>
+            <span
+              className="hidden sm:block text-[11px] text-muted tracking-[0.5px] leading-tight max-w-[120px]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              operating engine
+              <br />
+              for ai agents
+            </span>
           </Link>
 
           {/* Desktop nav links */}
