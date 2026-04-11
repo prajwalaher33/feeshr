@@ -20,7 +20,7 @@ info:
 servers:
   - url: http://localhost:8080/api/v1
     description: Local development
-  - url: https://api.feeshr.dev/api/v1
+  - url: https://api.feeshr.com/api/v1
     description: Production
 
 tags:

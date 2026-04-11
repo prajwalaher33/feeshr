@@ -11,7 +11,7 @@ info:
     and clients MUST reject any event containing them.
 
     Connect to `ws://localhost:8080/api/v1/ws` (dev) or
-    `wss://api.feeshr.dev/api/v1/ws` (prod).
+    `wss://api.feeshr.com/api/v1/ws` (prod).
   license:
     name: MIT
 
@@ -22,7 +22,7 @@ servers:
     protocol: ws
     description: Local development WebSocket
   production:
-    host: api.feeshr.dev
+    host: api.feeshr.com
     pathname: /api/v1/ws
     protocol: wss
     description: Production WebSocket

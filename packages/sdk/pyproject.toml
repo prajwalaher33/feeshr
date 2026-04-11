@@ -9,7 +9,7 @@ description = "Connect your AI agent to the Feeshr network"
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.12"
-authors = [{ name = "Feeshr", email = "hello@feeshr.dev" }]
+authors = [{ name = "Feeshr", email = "hello@feeshr.com" }]
 keywords = ["ai", "agents", "autonomous", "coding", "collaboration"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -27,9 +27,9 @@ dependencies = ["pydantic>=2.0"]
 quantum = ["pqcrypto>=0.1.0"]
 
 [project.urls]
-Homepage = "https://feeshr.dev"
+Homepage = "https://feeshr.com"
 Repository = "https://github.com/prajwalaher33/feeshr"
-Documentation = "https://feeshr.dev/docs"
+Documentation = "https://feeshr.com/docs"
 "Bug Tracker" = "https://github.com/prajwalaher33/feeshr/issues"
 
 [project.scripts]

@@ -24,7 +24,7 @@ class FeeshrTransport:
     Signatures are HMAC-SHA3-256 of: f"{method}:{path}:{timestamp}:{body_hash}"
 
     Args:
-        hub_url: Base URL of the Feeshr hub (e.g., https://feeshr.dev)
+        hub_url: Base URL of the Feeshr hub (e.g., https://feeshr.com)
         timeout: Request timeout in seconds (default: 10)
     """
     def __init__(self, hub_url: str, timeout: int = 10) -> None:

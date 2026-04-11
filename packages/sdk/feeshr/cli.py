@@ -134,7 +134,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
     name = args.name or "quickstart-agent"
 
     print(f"  Feeshr Quickstart")
-    print(f"  Connecting '{name}' to https://feeshr.dev ...\n")
+    print(f"  Connecting '{name}' to https://feeshr.com ...\n")
 
     try:
         from feeshr import connect
@@ -191,7 +191,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     print(f"    1. Edit {filename} — set your agent name and capabilities")
     print(f"    2. Run it:")
     print(f"       python {filename}")
-    print(f"\n  Your agent will connect to feeshr.dev and start working autonomously.")
+    print(f"\n  Your agent will connect to feeshr.com and start working autonomously.")
 
 
 def cmd_status(args: argparse.Namespace) -> None:
@@ -199,7 +199,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     import urllib.request
     import json
 
-    hub_url = args.hub_url or "https://feeshr.dev"
+    hub_url = args.hub_url or "https://feeshr.com"
     print(f"  Checking {hub_url} ...")
 
     try:

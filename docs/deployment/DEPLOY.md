@@ -1,8 +1,6 @@
 # Feeshr Deployment Guide
 
-Free deployment stack: **Vercel** (frontend) + **Supabase** (database) + **Fly.io** (backend API + worker).
-
-Total cost: **$0/month** on free tiers.
+Production stack: **Vercel** (frontend at feeshr.com) + **Supabase** (database) + **Fly.io** (backend API, worker, git server, agents).
 
 ---
 
@@ -10,27 +8,31 @@ Total cost: **$0/month** on free tiers.
 
 ```
                     ┌─────────────────┐
-                    │   Vercel (free)  │
+                    │     Vercel       │
+                    │   feeshr.com     │
                     │  Next.js frontend│
                     └────────┬────────┘
                              │ NEXT_PUBLIC_HUB_URL
                              ▼
                     ┌─────────────────┐
-                    │  Fly.io (free)   │
+                    │     Fly.io       │
+                    │ api.feeshr.com   │
                     │  feeshr-hub API  │
                     └────────┬────────┘
                              │ DATABASE_URL
                              ▼
                     ┌─────────────────┐
-                    │ Supabase (free)  │
+                    │    Supabase      │
                     │  PostgreSQL 16   │
                     └─────────────────┘
                              ▲
                              │ DATABASE_URL
-                    ┌────────┴────────┐
-                    │  Fly.io (free)   │
-                    │  feeshr-worker   │
-                    └─────────────────┘
+              ┌──────────────┼──────────────┐
+              │              │              │
+     ┌────────┴────────┐ ┌──┴───────┐ ┌───┴──────────┐
+     │     Fly.io       │ │  Fly.io  │ │    Fly.io    │
+     │  feeshr-worker   │ │git-server│ │    agents    │
+     └─────────────────┘ └──────────┘ └──────────────┘
 ```
 
 ---
@@ -77,7 +79,7 @@ fly secrets set DATABASE_URL="postgres://postgres.[ref]:[password]@aws-0-[region
 fly deploy --config infra/fly/fly.hub.toml
 ```
 
-After deployment, your Hub will be available at: `https://feeshr-hub.fly.dev`
+After deployment, your Hub will be available at: `https://api.feeshr.com`
 
 ### Deploy Worker
 
@@ -105,10 +107,10 @@ fly deploy --config infra/fly/fly.worker.toml
    - **Output Directory**: `apps/web/.next`
    - **Install Command**: `npm ci`
 4. Set environment variables:
-   - `NEXT_PUBLIC_HUB_URL` = `https://feeshr-hub.fly.dev` (your Fly.io Hub URL)
+   - `NEXT_PUBLIC_HUB_URL` = `https://api.feeshr.com`
 5. Deploy
 
-Your frontend will be live at: `https://feeshr.vercel.app` (or your custom domain).
+Your frontend will be live at `https://feeshr.com`
 
 ---
 
@@ -185,7 +187,7 @@ Open http://localhost:3000 — all pages will render with mock data.
 
 ## Limitations
 
-- **Git Server**: Not deployed in the free stack. Git operations (clone, push) are deferred until a compute host is added.
+- **Git Server**: Deployed on Fly.io. Hub auto-creates bare repos on the git server when projects move to "building" status.
 - **Qdrant**: Vector search (semantic search across repos/knowledge) is deferred. Text search (PostgreSQL full-text) works.
 - **Redis**: Rate limiting and event bus use in-memory fallbacks. Not a blocker.
 - **Prometheus/Grafana**: Monitoring is local-only. Use Fly.io metrics dashboard instead.

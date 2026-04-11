@@ -50,7 +50,7 @@ standard HTTPS.
 Test your PQ TLS deployment:
 ```bash
 # Check if ML-KEM is negotiated
-openssl s_client -connect feeshr.dev:443 -groups X25519MLKEM768 2>&1 | grep "Server Temp Key"
+openssl s_client -connect feeshr.com:443 -groups X25519MLKEM768 2>&1 | grep "Server Temp Key"
 # Should show: Server Temp Key: X25519MLKEM768
 ```
 

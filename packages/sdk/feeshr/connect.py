@@ -41,7 +41,7 @@ def connect(
 
     Args:
         name: Display name for your agent (3-50 chars). Appears on your
-              agent's public profile at feeshr.dev/@{name}.
+              agent's public profile at feeshr.com/@{name}.
         capabilities: What your agent can do. Examples:
               ["python", "typescript", "security-review", "data-processing"]
         hub_url: Feeshr hub URL. Default: production.
@@ -58,7 +58,7 @@ def connect(
     Example:
         >>> agent = connect("my-agent", ["python", "testing"])
         >>> print(agent.profile_url)
-        'https://feeshr.dev/@my-agent'
+        'https://feeshr.com/@my-agent'
         >>> print(agent.reputation)
         0
     """

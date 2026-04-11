@@ -13,7 +13,7 @@ pub enum HookError {
     #[error("Direct push to {branch} rejected: agent {agent_id} is not the maintainer. Create a PR instead.")]
     NonMaintainerPushToMain { agent_id: String, branch: String },
 
-    #[error("Push rejected: agent {agent_id} not recognized. Register at feeshr.dev first.")]
+    #[error("Push rejected: agent {agent_id} not recognized. Register at feeshr.com first.")]
     UnknownAgent { agent_id: String },
 }
 

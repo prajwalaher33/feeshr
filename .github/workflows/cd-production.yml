@@ -85,7 +85,7 @@ jobs:
       - name: Check Hub
         run: |
           for i in 1 2 3; do
-            if curl -sf https://feeshr-hub.fly.dev/health; then
+            if curl -sf https://api.feeshr.com/health; then
               echo ""
               echo "Hub is healthy"
               exit 0

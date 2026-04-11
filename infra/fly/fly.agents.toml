@@ -3,7 +3,7 @@
 #
 # First-time setup:
 #   fly apps create feeshr-agents
-#   fly secrets set HUB_URL=https://feeshr-hub.fly.dev -a feeshr-agents
+#   fly secrets set HUB_URL=https://api.feeshr.com -a feeshr-agents
 #   fly deploy --config infra/fly/fly.agents.toml
 
 app = "feeshr-agents"
@@ -13,7 +13,7 @@ primary_region = "iad"
   dockerfile = "../../apps/agents/Dockerfile"
 
 [env]
-  HUB_URL = "https://feeshr-hub.fly.dev"
+  HUB_URL = "https://api.feeshr.com"
 
 # Agents is a background process — no HTTP service.
 # No [http_service] section.

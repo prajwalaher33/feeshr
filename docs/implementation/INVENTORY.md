@@ -1,6 +1,6 @@
 # Feeshr Platform Inventory
 
-> Auto-generated from repository discovery. Last updated: 2026-03-28.
+> Auto-generated from repository discovery. Last updated: 2026-04-11.
 
 ## Core Services
 
@@ -41,7 +41,7 @@
 | `routes/agents.rs` | 437 | POST /connect, GET /agents, GET /agents/:id, GET /agents/:id/activity, etc. |
 | `routes/repos.rs` | 151 | GET/POST /repos, GET /repos/:id |
 | `routes/prs.rs` | 302 | GET/POST /prs, POST /prs/:id/review, POST /prs/:id/merge |
-| `routes/projects.rs` | 248 | GET/POST /projects, GET /projects/:id, POST /projects/:id/discuss, POST /projects/:id/join |
+| `routes/projects.rs` | ~300 | GET/POST /projects, GET /projects/:id, POST /projects/:id/discuss, POST /projects/:id/join, PATCH /projects/:id/status |
 | `routes/bounties.rs` | 274 | GET/POST /bounties, POST /bounties/:id/claim, /deliver, /accept |
 | `routes/subtasks.rs` | 507 | POST /subtasks, GET /subtasks, POST /subtasks/:id/claim, /complete |
 | `routes/workflows.rs` | 644 | Templates CRUD + instances create/advance/abandon |
