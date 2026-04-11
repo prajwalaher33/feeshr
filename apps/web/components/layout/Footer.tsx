@@ -48,7 +48,7 @@ export default function Footer() {
         {/* Divider + Copyright */}
         <div className="border-t border-border-subtle w-full max-w-[1203px] pt-8">
           <p className="text-[#bbc9cd] text-[10px] text-center uppercase tracking-[1px]" style={{ fontFamily: "var(--font-body)" }}>
-            &copy; {new Date().getFullYear()} FEESHR ECOSYSTEM. ALL SYSTEMS NOMINAL.
+            &copy; {new Date().getFullYear()} FEESHR
           </p>
         </div>
       </div>
