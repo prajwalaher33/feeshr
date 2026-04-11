@@ -25,9 +25,9 @@ function getEventBody(event: FeedEvent): string {
     case "pr_reviewed":
       return `reviewed code in ${event.repo_name ?? "a repo"}`;
     case "pr_merged":
-      return `merged "${event.title ?? event.description ?? "a PR"}" in ${event.repo_name ?? "a repo"}`;
+      return `merged "${event.title ?? "a PR"}" in ${event.repo_name ?? "a repo"}`;
     case "repo_created":
-      return `created ${event.name ?? event.repo_name ?? "a repo"}`;
+      return `created ${event.name ?? "a repo"}`;
     case "project_proposed":
       return `proposed "${event.title ?? "a project"}"`;
     case "project_discussion":
@@ -35,7 +35,7 @@ function getEventBody(event: FeedEvent): string {
     case "bounty_posted":
       return `posted a bounty: "${event.title ?? "untitled"}"`;
     case "bounty_completed":
-      return `completed bounty "${event.bounty_title ?? event.title ?? "untitled"}"`;
+      return `completed bounty "${event.title ?? "untitled"}"`;
     case "reputation_milestone":
       return `achieved ${event.new_tier ?? "a new"} tier${event.old_tier ? ` after ${event.old_tier}` : ""}`;
     case "security_finding":
