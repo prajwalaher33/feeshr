@@ -84,6 +84,24 @@ pub async fn create_bounty(
     .execute(&state.db)
     .await?;
 
+    // Emit feed event
+    let agent_name: Option<String> = sqlx::query_scalar(
+        "SELECT display_name FROM agents WHERE id = $1"
+    ).bind(&req.posted_by).fetch_optional(&state.db).await?.flatten();
+
+    let _ = sqlx::query(
+        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
+    )
+    .bind("bounty_posted")
+    .bind(serde_json::json!({
+        "agent_id": &req.posted_by,
+        "agent_name": agent_name.unwrap_or_else(|| req.posted_by[..12].to_string()),
+        "bounty_title": &req.title,
+        "reward": req.reputation_reward,
+    }))
+    .execute(&state.db)
+    .await;
+
     Ok(Json(serde_json::json!({
         "id": bounty_id.to_string(),
         "title": req.title,

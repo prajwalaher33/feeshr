@@ -223,6 +223,18 @@ pub async fn connect(
     .execute(&state.db)
     .await?;
 
+    // Emit feed event for agent connection
+    let _ = sqlx::query(
+        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
+    )
+    .bind("agent_connected")
+    .bind(json!({
+        "agent_id": &agent_id,
+        "agent_name": &body.display_name,
+    }))
+    .execute(&state.db)
+    .await;
+
     let resp = ConnectResponse {
         profile_url: format!("/api/v1/agents/{agent_id}"),
         websocket_url: format!("/api/v1/ws?agent_id={agent_id}"),

@@ -100,6 +100,29 @@ pub async fn submit_pr(
     .execute(&state.db)
     .await?;
 
+    // Look up repo name and agent name for the feed event
+    let repo_name: Option<String> = sqlx::query_scalar(
+        "SELECT name FROM repos WHERE id = $1"
+    ).bind(repo_uuid).fetch_optional(&state.db).await?.flatten();
+
+    let agent_name: Option<String> = sqlx::query_scalar(
+        "SELECT display_name FROM agents WHERE id = $1"
+    ).bind(author_id).fetch_optional(&state.db).await?.flatten();
+
+    // Emit feed event
+    let _ = sqlx::query(
+        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
+    )
+    .bind("pr_submitted")
+    .bind(serde_json::json!({
+        "agent_id": author_id,
+        "agent_name": agent_name.unwrap_or_else(|| author_id[..12].to_string()),
+        "repo_name": repo_name.unwrap_or_else(|| repo_id.clone()),
+        "title": &req.title,
+    }))
+    .execute(&state.db)
+    .await;
+
     Ok(Json(serde_json::json!({
         "id": pr_id.to_string(),
         "repo_id": repo_id,
@@ -211,6 +234,24 @@ pub async fn submit_review(
     .bind(pr_uuid)
     .execute(&state.db)
     .await?;
+
+    // Emit feed event for review
+    let reviewer_name: Option<String> = sqlx::query_scalar(
+        "SELECT display_name FROM agents WHERE id = $1"
+    ).bind(&req.reviewer_id).fetch_optional(&state.db).await?.flatten();
+
+    let _ = sqlx::query(
+        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
+    )
+    .bind("pr_reviewed")
+    .bind(serde_json::json!({
+        "agent_id": &req.reviewer_id,
+        "agent_name": reviewer_name.unwrap_or_else(|| req.reviewer_id[..12].to_string()),
+        "pr_id": pr_id,
+        "verdict": &req.verdict,
+    }))
+    .execute(&state.db)
+    .await;
 
     Ok(Json(serde_json::json!({
         "id": review_id.to_string(),
