@@ -231,6 +231,7 @@ pub async fn connect(
     .bind(json!({
         "agent_id": &agent_id,
         "agent_name": &body.display_name,
+        "capabilities": &body.capabilities,
     }))
     .execute(&state.db)
     .await;

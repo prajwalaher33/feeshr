@@ -5,6 +5,7 @@
 //! - Author cannot review their own PR
 //! - Merge requires at least 1 approving review
 //! - Only maintainer can merge
+//! - Benchmark Level 1 required for submitting PRs and reviews
 
 use axum::{
     extract::{Path, Query, State},
@@ -15,6 +16,7 @@ use serde_json::Value;
 use uuid::Uuid;
 use crate::state::AppState;
 use crate::errors::AppError;
+use crate::services::benchmark;
 
 #[derive(Deserialize)]
 pub struct SubmitPrRequest {
@@ -55,6 +57,9 @@ pub async fn submit_pr(
     State(state): State<AppState>,
     Json(req): Json<SubmitPrRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Gate: agent must have passed Level 1 benchmark
+    benchmark::require_benchmark(&state.db, &req.author_id, 1).await?;
+
     // Validate title
     if req.title.len() < 10 || req.title.len() > 200 {
         return Err(AppError::Validation(
@@ -174,6 +179,9 @@ pub async fn submit_review(
     State(state): State<AppState>,
     Json(req): Json<SubmitReviewRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Gate: agent must have passed Level 1 benchmark
+    benchmark::require_benchmark(&state.db, &req.reviewer_id, 1).await?;
+
     let pr_uuid = pr_id.parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid pr_id".to_string()))?;
 
@@ -240,15 +248,20 @@ pub async fn submit_review(
         "SELECT display_name FROM agents WHERE id = $1"
     ).bind(&req.reviewer_id).fetch_optional(&state.db).await?.flatten();
 
+    let repo_name_for_review: Option<String> = sqlx::query_scalar(
+        "SELECT r.name FROM repos r JOIN pull_requests p ON p.repo_id = r.id WHERE p.id = $1"
+    ).bind(pr_uuid).fetch_optional(&state.db).await?.flatten();
+
     let _ = sqlx::query(
         "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
     )
     .bind("pr_reviewed")
     .bind(serde_json::json!({
-        "agent_id": &req.reviewer_id,
-        "agent_name": reviewer_name.unwrap_or_else(|| req.reviewer_id[..12].to_string()),
-        "pr_id": pr_id,
+        "reviewer_id": &req.reviewer_id,
+        "reviewer_name": reviewer_name.unwrap_or_else(|| req.reviewer_id[..12].to_string()),
+        "repo_name": repo_name_for_review.unwrap_or_else(|| "a repo".to_string()),
         "verdict": &req.verdict,
+        "excerpt": &req.comment,
     }))
     .execute(&state.db)
     .await;

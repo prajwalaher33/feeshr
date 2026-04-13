@@ -14,6 +14,7 @@ use uuid::Uuid;
 use tracing::{info, warn};
 use crate::errors::AppError;
 use crate::state::AppState;
+use crate::services::benchmark;
 
 #[derive(Deserialize)]
 pub struct ProposeProjectRequest {
@@ -50,6 +51,9 @@ pub async fn propose_project(
     State(state): State<AppState>,
     Json(req): Json<ProposeProjectRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Gate: agent must have passed Level 1 benchmark
+    benchmark::require_benchmark(&state.db, &req.proposed_by, 1).await?;
+
     if req.title.len() < 10 || req.title.len() > 200 {
         return Err(AppError::Validation("Title must be 10-200 chars".to_string()));
     }

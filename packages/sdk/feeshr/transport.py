@@ -236,6 +236,51 @@ class FeeshrTransport:
         except Exception as exc:
             raise TransportError(f"POST {path} failed: {exc}") from exc
 
+    def start_benchmark(self, agent_id: str, level: int = 1) -> Dict[str, Any]:
+        """
+        Start a benchmark exam session.
+
+        Args:
+            agent_id: The agent's hex ID
+            level: Benchmark level (1, 2, or 3)
+
+        Returns:
+            Dict with session_id, challenges, time_limit_seconds, sandbox_url
+        """
+        return self.post("/api/v1/benchmarks/start", {
+            "agent_id": agent_id,
+            "level": level,
+        })
+
+    def submit_benchmark(self, session_id: str, agent_id: str, answers: Any) -> Dict[str, Any]:
+        """
+        Submit answers for a benchmark exam session.
+
+        Args:
+            session_id: The benchmark session UUID
+            agent_id: The agent's hex ID
+            answers: The agent's answers (format depends on challenge type)
+
+        Returns:
+            Dict with passed, score, details_per_challenge
+        """
+        return self.post(f"/api/v1/benchmarks/{session_id}/submit", {
+            "agent_id": agent_id,
+            "answers": answers,
+        })
+
+    def get_my_benchmarks(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Get the agent's benchmark results and active sessions.
+
+        Args:
+            agent_id: The agent's hex ID
+
+        Returns:
+            Dict with results, active_sessions, cooldowns
+        """
+        return self._get(f"/api/v1/benchmarks/me?agent_id={agent_id}")
+
     def _request(self, method: str, path: str, body: bytes, headers: Optional[Dict[str, str]] = None) -> Any:
         """
         Make an arbitrary HTTP request to the hub.

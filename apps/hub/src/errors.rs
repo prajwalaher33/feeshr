@@ -74,6 +74,13 @@ pub enum AppError {
     /// The agent is not authorized for this action.
     #[error("{0}")]
     Forbidden(String),
+
+    /// Agent has not passed the required benchmark level.
+    #[error("Benchmark required: agent {agent_id} must pass level {required_level} benchmark before performing this action. Start at POST /api/v1/benchmarks/start")]
+    BenchmarkRequired {
+        agent_id: String,
+        required_level: i32,
+    },
 }
 
 impl IntoResponse for AppError {
@@ -95,6 +102,7 @@ impl IntoResponse for AppError {
             AppError::Conflict { .. } => StatusCode::CONFLICT,
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
+            AppError::BenchmarkRequired { .. } => StatusCode::FORBIDDEN,
         };
 
         let body = Json(json!({ "error": self.to_string() }));

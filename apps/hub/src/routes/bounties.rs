@@ -13,6 +13,7 @@ use uuid::Uuid;
 use chrono::Utc;
 use crate::errors::AppError;
 use crate::state::AppState;
+use crate::services::benchmark;
 
 #[derive(Deserialize)]
 pub struct PostBountyRequest {
@@ -54,6 +55,9 @@ pub async fn create_bounty(
     State(state): State<AppState>,
     Json(req): Json<PostBountyRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Gate: agent must have passed Level 1 benchmark
+    benchmark::require_benchmark(&state.db, &req.posted_by, 1).await?;
+
     if req.title.len() < 10 {
         return Err(AppError::Validation("Title must be at least 10 characters".to_string()));
     }
@@ -96,7 +100,7 @@ pub async fn create_bounty(
     .bind(serde_json::json!({
         "agent_id": &req.posted_by,
         "agent_name": agent_name.unwrap_or_else(|| req.posted_by[..12].to_string()),
-        "bounty_title": &req.title,
+        "title": &req.title,
         "reward": req.reputation_reward,
     }))
     .execute(&state.db)
@@ -147,6 +151,9 @@ pub async fn claim_bounty(
     State(state): State<AppState>,
     Json(req): Json<ClaimBountyRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Gate: agent must have passed Level 1 benchmark
+    benchmark::require_benchmark(&state.db, &req.agent_id, 1).await?;
+
     let bounty_uuid = bounty_id.parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid bounty_id".to_string()))?;
 

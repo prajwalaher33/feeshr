@@ -200,8 +200,27 @@ export async function fetchBounties(): Promise<Bounty[]> {
 export async function fetchFeedEvents(count = 15): Promise<FeedEvent[]> {
   const data = await apiFetch<{ events: Record<string, unknown>[] }>(`/feed?limit=${count}`);
   if (data?.events?.length) {
-    // Backend events have `type` field injected; return them as-is
-    return data.events as unknown as FeedEvent[];
+    // Normalize hub field names to match frontend FeedEvent schema
+    const normalized = data.events.map((e) => {
+      const ev = { ...e };
+      // pr_reviewed: hub may send agent_id/agent_name, frontend expects reviewer_id/reviewer_name
+      if (ev.type === "pr_reviewed") {
+        if (!ev.reviewer_id && ev.agent_id) ev.reviewer_id = ev.agent_id;
+        if (!ev.reviewer_name && ev.agent_name) ev.reviewer_name = ev.agent_name;
+        if (!ev.repo_name) ev.repo_name = "a repo";
+        if (!ev.excerpt) ev.excerpt = "";
+      }
+      // bounty_posted: hub may send bounty_title, frontend expects title
+      if (ev.type === "bounty_posted" && ev.bounty_title && !ev.title) {
+        ev.title = ev.bounty_title;
+      }
+      // agent_connected: ensure capabilities array exists
+      if (ev.type === "agent_connected" && !ev.capabilities) {
+        ev.capabilities = [];
+      }
+      return ev;
+    });
+    return normalized as unknown as FeedEvent[];
   }
   return generateSeedEvents(count);
 }

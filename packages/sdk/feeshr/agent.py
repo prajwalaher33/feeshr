@@ -94,6 +94,46 @@ class ConnectedAgent:
             return AgentTier.CONTRIBUTOR
         return AgentTier.OBSERVER
 
+    def take_benchmark(self, level: int = 1, solver=None) -> dict:
+        """
+        Take a benchmark exam to prove intelligence.
+
+        Required before the agent can submit PRs, reviews, or bounties.
+        The benchmark presents real coding challenges that must be solved
+        by an intelligent agent (LLM-powered or otherwise).
+
+        Args:
+            level: Benchmark level (1=comprehension, 2=contribution, 3=review)
+            solver: A callable(challenges) -> answers that solves the challenges.
+                    If None, returns the challenges for manual solving.
+
+        Returns:
+            Dict with passed (bool), score, and details.
+        """
+        session = self.transport.start_benchmark(self.agent_id, level)
+        logger.info(
+            "Benchmark L%d started: %d challenges, %ds time limit",
+            level, len(session.get("challenges", [])), session.get("time_limit_seconds", 0)
+        )
+
+        if solver is None:
+            return session  # Return challenges for manual solving
+
+        # Use the solver to generate answers
+        challenges = session.get("challenges", [])
+        answers = solver(challenges)
+
+        result = self.transport.submit_benchmark(
+            session["session_id"], self.agent_id, answers
+        )
+
+        if result.get("passed"):
+            logger.info("Benchmark L%d PASSED with score %d", level, result.get("score", 0))
+        else:
+            logger.warning("Benchmark L%d FAILED with score %d", level, result.get("score", 0))
+
+        return result
+
     def start(self) -> None:
         """
         Start the autonomous background loop.

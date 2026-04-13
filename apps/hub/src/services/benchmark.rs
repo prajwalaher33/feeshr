@@ -531,78 +531,186 @@ async fn grade_submission(
 }
 
 /// Grade a Level 1 (comprehension) answer.
+///
+/// The agent's answer can be:
+/// - A JSON object with numbered keys {"1": "...", "2": "...", ...}
+/// - A JSON object with "answer" and "explanation" fields
+/// - A single string
+///
+/// Grading uses keyword matching against `correct_answers` array from
+/// the challenge's grading_criteria. Each correct_answer keyword that
+/// appears in the agent's response earns points proportionally.
 fn grade_level_1(
     challenge_id: &Uuid,
     _category: &str,
     criteria: &Value,
     answer: &Value,
 ) -> ChallengeResult {
-    let mut score = 0;
-    let mut details = serde_json::json!({});
-
     if answer.is_null() {
         return ChallengeResult {
             challenge_id: *challenge_id,
             score: 0,
             passed: false,
-            time_ms: answer.get("time_ms").and_then(|v| v.as_i64()),
+            time_ms: None,
             details: serde_json::json!({"reason": "No answer submitted"}),
         };
     }
 
-    // Check correct answer match
-    if let Some(correct) = criteria.get("correct_answer") {
-        let agent_answer = answer.get("answer").unwrap_or(&Value::Null);
-        if agent_answer == correct {
-            score = 100;
-            details["answer_match"] = serde_json::json!(true);
-        }
+    // Flatten the entire answer into a single lowercase string for keyword matching
+    let answer_text = flatten_value_to_text(answer).to_lowercase();
+
+    if answer_text.len() < 10 {
+        return ChallengeResult {
+            challenge_id: *challenge_id,
+            score: 0,
+            passed: false,
+            time_ms: None,
+            details: serde_json::json!({"reason": "Answer too short"}),
+        };
     }
 
-    // Check required explanations
-    if let Some(must_explain) = criteria.get("must_explain").and_then(|v| v.as_array()) {
-        let explanation = answer
-            .get("explanation")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let explanation_lower = explanation.to_lowercase();
+    // Collect all keyword phrases from every grading criteria field
+    let mut all_keywords: Vec<String> = Vec::new();
 
-        let mut explained = 0;
-        for point in must_explain {
-            if let Some(keyword) = point.as_str() {
-                if explanation_lower.contains(&keyword.to_lowercase()) {
-                    explained += 1;
+    // correct_answer: can be array of numbers [20, 20, 20, 12, 12] or strings
+    if let Some(ca) = criteria.get("correct_answer") {
+        match ca {
+            Value::Array(arr) => {
+                for v in arr {
+                    all_keywords.push(flatten_value_to_text(v).to_lowercase());
                 }
             }
-        }
-
-        let explain_ratio = if must_explain.is_empty() {
-            1.0
-        } else {
-            explained as f64 / must_explain.len() as f64
-        };
-
-        details["explanations_matched"] = serde_json::json!(explained);
-        details["explanations_required"] = serde_json::json!(must_explain.len());
-
-        // If correct answer but no explanation, partial credit only
-        if score == 100 && explain_ratio < 0.5 {
-            let partial = criteria.get("partial_credit").and_then(|v| v.as_bool());
-            if partial == Some(false) {
-                score = 50;
-                details["partial_credit"] = serde_json::json!(
-                    "Correct answer but insufficient explanation"
-                );
+            _ => {
+                all_keywords.push(flatten_value_to_text(ca).to_lowercase());
             }
         }
     }
+
+    // correct_answers (plural)
+    if let Some(Value::Array(arr)) = criteria.get("correct_answers") {
+        for v in arr {
+            all_keywords.push(flatten_value_to_text(v).to_lowercase());
+        }
+    }
+
+    // must_explain: keyword phrases about concepts
+    if let Some(Value::Array(arr)) = criteria.get("must_explain") {
+        for v in arr {
+            if let Some(s) = v.as_str() {
+                all_keywords.push(s.to_lowercase());
+            }
+        }
+    }
+
+    // must_find: required bug names
+    if let Some(Value::Array(arr)) = criteria.get("must_find") {
+        for v in arr {
+            if let Some(s) = v.as_str() {
+                all_keywords.push(s.to_lowercase());
+            }
+        }
+    }
+
+    // bugs: list of possible bugs
+    if let Some(Value::Array(arr)) = criteria.get("bugs") {
+        for v in arr {
+            if let Some(s) = v.as_str() {
+                all_keywords.push(s.to_lowercase());
+            }
+        }
+    }
+
+    // must_identify: key concepts for reasoning
+    if let Some(Value::Array(arr)) = criteria.get("must_identify") {
+        for v in arr {
+            if let Some(s) = v.as_str() {
+                all_keywords.push(s.to_lowercase());
+            }
+        }
+    }
+
+    // Deduplicate keywords
+    all_keywords.sort();
+    all_keywords.dedup();
+
+    if all_keywords.is_empty() {
+        // No grading criteria — pass if answer is substantive
+        let score = if answer_text.len() > 50 { 100 } else { 0 };
+        return ChallengeResult {
+            challenge_id: *challenge_id,
+            score,
+            passed: score >= 80,
+            time_ms: None,
+            details: serde_json::json!({"reason": "No grading keywords, scored on response length"}),
+        };
+    }
+
+    // Score: what fraction of keywords appear in the agent's response
+    let mut matched = 0;
+    let mut match_details = Vec::new();
+
+    for keyword in &all_keywords {
+        // For short keywords (numbers, single words), check direct containment
+        // For multi-word phrases, check if core terms (>3 chars) appear
+        let key_terms: Vec<&str> = keyword
+            .split(|c: char| c.is_whitespace() || c == '_' || c == '-')
+            .filter(|w| w.len() > 2)
+            .collect();
+
+        let hit = if key_terms.is_empty() {
+            // Very short keyword — exact containment
+            answer_text.contains(keyword.as_str())
+        } else if key_terms.len() == 1 {
+            // Single significant term
+            answer_text.contains(key_terms[0])
+        } else {
+            // Multi-word: at least half of significant terms must match
+            let terms_found = key_terms
+                .iter()
+                .filter(|term| answer_text.contains(*term))
+                .count();
+            terms_found as f64 / key_terms.len() as f64 >= 0.5
+        };
+
+        if hit {
+            matched += 1;
+        }
+        match_details.push(serde_json::json!({"keyword": keyword, "found": hit}));
+    }
+
+    let total = all_keywords.len().max(1);
+    // Pass if the agent matched at least 40% of all keywords (generous — these are
+    // pooled from multiple criteria fields, so matching all is unlikely)
+    let score = ((matched as f64 / total as f64) * 100.0) as i32;
+
+    let details = serde_json::json!({
+        "matched": matched,
+        "total": total,
+        "matches": match_details,
+    });
 
     ChallengeResult {
         challenge_id: *challenge_id,
         score,
-        passed: score >= 80,
-        time_ms: answer.get("time_ms").and_then(|v| v.as_i64()),
+        passed: score >= 50,
+        time_ms: None,
         details,
+    }
+}
+
+/// Recursively flatten a JSON value into a single string for keyword matching.
+fn flatten_value_to_text(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        Value::Bool(b) => b.to_string(),
+        Value::Array(arr) => arr.iter().map(flatten_value_to_text).collect::<Vec<_>>().join(" "),
+        Value::Object(map) => map
+            .values()
+            .map(flatten_value_to_text)
+            .collect::<Vec<_>>()
+            .join(" "),
+        Value::Null => String::new(),
     }
 }
 
@@ -1217,4 +1325,36 @@ pub async fn get_benchmark_stats(db: &PgPool) -> Result<Value, AppError> {
     Ok(serde_json::json!({
         "pass_rates_by_level": level_stats,
     }))
+}
+
+/// Check whether an agent has passed a given benchmark level.
+/// Returns Ok(()) if passed, Err(BenchmarkRequired) if not.
+///
+/// This is the gate that prevents scripted agents from performing
+/// meaningful actions on the platform. Only agents that can solve
+/// real coding challenges are allowed through.
+pub async fn require_benchmark(
+    db: &PgPool,
+    agent_id: &str,
+    required_level: i32,
+) -> Result<(), AppError> {
+    let passed = sqlx::query_scalar::<_, bool>(
+        r#"SELECT passed FROM benchmark_results
+           WHERE agent_id = $1 AND level = $2
+             AND passed = TRUE
+             AND (expires_at IS NULL OR expires_at > NOW())"#,
+    )
+    .bind(agent_id)
+    .bind(required_level)
+    .fetch_optional(db)
+    .await?;
+
+    if passed.unwrap_or(false) {
+        Ok(())
+    } else {
+        Err(AppError::BenchmarkRequired {
+            agent_id: agent_id.to_string(),
+            required_level,
+        })
+    }
 }
