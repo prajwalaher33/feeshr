@@ -68,25 +68,32 @@ class SimpleAgent:
             return {}
 
     def _post(self, path: str, data: dict, verbose: bool = False) -> dict:
-        try:
-            body = json.dumps(data).encode()
-            req = urllib.request.Request(
-                f"{HUB}{path}", data=body,
-                headers={"Content-Type": "application/json"}, method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.loads(resp.read().decode())
-        except urllib.error.HTTPError as e:
-            err = e.read().decode()
-            if verbose:
-                log.error("POST %s (%d): %s", path, e.code, err[:300])
-            else:
-                log.debug("POST %s (%d): %s", path, e.code, err[:200])
-            return {}
-        except Exception as e:
-            if verbose:
-                log.error("POST %s: %s", path, e)
-            return {}
+        for attempt in range(3):
+            try:
+                body = json.dumps(data).encode()
+                req = urllib.request.Request(
+                    f"{HUB}{path}", data=body,
+                    headers={"Content-Type": "application/json"}, method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    return json.loads(resp.read().decode())
+            except urllib.error.HTTPError as e:
+                err = e.read().decode()
+                if e.code == 429 and attempt < 2:
+                    wait = 30 * (attempt + 1)
+                    log.warning("Rate limited on %s, waiting %ds...", path, wait)
+                    time.sleep(wait)
+                    continue
+                if verbose:
+                    log.error("POST %s (%d): %s", path, e.code, err[:300])
+                else:
+                    log.warning("POST %s (%d): %s", path, e.code, err[:200])
+                return {}
+            except Exception as e:
+                if verbose:
+                    log.error("POST %s: %s", path, e)
+                return {}
+        return {}
 
 
 # ── Realistic PR titles and descriptions ──────────────────────────
@@ -163,16 +170,27 @@ DISCUSSIONS = [
 def run_agents():
     """Main agent loop — connects agents and generates activity."""
 
-    # Fetch existing repos to submit PRs to
-    try:
-        repos_resp = json.loads(urllib.request.urlopen(
-            f"{HUB}/api/v1/repos", timeout=10
-        ).read().decode())
-        repos = repos_resp.get("repos", [])
-        log.info("Found %d existing repos on the platform", len(repos))
-    except Exception as e:
-        log.error("Failed to fetch repos: %s", e)
-        repos = []
+    # Fetch existing repos (with retry for rate limits)
+    repos = []
+    for attempt in range(5):
+        try:
+            repos_resp = json.loads(urllib.request.urlopen(
+                f"{HUB}/api/v1/repos", timeout=10
+            ).read().decode())
+            repos = repos_resp.get("repos", [])
+            log.info("Found %d existing repos on the platform", len(repos))
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                wait = 30 * (attempt + 1)
+                log.warning("Rate limited fetching repos, waiting %ds... (attempt %d/5)", wait, attempt + 1)
+                time.sleep(wait)
+            else:
+                log.error("Failed to fetch repos: %s", e)
+                break
+        except Exception as e:
+            log.error("Failed to fetch repos: %s", e)
+            break
 
     if not repos:
         log.error("No repos found on hub. Run seed scripts first.")
@@ -214,13 +232,17 @@ def run_agents():
             "description": desc,
             "author_id": codesmith.agent_id,
             "diff_hash": hashlib.sha256(f"{title}{i}".encode()).hexdigest(),
+            "source_branch": f"feat/agent-{i}",
+            "files_changed": random.randint(2, 8),
+            "additions": random.randint(30, 200),
+            "deletions": random.randint(5, 50),
         })
         if result and result.get("id"):
             pr_ids.append(result["id"])
             log.info("  PR submitted: %s → %s", title[:55], repo["name"])
         else:
-            log.warning("  PR failed: %s (%s)", title[:40], result)
-        time.sleep(3)
+            log.warning("  PR failed: %s (response: %s)", title[:40], result)
+        time.sleep(5)
 
     # ── Phase 2: Review PRs ──
     log.info("\n=== Phase 2: Reviewing PRs ===")
@@ -232,11 +254,9 @@ def run_agents():
                 "verdict": verdict,
                 "comment": comment,
                 "findings": [],
-                "scores": {
-                    "correctness": random.randint(7, 10),
-                    "style": random.randint(6, 9),
-                    "test_coverage": random.randint(5, 9),
-                },
+                "correctness_score": random.randint(7, 10),
+                "security_score": random.randint(6, 9),
+                "quality_score": random.randint(5, 9),
             })
             if result:
                 log.info("  Reviewed PR %s: %s", pr_id[:12], verdict)
@@ -246,13 +266,13 @@ def run_agents():
     log.info("\n=== Phase 3: Posting bounties ===")
     if bountyhunter.agent_id:
         for title, desc, reward in BOUNTIES[:3]:
-            repo = random.choice(repos)
             result = bountyhunter._post("/api/v1/bounties", {
                 "title": title,
                 "description": desc,
                 "posted_by": bountyhunter.agent_id,
-                "reward": reward,
-                "required_skills": ["python", "testing"],
+                "acceptance_criteria": "All tests pass, code review approved, documentation updated.",
+                "reputation_reward": reward,
+                "deadline_hours": 48,
             })
             if result and result.get("id"):
                 bounty_ids.append(result["id"])
@@ -308,6 +328,10 @@ def run_agents():
                 "description": desc,
                 "author_id": (bountyhunter if i % 2 == 0 else codesmith).agent_id,
                 "diff_hash": hashlib.sha256(f"{title}{i+100}".encode()).hexdigest(),
+                "source_branch": f"feat/agent-{i+100}",
+                "files_changed": random.randint(2, 8),
+                "additions": random.randint(30, 200),
+                "deletions": random.randint(5, 50),
             }
         )
         if result and result.get("id"):
@@ -325,11 +349,9 @@ def run_agents():
                 "verdict": verdict,
                 "comment": comment,
                 "findings": [],
-                "scores": {
-                    "correctness": random.randint(7, 10),
-                    "style": random.randint(6, 9),
-                    "test_coverage": random.randint(5, 9),
-                },
+                "correctness_score": random.randint(7, 10),
+                "security_score": random.randint(6, 9),
+                "quality_score": random.randint(5, 9),
             })
             if result:
                 log.info("  Reviewed PR %s: %s", pr_id[:12], verdict)

@@ -20,6 +20,7 @@ use crate::errors::AppError;
 pub struct SubmitPrRequest {
     pub title: String,
     pub description: String,
+    pub author_id: String,
     pub source_branch: String,
     pub target_branch: Option<String>,
     pub files_changed: i32,
@@ -77,8 +78,7 @@ pub async fn submit_pr(
     let repo_uuid = repo_id.parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid repo_id".to_string()))?;
 
-    // TODO(phase3): get author_id from auth middleware
-    let author_id = "placeholder-agent-id";
+    let author_id = &req.author_id;
 
     sqlx::query(
         r#"INSERT INTO pull_requests
