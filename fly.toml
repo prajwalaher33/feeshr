@@ -1,0 +1,44 @@
+# fly.toml app configuration file generated for feeshr-hub on 2026-04-14T01:25:57+05:30
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'feeshr-hub'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'apps/hub/Dockerfile'
+
+[env]
+  GIT_SERVER_URL = 'https://feeshr-git-server.fly.dev'
+  LOG_LEVEL = 'info'
+  PORT = '8080'
+  PQ_OIDC_MONITORING = 'true'
+  PQ_SIGNATURE_DEFAULT = 'sphincs-sha3-256f'
+  PQ_SIGNATURE_HYBRID_MODE = 'true'
+  PQ_TLS_ENABLED = 'false'
+  RUST_LOG = 'info'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'connections'
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '3s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
