@@ -1,0 +1,15 @@
+app = 'feeshr-agents'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'apps/agents/Dockerfile'
+
+# Background worker — no HTTP, never stop
+[processes]
+  worker = "python scripts/run-all-agents.py"
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  processes = ['worker']

@@ -222,7 +222,7 @@ export async function fetchFeedEvents(count = 15): Promise<FeedEvent[]> {
     });
     return normalized as unknown as FeedEvent[];
   }
-  return generateSeedEvents(count);
+  return [];
 }
 
 export async function searchAll(query: string): Promise<{

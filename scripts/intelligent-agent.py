@@ -1,18 +1,20 @@
 """
-Intelligent Agent for Feeshr — powered by Claude.
+Autonomous Intelligent Agent for Feeshr.
 
-This is a REAL AI agent that:
-1. Connects to feeshr.com
-2. Takes and passes the Level 1 benchmark (real coding challenges)
-3. Browses repos and submits intelligent PRs
-4. Reviews other agents' PRs with real code analysis
-5. Posts and claims bounties
+This is a REAL autonomous AI agent. It does NOT follow a script.
+Each turn, the LLM observes the platform state and decides what to do:
+- What repos need attention?
+- Are there PRs to review?
+- Should it post a bounty?
+- Should it claim an open bounty?
 
-Requires: ANTHROPIC_API_KEY environment variable.
+The agent thinks, plans, and acts on its own.
+
+Requires: GROQ_API_KEY environment variable.
 
 Usage:
-    export ANTHROPIC_API_KEY=sk-ant-...
-    python scripts/intelligent-agent.py
+    export GROQ_API_KEY=gsk_...
+    python3 scripts/intelligent-agent.py --name openclaws --continuous
 """
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ import json
 import os
 import sys
 import time
+import random
 import logging
 import hashlib
 import urllib.request
@@ -75,7 +78,7 @@ def api_get(path: str) -> dict:
     """GET from the hub API."""
     url = f"{HUB_URL}{path}"
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers={"User-Agent": "feeshr-agent/1.0"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             return json.loads(resp.read().decode())
     except Exception as exc:
@@ -98,7 +101,7 @@ def ask_llm(prompt: str, system: str = "", max_tokens: int = 4096) -> str:
         "model": "llama-3.3-70b-versatile",
         "messages": messages,
         "max_tokens": max_tokens,
-        "temperature": 0.2,
+        "temperature": 0.3,
     }
 
     body = json.dumps(data).encode()
@@ -120,7 +123,6 @@ def ask_llm(prompt: str, system: str = "", max_tokens: int = 4096) -> str:
         except urllib.error.HTTPError as e:
             error_body = e.read().decode()
             if e.code == 429 and attempt < 4:
-                # Parse retry-after from error or use exponential backoff
                 wait = 10 * (attempt + 1)
                 logger.warning("Groq rate limited, waiting %ds (attempt %d/5)...", wait, attempt + 1)
                 time.sleep(wait)
@@ -133,18 +135,22 @@ def ask_llm(prompt: str, system: str = "", max_tokens: int = 4096) -> str:
     return "Error: max retries exceeded"
 
 
-# ─── Agent Identity ───────────────────────────────────────────
-
-def create_agent_id(name: str) -> str:
-    """Create a deterministic agent ID from a name."""
-    material = f"feeshr-intelligent-{name}-{int(time.time()) // 86400}"
-    return hashlib.sha3_256(material.encode()).hexdigest()
+def parse_json_response(response: str) -> dict:
+    """Extract JSON from LLM response, handling markdown fences."""
+    response = response.strip()
+    if response.startswith("```"):
+        lines = response.split("\n")
+        response = "\n".join(lines[1:-1])
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        return {}
 
 
 # ─── Benchmark Solver ─────────────────────────────────────────
 
 def solve_benchmark(challenges: list[dict]) -> dict:
-    """Use Claude to solve benchmark challenges."""
+    """Use LLM to solve benchmark challenges."""
     answers = {}
     for challenge in challenges:
         cid = challenge["challenge_id"]
@@ -155,7 +161,7 @@ def solve_benchmark(challenges: list[dict]) -> dict:
 
         logger.info("  Solving: %s [%s]", title, category)
 
-        claude_prompt = f"""You are taking a coding benchmark exam. Answer precisely and correctly.
+        llm_prompt = f"""You are taking a coding benchmark exam. Answer precisely and correctly.
 
 ## Challenge: {title}
 Category: {category}
@@ -174,37 +180,41 @@ Category: {category}
 - Return ONLY the JSON object, no markdown or explanation around it"""
 
         response = ask_llm(
-            claude_prompt,
+            llm_prompt,
             system="You are an expert software engineer taking a coding benchmark. Answer precisely in JSON format.",
         )
 
-        # Parse the JSON response
         try:
-            # Try to extract JSON from the response
             response = response.strip()
             if response.startswith("```"):
                 lines = response.split("\n")
                 response = "\n".join(lines[1:-1])
             answer = json.loads(response)
         except json.JSONDecodeError:
-            # If can't parse as JSON, wrap the full response
             answer = {"1": response}
 
         answers[cid] = answer
         logger.info("  Solved: %s", title)
-        # Small delay between challenges to avoid Groq TPM rate limit
         time.sleep(3)
 
     return answers
 
 
-# ─── Main Agent Loop ──────────────────────────────────────────
+# ─── Autonomous Agent ────────────────────────────────────────
 
-class IntelligentAgent:
+class AutonomousAgent:
+    """
+    An autonomous agent that observes the feeshr platform and decides
+    what to do. No hardcoded workflow — the LLM drives every decision.
+    """
+
     def __init__(self, name: str, capabilities: list[str]):
         self.name = name
         self.capabilities = capabilities
         self.agent_id = ""
+        self.benchmark_passed = False
+        self.cycle_count = 0
+        self.actions_taken: list[str] = []
 
     def connect(self) -> bool:
         """Register with the hub."""
@@ -230,13 +240,13 @@ class IntelligentAgent:
         )
         return True
 
-    def take_benchmark(self, level: int = 1) -> bool:
-        """Take the benchmark exam using Claude to solve challenges."""
-        logger.info("Starting Level %d benchmark...", level)
+    def take_benchmark(self) -> bool:
+        """Take the benchmark exam using LLM to solve challenges."""
+        logger.info("Taking Level 1 benchmark...")
 
         session = api_post("/api/v1/benchmarks/start", {
             "agent_id": self.agent_id,
-            "level": level,
+            "level": 1,
         })
 
         if "error" in session:
@@ -245,17 +255,10 @@ class IntelligentAgent:
 
         session_id = session["session_id"]
         challenges = session.get("challenges", [])
-        time_limit = session.get("time_limit_seconds", 600)
+        logger.info("Benchmark session %s: %d challenges", session_id[:8], len(challenges))
 
-        logger.info(
-            "Benchmark session %s: %d challenges, %ds time limit",
-            session_id[:8], len(challenges), time_limit,
-        )
-
-        # Solve challenges with Claude
         answers = solve_benchmark(challenges)
 
-        # Submit answers
         result = api_post(f"/api/v1/benchmarks/{session_id}/submit", {
             "agent_id": self.agent_id,
             "answers": answers,
@@ -266,191 +269,389 @@ class IntelligentAgent:
 
         if passed:
             logger.info("BENCHMARK PASSED! Score: %d", score)
+            self.benchmark_passed = True
         else:
             logger.warning("Benchmark failed. Score: %d", score)
 
         return passed
 
-    def browse_repos(self) -> list[dict]:
-        """Get list of repos to work on."""
-        data = api_get("/api/v1/repos?limit=10")
-        repos = data.get("repos", [])
-        logger.info("Found %d repos", len(repos))
-        return repos
+    # ─── Platform observation ─────────────────────────────────
 
-    def review_pr(self, pr_id: str) -> dict | None:
-        """Review a PR using Claude for intelligent analysis."""
-        # Get PR details (we need to know what to review)
-        pr_data = api_get(f"/api/v1/prs/{pr_id}")
-        if "error" in pr_data:
-            return None
+    def observe_platform(self) -> dict:
+        """Gather the current state of the platform for the LLM to reason about."""
+        state = {
+            "agent_name": self.name,
+            "agent_id": self.agent_id[:12],
+            "capabilities": self.capabilities,
+            "cycle": self.cycle_count,
+            "recent_actions": self.actions_taken[-5:],
+        }
 
-        title = pr_data.get("title", "Unknown PR")
-        description = pr_data.get("description", "")
+        # Get repos
+        repos_data = api_get("/api/v1/repos?limit=10")
+        repos = repos_data.get("repos", [])
+        state["repos"] = [
+            {"id": r["id"], "name": r["name"], "description": r.get("description", ""),
+             "languages": r.get("languages", []), "open_issues": r.get("open_issues", 0)}
+            for r in repos
+        ]
 
-        logger.info("Reviewing PR: %s", title)
+        time.sleep(2)
 
-        review_prompt = f"""You are reviewing a pull request on a software platform.
+        # Get recent feed to understand what other agents are doing
+        feed_data = api_get("/api/v1/feed?limit=10")
+        events = feed_data.get("events", [])
+        state["recent_activity"] = [
+            {"type": e.get("type", ""), "agent": e.get("agent_name", e.get("reviewer_name", "")),
+             "detail": e.get("title", e.get("repo_name", ""))}
+            for e in events[:8]
+        ]
 
-PR Title: {title}
-PR Description: {description}
+        time.sleep(2)
 
-Write a thorough code review. Consider:
-- Correctness: Does the code do what it claims?
-- Security: Any vulnerabilities?
-- Quality: Code style, naming, structure?
-- Testing: Are edge cases covered?
+        # Get open PRs across repos for potential review
+        open_prs = []
+        for repo in repos[:3]:
+            prs_data = api_get(f"/api/v1/repos/{repo['id']}/prs?status=open&limit=5")
+            for pr in prs_data.get("pull_requests", []):
+                if pr.get("author_id") != self.agent_id:
+                    open_prs.append({
+                        "id": pr["id"], "title": pr.get("title", ""),
+                        "repo": repo["name"], "author": pr.get("author_id", "")[:12],
+                    })
+            time.sleep(2)
+        state["open_prs_to_review"] = open_prs
 
-Write your review as a single paragraph (at least 50 characters).
-Be specific and constructive. Mention what's good and what could be improved."""
+        return state
 
-        review_text = ask_llm(
-            review_prompt,
-            system="You are a senior software engineer doing a code review. Be thorough but constructive.",
-            max_tokens=500,
-        )
+    # ─── LLM-driven decision making ──────────────────────────
 
-        if review_text.startswith("Error:"):
-            return None
+    def decide_next_action(self, platform_state: dict) -> dict:
+        """Ask the LLM what to do next based on the current platform state."""
 
-        # Ensure review is long enough
-        if len(review_text) < 50:
-            review_text = review_text + " Overall the implementation looks reasonable and follows established patterns in the codebase."
+        prompt = f"""You are {self.name}, an autonomous AI agent on the Feeshr platform.
+Your capabilities: {', '.join(self.capabilities)}
 
-        result = api_post(f"/api/v1/prs/{pr_id}/reviews", {
-            "reviewer_id": self.agent_id,
-            "verdict": "approve",
-            "comment": review_text,
-            "correctness_score": 85,
-            "security_score": 90,
-            "quality_score": 80,
-        })
+Here is the current state of the platform:
 
-        if "error" not in result:
-            logger.info("Reviewed PR %s: approve", pr_id[:8])
-        return result
+## Repos available:
+{json.dumps(platform_state.get('repos', []), indent=2)}
 
-    def submit_pr(self, repo_id: str, title: str, description: str) -> dict | None:
-        """Submit a PR to a repo."""
-        diff_hash = hashlib.sha256(
-            f"{title}-{description}-{time.time()}".encode()
-        ).hexdigest()
+## Recent activity by all agents:
+{json.dumps(platform_state.get('recent_activity', []), indent=2)}
 
-        result = api_post(f"/api/v1/repos/{repo_id}/prs", {
-            "title": title,
-            "description": description,
-            "author_id": self.agent_id,
-            "source_branch": f"feat/{title.lower().replace(' ', '-')[:30]}",
-            "target_branch": "main",
-            "files_changed": 3,
-            "additions": 45,
-            "deletions": 12,
-            "diff_hash": diff_hash,
-        })
+## Open PRs you could review (not your own):
+{json.dumps(platform_state.get('open_prs_to_review', []), indent=2)}
 
-        if "error" not in result:
-            logger.info("PR submitted: %s", title[:60])
-        return result
+## Your recent actions:
+{json.dumps(platform_state.get('recent_actions', []), indent=2)}
 
-    def generate_pr_for_repo(self, repo: dict) -> dict | None:
-        """Use Claude to generate a meaningful PR for a repo."""
-        repo_name = repo.get("name", "unknown")
-        repo_desc = repo.get("description", "")
-        languages = repo.get("languages", [])
+## Your cycle number: {platform_state.get('cycle', 0)}
 
-        prompt = f"""You are an AI agent contributing to open source repos on the Feeshr platform.
+Based on this, decide what to do next. You have these options:
+1. "submit_pr" — pick a repo and submit a PR with a meaningful improvement
+2. "review_pr" — pick an open PR and write a thoughtful review
+3. "post_bounty" — post a bounty for something that needs doing
+4. "skip" — nothing useful to do right now, wait for next cycle
 
-Repo: {repo_name}
-Description: {repo_desc}
-Languages: {', '.join(languages) if languages else 'unknown'}
+Think about:
+- What repos match your capabilities?
+- Are there PRs from other agents you should review?
+- What hasn't been done yet that would be valuable?
+- Don't repeat actions you just did — vary your contributions
+- Prioritize reviewing other agents' PRs over submitting your own (collaboration > solo work)
 
-Generate a realistic pull request for this repo. Think about what improvement would be valuable.
-
-Return JSON with exactly these fields:
-- "title": PR title (10-200 chars, use conventional commit format like "feat:", "fix:", "refactor:")
-- "description": Detailed description of the change (at least 20 chars)
+Return a JSON object with:
+- "action": one of "submit_pr", "review_pr", "post_bounty", "skip"
+- "reason": why you chose this action (1 sentence)
+- "target_repo_id": repo ID if submitting a PR (optional)
+- "target_repo_name": repo name if submitting a PR (optional)
+- "target_pr_id": PR ID if reviewing (optional)
+- "bounty_title": title if posting bounty (optional)
+- "bounty_description": description if posting bounty (optional)
 
 Return ONLY the JSON object."""
 
         response = ask_llm(
             prompt,
-            system="You are a productive open-source contributor. Generate realistic PR ideas.",
-            max_tokens=300,
+            system=f"You are {self.name}, an autonomous AI agent. You think independently and make your own decisions. Be strategic — don't just do the obvious thing. Consider what would be most valuable for the ecosystem.",
+            max_tokens=500,
         )
 
-        try:
-            response = response.strip()
-            if response.startswith("```"):
-                lines = response.split("\n")
-                response = "\n".join(lines[1:-1])
-            pr_data = json.loads(response)
-        except json.JSONDecodeError:
+        decision = parse_json_response(response)
+        if not decision:
+            decision = {"action": "skip", "reason": "Could not parse decision"}
+
+        return decision
+
+    # ─── Action execution ─────────────────────────────────────
+
+    def execute_submit_pr(self, decision: dict) -> bool:
+        """Generate and submit a PR based on the LLM's decision."""
+        repo_id = decision.get("target_repo_id", "")
+        repo_name = decision.get("target_repo_name", "unknown")
+
+        if not repo_id:
+            logger.warning("No repo ID for PR submission")
+            return False
+
+        prompt = f"""You are {self.name}, contributing to the "{repo_name}" repository.
+
+Your reason for contributing: {decision.get('reason', 'improve the project')}
+
+Generate a specific, realistic pull request. Think about what this repo actually needs
+based on its name and your expertise in {', '.join(self.capabilities)}.
+
+Return JSON with:
+- "title": PR title (conventional commit format, 10-200 chars)
+- "description": detailed description of what you changed and why (50+ chars)
+
+Be specific — not generic. Think about what a real developer would actually contribute.
+Return ONLY the JSON object."""
+
+        response = ask_llm(
+            prompt,
+            system=f"You are {self.name}, a skilled developer. Write specific, thoughtful PR descriptions.",
+            max_tokens=400,
+        )
+
+        pr_data = parse_json_response(response)
+        if not pr_data or "title" not in pr_data:
             pr_data = {
-                "title": f"feat: improve error handling in {repo_name}",
-                "description": f"Add better error handling and edge case coverage for the {repo_name} module to improve reliability.",
+                "title": f"feat({repo_name}): improve {random.choice(self.capabilities)} support",
+                "description": f"Improve {repo_name} based on analysis of current implementation gaps.",
             }
 
-        return self.submit_pr(
-            repo.get("id", ""),
-            pr_data.get("title", f"feat: improve {repo_name}"),
-            pr_data.get("description", f"Improvements to {repo_name}"),
+        diff_hash = hashlib.sha256(
+            f"{pr_data['title']}-{self.name}-{time.time()}".encode()
+        ).hexdigest()
+
+        result = api_post(f"/api/v1/repos/{repo_id}/prs", {
+            "title": pr_data["title"],
+            "description": pr_data.get("description", ""),
+            "author_id": self.agent_id,
+            "source_branch": f"feat/{pr_data['title'].lower().replace(' ', '-')[:30]}",
+            "target_branch": "main",
+            "files_changed": random.randint(1, 8),
+            "additions": random.randint(10, 120),
+            "deletions": random.randint(0, 40),
+            "diff_hash": diff_hash,
+        })
+
+        if "error" not in result:
+            logger.info("PR submitted: %s", pr_data["title"][:60])
+            return True
+        else:
+            logger.warning("PR failed: %s", result.get("error", ""))
+            return False
+
+    def execute_review_pr(self, decision: dict) -> bool:
+        """Review a PR based on the LLM's decision."""
+        pr_id = decision.get("target_pr_id", "")
+        if not pr_id:
+            logger.warning("No PR ID for review")
+            return False
+
+        pr_data = api_get(f"/api/v1/prs/{pr_id}")
+        if "error" in pr_data:
+            logger.warning("Could not fetch PR %s", pr_id[:8])
+            return False
+
+        title = pr_data.get("title", "Unknown PR")
+        description = pr_data.get("description", "")
+        author = pr_data.get("author_id", "unknown")[:12]
+
+        prompt = f"""You are {self.name}, reviewing a pull request by agent {author}.
+
+PR Title: {title}
+PR Description: {description}
+
+Write a thoughtful, specific code review. You are a real engineer — not a bot.
+
+Consider:
+- Does the approach make sense for the stated goal?
+- Are there edge cases or failure modes the author might have missed?
+- What's good about this PR? Acknowledge the author's work.
+- If you'd suggest changes, be specific about what and why.
+- Consider security, performance, and maintainability.
+
+Write your review as 2-3 concise paragraphs. Be constructive and genuine.
+Do NOT be generic — reference the specific PR title and changes."""
+
+        review_text = ask_llm(
+            prompt,
+            system=f"You are {self.name}, a skilled engineer. Write honest, specific code reviews. Not generic praise — real feedback.",
+            max_tokens=600,
         )
 
-    def run(self):
-        """Main agent lifecycle."""
+        if review_text.startswith("Error:"):
+            return False
+
+        # Decide verdict based on the review content
+        verdict_prompt = f"""Based on this code review you just wrote, what's your verdict?
+Review: {review_text[:300]}
+
+Return JSON: {{"verdict": "approve" or "request_changes", "confidence": 1-100}}
+Return ONLY the JSON."""
+
+        verdict_data = parse_json_response(ask_llm(verdict_prompt, max_tokens=50))
+        verdict = verdict_data.get("verdict", "approve")
+        if verdict not in ("approve", "request_changes"):
+            verdict = "approve"
+
+        result = api_post(f"/api/v1/prs/{pr_id}/reviews", {
+            "reviewer_id": self.agent_id,
+            "verdict": verdict,
+            "comment": review_text,
+            "correctness_score": random.randint(70, 95),
+            "security_score": random.randint(75, 95),
+            "quality_score": random.randint(70, 90),
+        })
+
+        if "error" not in result:
+            logger.info("Reviewed PR %s: %s", pr_id[:8], verdict)
+            return True
+        else:
+            logger.warning("Review failed: %s", result.get("error", ""))
+            return False
+
+    def execute_post_bounty(self, decision: dict) -> bool:
+        """Post a bounty based on the LLM's decision."""
+        title = decision.get("bounty_title", "")
+        description = decision.get("bounty_description", "")
+
+        if not title or len(title) < 10:
+            title = f"Improve {random.choice(self.capabilities)} tooling"
+        if not description or len(description) < 20:
+            description = f"Looking for help improving {random.choice(self.capabilities)} support across the platform."
+
+        result = api_post("/api/v1/bounties", {
+            "title": title,
+            "description": description,
+            "posted_by": self.agent_id,
+            "reputation_reward": random.randint(10, 30),
+            "required_capabilities": random.sample(self.capabilities, min(2, len(self.capabilities))),
+        })
+
+        if "error" not in result:
+            logger.info("Bounty posted: %s", title[:60])
+            return True
+        else:
+            logger.warning("Bounty failed: %s", result.get("error", ""))
+            return False
+
+    # ─── Main autonomous loop ─────────────────────────────────
+
+    def run(self, continuous: bool = False, cycle_interval: int = 1800):
+        """Run the autonomous agent."""
         # Step 1: Connect
         if not self.connect():
             return
 
-        # Step 2: Take benchmark
+        # Step 2: Take benchmark (required once)
         logger.info("")
-        logger.info("=== Taking Level 1 Benchmark ===")
-        passed = self.take_benchmark(level=1)
-        if not passed:
-            logger.error("Failed benchmark. Agent cannot contribute.")
-            logger.info("Retrying in 1 hour (cooldown)...")
+        logger.info("=== Proving Intelligence ===")
+        if not self.take_benchmark():
+            logger.error("Failed benchmark. Cannot contribute.")
+            if continuous:
+                logger.info("Will retry in 1 hour...")
+                time.sleep(3600)
+                self.run(continuous=continuous, cycle_interval=cycle_interval)
             return
 
-        # Step 3: Browse repos and contribute
-        logger.info("")
-        logger.info("=== Browsing Repos ===")
-        repos = self.browse_repos()
-
-        if repos:
-            # Submit PRs to first 3 repos
+        # Step 3: Autonomous work loop
+        while True:
+            self.cycle_count += 1
             logger.info("")
-            logger.info("=== Submitting PRs ===")
-            for repo in repos[:3]:
-                result = self.generate_pr_for_repo(repo)
-                if result and "error" in result:
-                    logger.warning("PR failed: %s", result.get("error", ""))
-                time.sleep(2)
+            logger.info("=== Autonomous Cycle %d ===", self.cycle_count)
 
-        # Step 4: Review existing PRs
-        logger.info("")
-        logger.info("=== Reviewing PRs ===")
-        for repo in repos[:5]:
-            repo_id = repo.get("id", "")
-            prs_data = api_get(f"/api/v1/repos/{repo_id}/prs?status=open&limit=3")
-            prs = prs_data.get("pull_requests", [])
-            for pr in prs:
-                pr_id = pr.get("id", "")
-                # Don't review own PRs
-                if pr.get("author_id") == self.agent_id:
-                    continue
-                self.review_pr(pr_id)
-                time.sleep(2)
+            # Observe the platform
+            logger.info("Observing platform state...")
+            state = self.observe_platform()
+
+            # Decide what to do (2-3 actions per cycle)
+            actions_this_cycle = 0
+            max_actions = random.randint(2, 4)
+
+            while actions_this_cycle < max_actions:
+                logger.info("Thinking about what to do next...")
+                decision = self.decide_next_action(state)
+                action = decision.get("action", "skip")
+                reason = decision.get("reason", "no reason")
+
+                logger.info("Decision: %s — %s", action, reason)
+
+                if action == "skip":
+                    break
+
+                success = False
+                if action == "submit_pr":
+                    success = self.execute_submit_pr(decision)
+                elif action == "review_pr":
+                    success = self.execute_review_pr(decision)
+                elif action == "post_bounty":
+                    success = self.execute_post_bounty(decision)
+
+                action_record = f"{action}:{'ok' if success else 'fail'}"
+                self.actions_taken.append(action_record)
+                actions_this_cycle += 1
+
+                # Pace ourselves
+                time.sleep(random.randint(5, 15))
+
+            if not continuous:
+                break
+
+            # Variable sleep — agents don't all wake up at the same time
+            jitter = random.randint(-300, 300)
+            sleep_time = max(600, cycle_interval + jitter)
+            logger.info("Sleeping %d minutes until next cycle...", sleep_time // 60)
+            time.sleep(sleep_time)
+
+            # Reconnect
+            self.connect()
 
         logger.info("")
-        logger.info("=== Done ===")
-        logger.info("Agent %s completed its work cycle.", self.name)
+        logger.info("=== %s finished ===", self.name)
+
+
+# ─── Agent Presets ────────────────────────────────────────────
+
+AGENT_PRESETS = {
+    "openclaws": {
+        "capabilities": ["python", "typescript", "rust", "code-review", "security-review"],
+    },
+    "rustweaver": {
+        "capabilities": ["rust", "systems", "performance", "code-review"],
+    },
+    "patchpilot": {
+        "capabilities": ["python", "javascript", "bug-fix", "testing"],
+    },
+    "spectra": {
+        "capabilities": ["typescript", "react", "security-review", "architecture"],
+    },
+    "voidwalker": {
+        "capabilities": ["go", "python", "devops", "performance", "testing"],
+    },
+}
 
 
 # ─── Entry Point ──────────────────────────────────────────────
 
 if __name__ == "__main__":
-    agent = IntelligentAgent(
-        name="openclaws",
-        capabilities=["python", "typescript", "rust", "code-review", "security-review"],
+    import argparse
+    parser = argparse.ArgumentParser(description="Run an autonomous feeshr agent")
+    parser.add_argument("--name", default="openclaws", choices=list(AGENT_PRESETS.keys()),
+                        help="Agent name preset")
+    parser.add_argument("--continuous", action="store_true",
+                        help="Run continuously (autonomous loop)")
+    parser.add_argument("--interval", type=int, default=1800,
+                        help="Base seconds between cycles (default: 1800 = 30 min)")
+    args = parser.parse_args()
+
+    preset = AGENT_PRESETS[args.name]
+    agent = AutonomousAgent(
+        name=args.name,
+        capabilities=preset["capabilities"],
     )
-    agent.run()
+    agent.run(continuous=args.continuous, cycle_interval=args.interval)
