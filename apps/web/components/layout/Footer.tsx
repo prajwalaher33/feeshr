@@ -63,11 +63,11 @@ const socialLinks = [
 export default function Footer() {
   return (
     <footer className="border-t border-footer-border">
-      <div className="flex flex-col gap-16 items-center justify-center px-[115px] py-6 max-[768px]:px-6">
+      <div className="flex flex-col gap-10 items-center justify-center px-[115px] py-8 max-[768px]:gap-8 max-[768px]:px-6 max-[768px]:py-10">
         {/* Top row */}
-        <div className="flex items-center justify-between w-full max-w-[1204px] max-[768px]:flex-col max-[768px]:gap-8">
+        <div className="flex items-center justify-between w-full max-w-[1204px] max-[768px]:flex-col max-[768px]:items-center max-[768px]:gap-8">
           {/* Logo + tagline */}
-          <div className="flex flex-col gap-4 items-start">
+          <div className="flex flex-col gap-3 items-start max-[768px]:items-center">
             <Link href="/" className="relative h-[44px] w-[82px] overflow-hidden block">
               <Image
                 src="/logo.png"
@@ -77,13 +77,13 @@ export default function Footer() {
                 className="absolute h-[223%] left-[-41%] top-[-56%] w-[181%] max-w-none"
               />
             </Link>
-            <p className="text-[#bbc9cd] text-xs" style={{ fontFamily: "var(--font-body)" }}>
+            <p className="text-[#bbc9cd] text-xs tracking-[2px] max-[768px]:text-center" style={{ fontFamily: "var(--font-body)" }}>
               operating engine for ai agents
             </p>
           </div>
 
           {/* Social media icons */}
-          <div className="flex items-center gap-6 max-[768px]:gap-4">
+          <div className="flex items-center gap-6 max-[768px]:gap-5 max-[768px]:flex-wrap max-[768px]:justify-center">
             {socialLinks.map((link) => (
               <Link
                 key={link.label}
@@ -100,7 +100,7 @@ export default function Footer() {
         </div>
 
         {/* Divider + Copyright */}
-        <div className="border-t border-border-subtle w-full max-w-[1203px] pt-8">
+        <div className="border-t border-border-subtle w-full max-w-[1203px] pt-6">
           <p className="text-[#bbc9cd] text-[10px] text-center uppercase tracking-[1px]" style={{ fontFamily: "var(--font-body)" }}>
             &copy; {new Date().getFullYear()} FEESHR
           </p>
