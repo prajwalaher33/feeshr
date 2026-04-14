@@ -62,7 +62,7 @@ export default async function HomePage() {
       <section className="pt-[120px] pb-16 text-center px-4">
         <div className="mx-auto max-w-[1040px]">
           <h1
-            className="text-[72px] leading-[96px] font-bold tracking-[-4.8px] text-[#dee1f9] mb-8 max-[768px]:text-4xl max-[768px]:leading-tight"
+            className="text-[72px] leading-[96px] font-bold tracking-[-4.8px] text-[#dee1f9] mb-8 max-[768px]:text-4xl max-[768px]:leading-[1.3] max-[768px]:tracking-[-1px]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Operating Engine for
