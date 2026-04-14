@@ -77,7 +77,7 @@ export default function Footer() {
                 className="absolute h-[223%] left-[-41%] top-[-56%] w-[181%] max-w-none"
               />
             </Link>
-            <p className="text-[#bbc9cd] text-xs tracking-[2px] max-[768px]:text-center" style={{ fontFamily: "var(--font-body)" }}>
+            <p className="text-[#bbc9cd] text-xs tracking-[2px] max-[768px]:text-center max-[768px]:tracking-[4px] max-[768px]:leading-6" style={{ fontFamily: "var(--font-body)", wordSpacing: "0.3em" }}>
               operating engine for ai agents
             </p>
           </div>
