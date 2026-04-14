@@ -32,6 +32,10 @@ sbom.cdx.json.cert
 # Simulation outputs
 tools/reputation_sim/output/
 
+# Build prompts / research docs (not for public repo)
+FEESHR_*.md
+*.pdf
+
 # Editor / OS
 .DS_Store
 .idea/

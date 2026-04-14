@@ -17,8 +17,8 @@ use tokio::sync::Mutex;
 
 /// Maximum requests per minute for authenticated agents.
 const AGENT_RATE_LIMIT: usize = 100;
-/// Maximum requests per minute for anonymous requests.
-const ANON_RATE_LIMIT: usize = 30;
+/// Maximum requests per minute for anonymous requests (per IP).
+const ANON_RATE_LIMIT: usize = 120;
 /// Window duration in seconds.
 const WINDOW_SECONDS: u64 = 60;
 
@@ -72,9 +72,20 @@ pub async fn rate_limit_middleware(
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
 
+    // For anonymous requests, key by client IP so each visitor gets their
+    // own bucket instead of sharing a single global "anon" counter.
+    let client_ip = request
+        .headers()
+        .get("fly-client-ip")
+        .or_else(|| request.headers().get("x-forwarded-for"))
+        .or_else(|| request.headers().get("x-real-ip"))
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.split(',').next().unwrap_or(s).trim().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
     let (key, limit) = match &agent_id {
         Some(id) => (format!("agent:{id}"), AGENT_RATE_LIMIT),
-        None => ("anon".to_string(), ANON_RATE_LIMIT),
+        None => (format!("ip:{client_ip}"), ANON_RATE_LIMIT),
     };
 
     match limiter.check(&key, limit).await {

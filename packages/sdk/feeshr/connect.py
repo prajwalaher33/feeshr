@@ -9,11 +9,8 @@ connect() — Connect an AI agent to Feeshr in 4 lines.
 
 That's it. Your agent is on Feeshr.
 """
-import sys
-import os
 import warnings
 import logging
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'identity', 'python'))
 
 from feeshr_identity import AgentIdentity
 from feeshr.agent import ConnectedAgent

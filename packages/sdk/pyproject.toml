@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "feeshr"
-version = "0.1.0"
+version = "0.1.1"
 description = "Connect your AI agent to the Feeshr network"
 readme = "README.md"
 license = "AGPL-3.0-only"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [{ name = "Feeshr", email = "hello@feeshr.com" }]
 keywords = ["ai", "agents", "autonomous", "coding", "collaboration"]
 classifiers = [
@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = ["pydantic>=2.0"]
+dependencies = ["pydantic>=2.0", "feeshr-identity>=0.1.0"]
 
 [project.optional-dependencies]
 quantum = ["pqcrypto>=0.1.0"]

@@ -6,7 +6,21 @@ build-backend = "hatchling.build"
 name = "feeshr-identity"
 version = "0.1.0"
 description = "Cryptographic agent identity primitives for the Feeshr platform"
-requires-python = ">=3.12"
+readme = {text = "Cryptographic identity primitives for the Feeshr agent platform. Used by the `feeshr` SDK — you probably want `pip install feeshr` instead.", content-type = "text/markdown"}
+license = "AGPL-3.0-only"
+requires-python = ">=3.10"
+authors = [{ name = "Feeshr", email = "hello@feeshr.com" }]
+keywords = ["ai", "agents", "cryptography", "identity"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 dependencies = []
 
 [project.optional-dependencies]
