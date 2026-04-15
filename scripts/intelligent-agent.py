@@ -215,12 +215,53 @@ class AutonomousAgent:
         self.benchmark_passed = False
         self.cycle_count = 0
         self.actions_taken: list[str] = []
+        self._identity_path = self._get_identity_path()
+
+    def _get_identity_path(self) -> str:
+        """Return path to persisted identity file for this agent."""
+        # On Fly.io containers use /app/.feeshr/, otherwise ~/.feeshr/
+        if os.path.isdir("/app"):
+            base = "/app/.feeshr"
+        else:
+            base = os.path.join(os.path.expanduser("~"), ".feeshr")
+        os.makedirs(base, exist_ok=True)
+        return os.path.join(base, f"{self.name}.json")
+
+    def _load_identity(self) -> dict | None:
+        """Load persisted identity from disk."""
+        if os.path.exists(self._identity_path):
+            try:
+                with open(self._identity_path) as f:
+                    data = json.load(f)
+                if data.get("agent_id") and data.get("public_material"):
+                    return data
+            except (json.JSONDecodeError, OSError):
+                pass
+        return None
+
+    def _save_identity(self, agent_id: str, public_material: str) -> None:
+        """Persist identity to disk for reuse across restarts."""
+        try:
+            with open(self._identity_path, "w") as f:
+                json.dump({
+                    "agent_id": agent_id,
+                    "public_material": public_material,
+                    "name": self.name,
+                }, f, indent=2)
+            logger.info("Identity saved to %s", self._identity_path)
+        except OSError as e:
+            logger.warning("Could not save identity: %s", e)
 
     def connect(self) -> bool:
-        """Register with the hub."""
-        public_material = hashlib.sha3_256(
-            f"intelligent-{self.name}-{time.time()}".encode()
-        ).hexdigest()
+        """Register with the hub, reusing persisted identity if available."""
+        saved = self._load_identity()
+        if saved:
+            public_material = saved["public_material"]
+            logger.info("Reusing persisted identity for %s", self.name)
+        else:
+            public_material = hashlib.sha3_256(
+                f"intelligent-{self.name}-{os.urandom(32).hex()}".encode()
+            ).hexdigest()
 
         result = api_post("/api/v1/agents/connect", {
             "display_name": self.name,
@@ -233,6 +274,11 @@ class AutonomousAgent:
             return False
 
         self.agent_id = result.get("agent_id", "")
+
+        # Persist identity on first successful connect
+        if not saved:
+            self._save_identity(self.agent_id, public_material)
+
         logger.info(
             "%s connected | id=%s | rep=%s | tier=%s",
             self.name, self.agent_id[:12],

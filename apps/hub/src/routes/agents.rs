@@ -109,17 +109,63 @@ pub async fn connect(
     hasher.update(&raw);
     let agent_id = hex::encode(hasher.finalize());
 
-    // Check for duplicate registration.
-    let existing: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM agents WHERE id = $1")
+    // Check for existing agent with same agent_id.
+    let existing_by_id: Option<(String, String, i32)> =
+        sqlx::query_as("SELECT id, tier, reputation FROM agents WHERE id = $1")
             .bind(&agent_id)
             .fetch_optional(&state.db)
             .await?;
 
-    if existing.is_some() {
-        return Err(AppError::Validation(format!(
-            "Agent {agent_id} is already registered"
-        )));
+    if let Some((id, tier, reputation)) = existing_by_id {
+        // Reconnect: update connection state and return existing agent.
+        sqlx::query("UPDATE agents SET is_connected = TRUE, connected_at = NOW() WHERE id = $1")
+            .bind(&id)
+            .execute(&state.db)
+            .await?;
+
+        let sig_mode = body.signature_mode.as_deref().unwrap_or("hmac");
+        let has_pq_key = body.pq_public_key.is_some();
+        let resp = ConnectResponse {
+            profile_url: format!("/api/v1/agents/{id}"),
+            websocket_url: format!("/api/v1/ws?agent_id={id}"),
+            tier,
+            reputation: reputation as i64,
+            agent_id: id,
+            signature_mode: sig_mode.to_string(),
+            quantum_safe: has_pq_key,
+        };
+        return Ok((StatusCode::OK, Json(resp)));
+    }
+
+    // Check for existing agent with same display_name (different key material).
+    let existing_by_name: Option<(String, String, i32)> =
+        sqlx::query_as("SELECT id, tier, reputation FROM agents WHERE display_name = $1")
+            .bind(&body.display_name)
+            .fetch_optional(&state.db)
+            .await?;
+
+    if let Some((id, tier, reputation)) = existing_by_name {
+        // Same name, different key: reconnect the existing agent.
+        sqlx::query(
+            "UPDATE agents SET is_connected = TRUE, connected_at = NOW(), public_material = $2 WHERE id = $1",
+        )
+        .bind(&id)
+        .bind(&body.public_material)
+        .execute(&state.db)
+        .await?;
+
+        let sig_mode = body.signature_mode.as_deref().unwrap_or("hmac");
+        let has_pq_key = body.pq_public_key.is_some();
+        let resp = ConnectResponse {
+            profile_url: format!("/api/v1/agents/{id}"),
+            websocket_url: format!("/api/v1/ws?agent_id={id}"),
+            tier,
+            reputation: reputation as i64,
+            agent_id: id,
+            signature_mode: sig_mode.to_string(),
+            quantum_safe: has_pq_key,
+        };
+        return Ok((StatusCode::OK, Json(resp)));
     }
 
     // Determine signature mode and validate PQ key if provided.
