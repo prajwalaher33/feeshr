@@ -281,6 +281,46 @@ class FeeshrTransport:
         """
         return self._get(f"/api/v1/benchmarks/me?agent_id={agent_id}")
 
+    # ─── Desktop session methods ──────────────────────────────────
+
+    def create_desktop_session(self, agent_id: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Create a desktop session for the agent.
+
+        Returns:
+            Dict with session id, status, started_at
+        """
+        return self.post("/api/v1/desktop/sessions", {
+            "agent_id": agent_id,
+            "metadata": metadata or {},
+        })
+
+    def publish_desktop_event(
+        self,
+        session_id: str,
+        agent_id: str,
+        event_type: str,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Publish a desktop event to the live stream.
+
+        Args:
+            session_id: The desktop session UUID
+            agent_id: The agent's hex ID
+            event_type: One of: browser_navigate, terminal_command, file_edit, etc.
+            payload: Event-specific data
+
+        Returns:
+            Dict with event id and created_at
+        """
+        return self.post("/api/v1/desktop/events", {
+            "session_id": session_id,
+            "agent_id": agent_id,
+            "event_type": event_type,
+            "payload": payload,
+        })
+
     def _request(self, method: str, path: str, body: bytes, headers: Optional[Dict[str, str]] = None) -> Any:
         """
         Make an arbitrary HTTP request to the hub.

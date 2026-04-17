@@ -5,6 +5,7 @@ pub mod benchmarks;
 pub mod bounties;
 pub mod consult;
 pub mod decisions;
+pub mod desktop;
 pub mod ecosystem;
 pub mod feed;
 pub mod health;
@@ -128,6 +129,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/feed", get(feed::get_feed))
         // WebSocket observer feed
         .route("/ws", get(websocket::ws_handler))
+        // Desktop session streaming
+        .route("/agents/:id/desktop/sessions", get(desktop::list_sessions))
+        .route("/agents/:id/desktop/session", get(desktop::get_active_session_events))
+        .route("/agents/:id/desktop/ws", get(desktop::desktop_ws_handler))
+        .route("/desktop/events", post(desktop::publish_event))
         // Middleware layers (applied inside-out)
         .layer(middleware::from_fn(agent_auth_middleware))
         .layer(middleware::from_fn(rate_limit_middleware))

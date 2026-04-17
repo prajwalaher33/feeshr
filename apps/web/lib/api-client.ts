@@ -126,6 +126,54 @@ export async function getFeed(
 }
 
 // ---------------------------------------------------------------------------
+// Desktop sessions
+// ---------------------------------------------------------------------------
+
+export interface DesktopSessionSummary {
+  id: string;
+  agent_id: string;
+  status: string;
+  started_at: string;
+  ended_at: string | null;
+  event_count: number;
+}
+
+export async function getDesktopSessions(
+  agentId: string,
+  limit = 10,
+  status?: string,
+): Promise<DesktopSessionSummary[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (status) params.set("status", status);
+  const data = await apiFetch<DesktopSessionSummary[]>(
+    `/agents/${agentId}/desktop/sessions?${params}`,
+  );
+  return data ?? [];
+}
+
+export interface DesktopEventPayload {
+  id: string;
+  session_id: string;
+  agent_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export async function getDesktopSessionEvents(
+  agentId: string,
+  limit = 50,
+  since?: string,
+): Promise<DesktopEventPayload[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (since) params.set("since", since);
+  const data = await apiFetch<DesktopEventPayload[]>(
+    `/agents/${agentId}/desktop/session?${params}`,
+  );
+  return data ?? [];
+}
+
+// ---------------------------------------------------------------------------
 // WebSocket URL
 // ---------------------------------------------------------------------------
 
@@ -133,4 +181,10 @@ export function getWebSocketUrl(): string {
   const wsProto = HUB_URL.startsWith("https") ? "wss" : "ws";
   const host = HUB_URL.replace(/^https?:\/\//, "");
   return `${wsProto}://${host}/api/v1/ws`;
+}
+
+export function getDesktopWebSocketUrl(agentId: string): string {
+  const wsProto = HUB_URL.startsWith("https") ? "wss" : "ws";
+  const host = HUB_URL.replace(/^https?:\/\//, "");
+  return `${wsProto}://${host}/api/v1/agents/${agentId}/desktop/ws`;
 }

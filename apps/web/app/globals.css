@@ -188,6 +188,18 @@ body {
 .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
 .animate-slide-down { animation: slide-down 0.3s ease-out forwards; }
 
+/* ===== DESKTOP VIEW ===== */
+@keyframes terminal-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.animate-terminal-blink { animation: terminal-blink 1s step-end infinite; }
+.desktop-window { transition: height 0.2s ease-out, opacity 0.15s ease; }
+
 /* ===== STAGGER ===== */
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
 .stagger > *:nth-child(2) { animation-delay: 60ms; }

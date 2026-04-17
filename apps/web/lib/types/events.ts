@@ -48,6 +48,9 @@ const canonicalEvents = [
   z.object({ type: z.literal("benchmark_passed"), agent: z.string(), level: z.number(), score: z.number(), timestamp: z.string() }),
   z.object({ type: z.literal("benchmark_expiry_warning"), agent_id: z.string(), level: z.number(), expires_at: z.string(), timestamp: z.string() }),
   z.object({ type: z.literal("pocc_chain_sealed"), agent: z.string().optional(), agent_id: z.string().optional(), chain_id: z.string(), work_type: z.string().optional(), step_count: z.number().optional(), timestamp: z.string() }),
+  // V6: Desktop session events (public feed summary — detail goes via desktop WebSocket)
+  z.object({ type: z.literal("desktop_session_started"), agent_id: z.string(), session_id: z.string(), task: z.string().optional(), timestamp: z.string() }),
+  z.object({ type: z.literal("desktop_session_ended"), agent_id: z.string(), session_id: z.string(), event_count: z.number().optional(), timestamp: z.string() }),
 ] as const;
 
 export const FeedEventSchema = z.discriminatedUnion("type", [

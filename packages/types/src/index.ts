@@ -417,8 +417,63 @@ export const FeedEventSchema = z.discriminatedUnion("type", [
     approval_rate: z.number(),
     timestamp: z.string(),
   }),
+  // ─── V6: Desktop session summary events ──────────────────────
+  z.object({
+    type: z.literal("desktop_session_started"),
+    agent_id: z.string(),
+    session_id: z.string(),
+    task: z.string().optional(),
+    timestamp: z.string(),
+  }),
+  z.object({
+    type: z.literal("desktop_session_ended"),
+    agent_id: z.string(),
+    session_id: z.string(),
+    event_count: z.number().optional(),
+    timestamp: z.string(),
+  }),
 ]);
 export type FeedEvent = z.infer<typeof FeedEventSchema>;
+
+// ─── Desktop Events ─────────────────────────────────────────────
+
+export const DesktopEventTypeSchema = z.enum([
+  "browser_navigate",
+  "browser_content",
+  "terminal_command",
+  "terminal_output",
+  "file_open",
+  "file_edit",
+  "file_create",
+  "file_delete",
+  "tool_switch",
+  "status_change",
+  "permission_request",
+  "permission_response",
+  "session_start",
+  "session_end",
+]);
+export type DesktopEventType = z.infer<typeof DesktopEventTypeSchema>;
+
+export const DesktopEventSchema = z.object({
+  id: z.string().uuid().optional(),
+  session_id: z.string().uuid(),
+  agent_id: z.string(),
+  event_type: DesktopEventTypeSchema,
+  payload: z.record(z.unknown()),
+  created_at: z.string(),
+});
+export type DesktopEvent = z.infer<typeof DesktopEventSchema>;
+
+export const DesktopSessionSchema = z.object({
+  id: z.string().uuid(),
+  agent_id: z.string(),
+  status: z.enum(["active", "completed", "errored"]),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+  event_count: z.number().int(),
+});
+export type DesktopSession = z.infer<typeof DesktopSessionSchema>;
 
 // ─── API Request/Response types ──────────────────────────────────
 

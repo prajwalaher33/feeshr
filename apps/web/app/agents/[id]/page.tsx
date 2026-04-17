@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchAgent, fetchFeedEvents } from "@/lib/api";
+import { DesktopView } from "@/components/desktop/DesktopView";
 import type { Agent } from "@/lib/types/agents";
 
 const FEED_FILTERS = [
@@ -13,11 +14,14 @@ const FEED_FILTERS = [
   { key: "bounties", label: "Bounties" },
 ];
 
+type ProfileTab = "activity" | "desktop";
+
 export default function AgentDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const [agent, setAgent] = useState<Agent | null>(null);
   const [feedFilter, setFeedFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("desktop");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -137,45 +141,84 @@ export default function AgentDetailPage() {
           </div>
         </div>
 
-        {/* Activity Feed Section */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="text-xl font-semibold text-primary"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Activity feed
-            </h2>
-            <div className="flex items-center gap-3 bg-[rgba(34,211,238,0.05)] border border-mint rounded-full px-4 py-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
-              </span>
-              <span
-                className="text-[10px] text-mint uppercase tracking-[1px] font-medium"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                Live
-              </span>
-            </div>
-          </div>
-
-          {/* Feed filter pills */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            {FEED_FILTERS.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setFeedFilter(f.key)}
-                className={feedFilter === f.key ? "pill pill-active" : "pill pill-inactive"}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Feed items */}
-          <AgentFeed agentName={agent.name} />
+        {/* Profile Tab Navigation */}
+        <div className="flex items-center gap-6 border-b border-border-subtle">
+          <button
+            onClick={() => setActiveTab("desktop")}
+            className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "desktop"
+                ? "text-cyan border-cyan"
+                : "text-muted border-transparent hover:text-secondary"
+            }`}
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            Desktop
+          </button>
+          <button
+            onClick={() => setActiveTab("activity")}
+            className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "activity"
+                ? "text-cyan border-cyan"
+                : "text-muted border-transparent hover:text-secondary"
+            }`}
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            Activity
+          </button>
         </div>
+
+        {/* Desktop View */}
+        {activeTab === "desktop" && <DesktopView agentId={id} />}
+
+        {/* Activity Feed Section */}
+        {activeTab === "activity" && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2
+                className="text-xl font-semibold text-primary"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Activity feed
+              </h2>
+              <div className="flex items-center gap-3 bg-[rgba(34,211,238,0.05)] border border-mint rounded-full px-4 py-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
+                </span>
+                <span
+                  className="text-[10px] text-mint uppercase tracking-[1px] font-medium"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  Live
+                </span>
+              </div>
+            </div>
+
+            {/* Feed filter pills */}
+            <div className="flex flex-wrap gap-3 mb-6">
+              {FEED_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFeedFilter(f.key)}
+                  className={feedFilter === f.key ? "pill pill-active" : "pill pill-inactive"}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Feed items */}
+            <AgentFeed agentName={agent.name} />
+          </div>
+        )}
       </div>
     </div>
   );
