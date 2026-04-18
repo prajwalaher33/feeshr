@@ -16,19 +16,19 @@ export function TerminalWindow() {
   return (
     <div className="flex flex-col h-full">
       {/* Terminal header */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-[rgba(255,255,255,0.04)] shrink-0">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#5a6270]">
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[rgba(255,255,255,0.03)] shrink-0 bg-[rgba(255,255,255,0.008)]">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#3a4250]">
           <polyline points="4 17 10 11 4 5" />
           <line x1="12" y1="19" x2="20" y2="19" />
         </svg>
-        <span className="text-[11px] text-[#5a6270]" style={{ fontFamily: "var(--font-mono)" }}>
+        <span className="text-[10px] text-[#3a4250]" style={{ fontFamily: "var(--font-mono)" }}>
           {terminal.cwd}
         </span>
         {terminal.running && (
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="ml-auto text-[10px] text-cyan/60 uppercase tracking-wider"
+            className="ml-auto text-[9px] text-cyan/40 uppercase tracking-[1.5px]"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             running
@@ -40,10 +40,10 @@ export function TerminalWindow() {
       <div
         ref={scrollRef}
         className="flex-1 overflow-auto p-4 pb-6"
-        style={{ fontFamily: "var(--font-mono)", fontSize: "13px", lineHeight: "1.8" }}
+        style={{ fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: "1.85" }}
       >
         {terminal.lines.length === 0 && (
-          <div className="flex items-center gap-2 text-[#3a4250]">
+          <div className="flex items-center gap-2 text-[#2a3040]">
             <span className="text-[#28c840]">$</span>
             <span className="animate-pulse">_</span>
           </div>
@@ -52,22 +52,22 @@ export function TerminalWindow() {
         {terminal.lines.map((line, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, x: -4 }}
+            initial={{ opacity: 0, x: -3 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.15, delay: 0.02 }}
+            transition={{ duration: 0.12, delay: 0.015 }}
             className="whitespace-pre-wrap break-all"
           >
             {line.type === "command" ? (
-              <div className="flex items-start gap-2 mt-2 first:mt-0">
+              <div className="flex items-start gap-2 mt-2.5 first:mt-0">
                 <span className="text-[#28c840] shrink-0">$</span>
-                <span className="text-[#e2e8f0]">{line.text}</span>
+                <span className="text-[#d4d8e4]">{line.text}</span>
               </div>
             ) : line.type === "error" ? (
-              <span className="text-[#ff6b6b]">{line.text}</span>
+              <span className="text-[#ff6b6b]/90">{line.text}</span>
             ) : line.type === "system" ? (
-              <span className="text-[#f7c948]">{line.text}</span>
+              <span className="text-[#f7c948]/80">{line.text}</span>
             ) : (
-              <span className="text-[#7a8394]">{line.text}</span>
+              <span className="text-[#5a6270]">{line.text}</span>
             )}
           </motion.div>
         ))}
@@ -76,7 +76,7 @@ export function TerminalWindow() {
         {terminal.running && (
           <div className="flex items-center gap-2 mt-1">
             <span className="text-[#28c840]">$</span>
-            <span className="inline-block w-[7px] h-[15px] bg-[#e2e8f0] animate-terminal-blink" />
+            <span className="inline-block w-[6px] h-[14px] bg-[#d4d8e4] animate-terminal-blink" />
           </div>
         )}
       </div>

@@ -15,13 +15,13 @@ export default function ActivityPage() {
           >
             Recent Activities
           </h1>
-          <div className="flex items-center gap-3 bg-[rgba(34,211,238,0.05)] border border-mint rounded-full px-4 py-2">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75 animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
+          <div className="flex items-center gap-2.5 bg-[rgba(97,246,185,0.04)] border border-[rgba(97,246,185,0.12)] rounded-full px-3.5 py-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-mint opacity-75 animate-ping" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint" />
             </span>
             <span
-              className="text-[10px] text-mint uppercase tracking-[1px] font-medium"
+              className="text-[10px] text-mint/80 uppercase tracking-[1.5px] font-medium"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               Live

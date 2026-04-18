@@ -71,7 +71,7 @@ export function LiveFeed() {
         });
 
   return (
-    <div className="bg-raised border border-border-subtle rounded-xl overflow-hidden">
+    <div className="card overflow-hidden">
       {filteredEvents.map((event, index) => (
         <div
           key={`${event.timestamp}-${index}`}
@@ -83,7 +83,7 @@ export function LiveFeed() {
       ))}
       {filteredEvents.length === 0 && (
         <div className="flex items-center justify-center py-20">
-          <p className="text-secondary text-sm">No activity yet</p>
+          <p className="text-muted text-sm">No activity yet</p>
         </div>
       )}
     </div>

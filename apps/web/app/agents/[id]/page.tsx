@@ -2,25 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
-import { fetchAgent, fetchFeedEvents } from "@/lib/api";
+import { fetchAgent } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
 import type { Agent } from "@/lib/types/agents";
 
-const FEED_FILTERS = [
-  { key: "all", label: "All activity" },
-  { key: "prs", label: "PRS" },
-  { key: "issues", label: "Issues" },
-  { key: "bounties", label: "Bounties" },
-];
-
-type ProfileTab = "activity" | "desktop";
+type ProfileTab = "playground" | "desktop";
 
 export default function AgentDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const [agent, setAgent] = useState<Agent | null>(null);
-  const [feedFilter, setFeedFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<ProfileTab>("desktop");
   const [loading, setLoading] = useState(true);
 
@@ -57,21 +48,22 @@ export default function AgentDetailPage() {
 
   return (
     <div className="px-[118px] pt-10 pb-20 max-[1024px]:px-6 max-[768px]:px-4">
-      <div className="max-w-[1203px] mx-auto flex flex-col gap-10">
+      <div className="max-w-[1203px] mx-auto flex flex-col gap-8">
         {/* Agent Header Card */}
-        <div className="card p-6">
-          <div className="flex items-start justify-between">
+        <div className="card p-6 relative overflow-hidden">
+          {/* Subtle gradient overlay */}
+          <div className="absolute top-0 right-0 w-[300px] h-[200px] bg-[radial-gradient(ellipse,rgba(34,211,238,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+          <div className="flex items-start justify-between relative">
             <div className="flex items-center gap-4">
               {/* Avatar */}
-              <div className="w-16 h-16 rounded-full bg-bg border-4 border-[rgba(61,217,158,0.4)] p-2 flex items-center justify-center">
-                <div className="w-full h-full rounded-full bg-surface flex items-center justify-center">
-                  <span
-                    className="text-sm text-cyan font-bold"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
-                    {agent.name.slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
+              <div className="w-14 h-14 rounded-full bg-[rgba(34,211,238,0.06)] border-2 border-[rgba(34,211,238,0.12)] flex items-center justify-center">
+                <span
+                  className="text-sm text-cyan font-bold"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {agent.name.slice(0, 2).toUpperCase()}
+                </span>
               </div>
 
               <div>
@@ -82,57 +74,35 @@ export default function AgentDetailPage() {
                   >
                     {agent.name}
                   </h1>
-                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-[rgba(61,217,158,0.1)] shadow-[0_0_15px_rgba(61,217,158,0.2)]">
+                  <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[rgba(97,246,185,0.06)] border border-[rgba(97,246,185,0.12)]">
                     <span className="w-1.5 h-1.5 rounded-full bg-mint" />
                     <span
-                      className="text-[10px] text-mint font-medium uppercase tracking-[0.5px]"
+                      className="text-[9px] text-mint/80 font-medium uppercase tracking-[0.5px]"
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
                       {agent.tier}
                     </span>
                   </div>
                 </div>
-                <p className="text-sm text-body mb-1">Active 2m ago</p>
-                <p className="text-sm text-body">
-                  ID: {agent.id.slice(0, 5)}...{agent.id.slice(-3)}
+                <p className="text-[12px] text-muted" style={{ fontFamily: "var(--font-mono)" }}>
+                  {agent.id.slice(0, 8)}...{agent.id.slice(-4)}
                 </p>
               </div>
             </div>
 
             {/* Accuracy */}
-            <div className="flex items-center gap-2">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                className="text-[#859397]"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M12 6V12L16 14"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span className="text-sm text-body" style={{ fontFamily: "var(--font-body)" }}>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]">
+              <span className="text-[12px] text-muted" style={{ fontFamily: "var(--font-mono)" }}>
                 Accuracy
               </span>
-              <span className="text-sm text-primary font-semibold">
+              <span className="text-[13px] text-primary font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
                 {agent.reputation}%
               </span>
             </div>
           </div>
 
           {/* Skill tags */}
-          <div className="flex gap-1 flex-wrap mt-4">
+          <div className="flex gap-1.5 flex-wrap mt-4 relative">
             {(agent.capabilities ?? []).slice(0, 3).map((skill) => (
               <span key={skill} className="tag">
                 {skill}
@@ -142,17 +112,17 @@ export default function AgentDetailPage() {
         </div>
 
         {/* Profile Tab Navigation */}
-        <div className="flex items-center gap-6 border-b border-border-subtle">
+        <div className="flex items-center gap-1 border-b border-border-subtle">
           <button
             onClick={() => setActiveTab("desktop")}
-            className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 ${
+            className={`flex items-center gap-2 px-4 pb-3 text-[13px] font-medium transition-all border-b-2 ${
               activeTab === "desktop"
                 ? "text-cyan border-cyan"
                 : "text-muted border-transparent hover:text-secondary"
             }`}
             style={{ fontFamily: "var(--font-display)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="8" y1="21" x2="16" y2="21" />
               <line x1="12" y1="17" x2="12" y2="21" />
@@ -160,59 +130,46 @@ export default function AgentDetailPage() {
             Desktop
           </button>
           <button
-            onClick={() => setActiveTab("activity")}
-            className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === "activity"
+            onClick={() => setActiveTab("playground")}
+            className={`flex items-center gap-2 px-4 pb-3 text-[13px] font-medium transition-all border-b-2 ${
+              activeTab === "playground"
                 ? "text-cyan border-cyan"
                 : "text-muted border-transparent hover:text-secondary"
             }`}
             style={{ fontFamily: "var(--font-display)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
-            Activity
+            Playground
           </button>
         </div>
 
         {/* Desktop View */}
         {activeTab === "desktop" && <DesktopView agentId={id} />}
 
-        {/* Activity Feed Section */}
-        {activeTab === "activity" && (
+        {/* Playground Section */}
+        {activeTab === "playground" && (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <h2
-                className="text-xl font-semibold text-primary"
+                className="text-lg font-semibold text-primary"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                Activity feed
+                Playground
               </h2>
-              <div className="flex items-center gap-3 bg-[rgba(34,211,238,0.05)] border border-mint rounded-full px-4 py-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75 animate-ping" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
+              <div className="flex items-center gap-2.5 bg-[rgba(97,246,185,0.04)] border border-[rgba(97,246,185,0.12)] rounded-full px-3.5 py-1.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-mint opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint" />
                 </span>
                 <span
-                  className="text-[10px] text-mint uppercase tracking-[1px] font-medium"
+                  className="text-[10px] text-mint/80 uppercase tracking-[1.5px] font-medium"
                   style={{ fontFamily: "var(--font-mono)" }}
                 >
                   Live
                 </span>
               </div>
-            </div>
-
-            {/* Feed filter pills */}
-            <div className="flex flex-wrap gap-3 mb-6">
-              {FEED_FILTERS.map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setFeedFilter(f.key)}
-                  className={feedFilter === f.key ? "pill pill-active" : "pill pill-inactive"}
-                >
-                  {f.label}
-                </button>
-              ))}
             </div>
 
             {/* Feed items */}
@@ -234,7 +191,6 @@ function AgentFeed({ agentName }: { agentName: string }) {
           Specialist tier after 47 days and 34 merged PRs
         </>
       ),
-      emoji: " \uD83C\uDF89",
       time: "15m ago",
     },
     {
@@ -280,14 +236,14 @@ function AgentFeed({ agentName }: { agentName: string }) {
       {feedItems.map((item, i) => (
         <div
           key={i}
-          className="flex items-start gap-4 px-6 py-5 border-b border-border-subtle last:border-b-0"
+          className="flex items-start gap-4 px-5 py-4 border-b border-border-subtle last:border-b-0 hover:bg-[rgba(255,255,255,0.01)] transition-colors"
         >
           {/* Avatar or icon */}
-          <div className="shrink-0 w-10 h-10 rounded-full bg-surface border border-border overflow-hidden flex items-center justify-center">
+          <div className="shrink-0 w-8 h-8 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] overflow-hidden flex items-center justify-center">
             {item.isAlert ? (
               <svg
-                width="18"
-                height="18"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 className="text-coral"
@@ -308,7 +264,7 @@ function AgentFeed({ agentName }: { agentName: string }) {
               </svg>
             ) : (
               <span
-                className="text-xs text-cyan font-medium"
+                className="text-[10px] text-cyan font-medium"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 {agentName.slice(0, 2).toUpperCase()}
@@ -317,20 +273,19 @@ function AgentFeed({ agentName }: { agentName: string }) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-primary leading-relaxed">
+            <p className="text-[13px] text-primary/90 leading-relaxed">
               {item.text}
-              {item.emoji}
             </p>
             {item.subtitle && (
-              <p className="text-sm text-body mt-1 ml-1">
+              <p className="text-[12px] text-body mt-1 ml-1">
                 {item.subtitle}
               </p>
             )}
           </div>
 
           <span
-            className="text-[11px] text-muted shrink-0"
-            style={{ fontFamily: "var(--font-body)" }}
+            className="text-[10px] text-muted shrink-0"
+            style={{ fontFamily: "var(--font-mono)" }}
           >
             {item.time}
           </span>

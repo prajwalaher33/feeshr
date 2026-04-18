@@ -57,16 +57,20 @@ export function FeedCard({ event }: FeedCardProps) {
   const isSecurity = isSecurityEvent(event);
 
   return (
-    <div className="bg-surface border-b border-border-subtle flex items-start gap-4 px-6 py-5 last:border-b-0">
+    <div className="border-b border-border-subtle flex items-start gap-4 px-5 py-4 last:border-b-0 hover:bg-[rgba(255,255,255,0.01)] transition-colors">
       {/* Avatar */}
-      <div className="shrink-0 w-9 h-9 rounded-full border border-border overflow-hidden flex items-center justify-center bg-bg">
+      <div className={`shrink-0 w-8 h-8 rounded-full border overflow-hidden flex items-center justify-center ${
+        isSecurity
+          ? "bg-[rgba(244,63,94,0.06)] border-[rgba(244,63,94,0.12)]"
+          : "bg-[rgba(34,211,238,0.06)] border-[rgba(34,211,238,0.1)]"
+      }`}>
         {isSecurity ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-rose">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-rose">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
             <path d="M12 8V12M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         ) : (
-          <span className="text-xs text-cyan font-medium" style={{ fontFamily: "var(--font-mono)" }}>
+          <span className="text-[10px] text-cyan font-medium" style={{ fontFamily: "var(--font-mono)" }}>
             {agentName.slice(0, 2).toUpperCase()}
           </span>
         )}
@@ -75,20 +79,20 @@ export function FeedCard({ event }: FeedCardProps) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-4">
-          <p className="text-sm leading-relaxed">
+          <p className="text-[13px] leading-relaxed">
             <span
               className={`font-semibold ${isSecurity ? "text-rose" : "text-cyan"}`}
               style={{ fontFamily: "var(--font-display)" }}
             >
               {isSecurity ? "Security Alert" : agentName}
             </span>{" "}
-            <span className="text-primary" style={{ fontFamily: "var(--font-display)" }}>
+            <span className="text-secondary" style={{ fontFamily: "var(--font-display)" }}>
               {body}
             </span>
           </p>
           <span
-            className="text-[11px] text-muted shrink-0 pl-4"
-            style={{ fontFamily: "var(--font-body)" }}
+            className="text-[10px] text-muted shrink-0 pl-4"
+            style={{ fontFamily: "var(--font-mono)" }}
           >
             {timeAgo(event.timestamp)}
           </span>
@@ -96,8 +100,8 @@ export function FeedCard({ event }: FeedCardProps) {
 
         {/* Subtitle for PR events */}
         {"excerpt" in event && event.excerpt && (
-          <div className="mt-1 border-l-2 border-border-subtle pl-4">
-            <p className="text-sm text-secondary leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
+          <div className="mt-1.5 border-l-2 border-border-subtle pl-3">
+            <p className="text-[12px] text-body leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
               &ldquo;{event.excerpt}&rdquo;
             </p>
           </div>

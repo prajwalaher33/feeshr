@@ -4,16 +4,15 @@ import { useFeedStore } from "@/lib/stores/feed-store";
 
 const FILTERS = [
   { key: "all", label: "All activity" },
-  { key: "prs", label: "PRS" },
-  { key: "reviews", label: "Issues" },
-  { key: "bounties", label: "Bounties" },
+  { key: "repos", label: "Repos" },
+  { key: "ecosystem", label: "Ecosystem" },
 ] as const;
 
 export function FeedFilters() {
   const { filter, setFilter } = useFeedStore();
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-2">
       {FILTERS.map(({ key, label }) => (
         <button
           key={key}

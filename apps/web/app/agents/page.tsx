@@ -40,11 +40,11 @@ export default function AgentsPage() {
         <div className="flex items-center gap-4 max-[768px]:flex-col">
           <div className="flex-1 relative min-w-0 w-full">
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
             >
               <path
                 d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"
@@ -59,19 +59,20 @@ export default function AgentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agent by name, skill, or ID..."
-              className="w-full bg-[#0e1120] border border-[rgba(60,73,76,0.3)] rounded-t-lg pl-12 pr-4 py-5 text-lg text-primary placeholder:text-[#859397] outline-none focus:border-cyan/40"
+              className="w-full bg-surface border border-border rounded-xl pl-11 pr-4 py-4 text-[14px] text-primary placeholder:text-[#4a5568] outline-none focus:border-[rgba(34,211,238,0.3)] transition-colors"
               style={{ fontFamily: "var(--font-body)" }}
             />
           </div>
           <Link
             href="/connect"
-            className="shrink-0 flex items-center gap-2 px-8 py-4 rounded-lg font-bold text-base text-cyan-dark"
+            className="shrink-0 flex items-center gap-2 h-[52px] px-6 rounded-xl font-semibold text-[14px] transition-all duration-200 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]"
             style={{
               fontFamily: "var(--font-display)",
-              backgroundImage: "linear-gradient(165deg, #22d3ee 0%, #8aebff 100%)",
+              background: "linear-gradient(135deg, #22d3ee, #67e8f9)",
+              color: "#021a1f",
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M7 1V13M1 7H13" />
             </svg>
             Register Agent
@@ -79,7 +80,7 @@ export default function AgentsPage() {
         </div>
 
         {/* Tier filter pills */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {TIER_FILTERS.map((tier) => (
             <button
               key={tier.key}
@@ -97,13 +98,13 @@ export default function AgentsPage() {
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-cyan" />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-6 max-[768px]:grid-cols-1">
+          <div className="grid grid-cols-3 gap-5 max-[768px]:grid-cols-1">
             {filtered.map((agent) => (
               <AgentCardFigma key={agent.id} agent={agent} />
             ))}
             {filtered.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-20">
-                <p className="text-secondary text-sm">No agents found</p>
+                <p className="text-muted text-sm">No agents found</p>
               </div>
             )}
           </div>
@@ -117,24 +118,22 @@ function AgentCardFigma({ agent }: { agent: Agent }) {
   return (
     <Link
       href={`/agents/${agent.id}`}
-      className="bg-surface border border-border rounded-2xl p-6 flex flex-col gap-3 h-[280px] hover:border-border-hover transition-colors"
+      className="card-hover p-5 flex flex-col gap-3 h-[260px]"
     >
       {/* Avatar + tier badge */}
-      <div className="flex items-start justify-between">
-        <div className="w-16 h-16 rounded-full bg-bg border-4 border-[rgba(61,217,158,0.4)] p-2 flex items-center justify-center">
-          <div className="w-full h-full rounded-full bg-surface flex items-center justify-center">
-            <span
-              className="text-sm text-cyan font-bold"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {agent.name.slice(0, 2).toUpperCase()}
-            </span>
-          </div>
+      <div className="flex items-start justify-between relative">
+        <div className="w-12 h-12 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] flex items-center justify-center">
+          <span
+            className="text-[12px] text-cyan font-bold"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {agent.name.slice(0, 2).toUpperCase()}
+          </span>
         </div>
-        <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-[rgba(61,217,158,0.1)] shadow-[0_0_15px_rgba(61,217,158,0.2)]">
+        <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[rgba(97,246,185,0.06)] border border-[rgba(97,246,185,0.1)]">
           <span className="w-1.5 h-1.5 rounded-full bg-mint" />
           <span
-            className="text-[10px] text-mint font-medium uppercase tracking-[0.5px]"
+            className="text-[9px] text-mint/80 font-medium uppercase tracking-[0.5px]"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             {agent.tier}
@@ -145,21 +144,21 @@ function AgentCardFigma({ agent }: { agent: Agent }) {
       {/* Name + ID */}
       <div>
         <h3
-          className="text-lg font-semibold text-primary"
+          className="text-[15px] font-semibold text-primary"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {agent.name}
         </h3>
         <p
-          className="text-sm text-body truncate"
-          style={{ fontFamily: "var(--font-body)" }}
+          className="text-[11px] text-muted truncate mt-0.5"
+          style={{ fontFamily: "var(--font-mono)" }}
         >
-          ID: {agent.id.slice(0, 5)}...{agent.id.slice(-3)}
+          {agent.id.slice(0, 8)}...{agent.id.slice(-4)}
         </p>
       </div>
 
       {/* Skill tags */}
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap">
         {(agent.capabilities ?? []).slice(0, 3).map((skill) => (
           <span key={skill} className="tag">
             {skill}
@@ -167,26 +166,23 @@ function AgentCardFigma({ agent }: { agent: Agent }) {
         ))}
       </div>
 
-      {/* Spacer to push footer to bottom */}
+      {/* Spacer */}
       <div className="flex-1" />
 
       {/* Footer */}
       <div className="border-t border-divider pt-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[#859397]">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-            <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
           <span
-            className="text-xs text-[#859397] font-medium"
-            style={{ fontFamily: "var(--font-body)" }}
+            className="text-[11px] text-muted font-medium"
+            style={{ fontFamily: "var(--font-mono)" }}
           >
             {agent.reputation}%
           </span>
+          <span className="text-[10px] text-[#3a4250]">accuracy</span>
         </div>
         <span
-          className="text-xs text-[#859397] font-medium"
-          style={{ fontFamily: "var(--font-body)" }}
+          className="text-[10px] text-[#3a4250]"
+          style={{ fontFamily: "var(--font-mono)" }}
         >
           Active 2m ago
         </span>

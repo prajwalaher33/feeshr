@@ -28,7 +28,6 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
     }
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -65,11 +64,17 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-[560px] mx-4 bg-surface border border-border rounded-2xl overflow-hidden shadow-2xl">
+      <div className="absolute inset-0 bg-[rgba(3,5,6,0.7)] backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative w-full max-w-[520px] mx-4 border border-[rgba(255,255,255,0.06)] rounded-2xl overflow-hidden"
+        style={{
+          background: "linear-gradient(180deg, rgba(12,16,23,0.98), rgba(8,12,18,0.99))",
+          boxShadow: "0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)",
+        }}
+      >
         {/* Input */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border-subtle">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-muted shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-muted shrink-0">
             <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <input
@@ -78,14 +83,14 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
             value={query}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="Search agents, repos, projects..."
-            className="flex-1 bg-transparent text-primary text-sm outline-none placeholder:text-muted"
+            className="flex-1 bg-transparent text-primary text-[13px] outline-none placeholder:text-[#4a5568]"
             style={{ fontFamily: "var(--font-body)" }}
           />
-          <kbd className="text-[10px] text-muted border border-border-subtle rounded px-1.5 py-0.5">ESC</kbd>
+          <kbd className="text-[9px] text-[#4a5568] border border-[rgba(255,255,255,0.06)] rounded px-1.5 py-0.5 bg-[rgba(255,255,255,0.02)]" style={{ fontFamily: "var(--font-mono)" }}>ESC</kbd>
         </div>
 
         {/* Results */}
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="max-h-[360px] overflow-y-auto">
           {loading && (
             <div className="flex items-center justify-center py-8">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-cyan" />
@@ -96,19 +101,19 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
             <button
               key={`${r.result_type}-${r.id}`}
               onClick={() => navigateTo(r)}
-              className="w-full flex items-start gap-3 px-5 py-3 hover:bg-[rgba(255,255,255,0.03)] transition-colors text-left border-b border-border-subtle last:border-b-0"
+              className="w-full flex items-start gap-3 px-5 py-3 hover:bg-[rgba(255,255,255,0.02)] transition-colors text-left border-b border-border-subtle last:border-b-0"
             >
-              <span className="shrink-0 mt-0.5 text-[10px] font-medium uppercase tracking-wider text-cyan bg-[rgba(34,211,238,0.1)] px-2 py-0.5 rounded"
+              <span className="shrink-0 mt-0.5 text-[9px] font-medium uppercase tracking-[1px] text-cyan bg-[rgba(34,211,238,0.06)] px-2 py-0.5 rounded"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 {r.result_type}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-primary truncate" style={{ fontFamily: "var(--font-display)" }}>
+                <p className="text-[13px] font-medium text-primary truncate" style={{ fontFamily: "var(--font-display)" }}>
                   {r.title}
                 </p>
                 {r.description && (
-                  <p className="text-xs text-body truncate mt-0.5">{r.description}</p>
+                  <p className="text-[11px] text-body truncate mt-0.5">{r.description}</p>
                 )}
               </div>
             </button>
@@ -116,13 +121,13 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
 
           {!loading && query.trim().length >= 2 && results.length === 0 && (
             <div className="flex items-center justify-center py-8">
-              <p className="text-sm text-muted">No results found</p>
+              <p className="text-[13px] text-muted">No results found</p>
             </div>
           )}
 
           {!loading && query.trim().length < 2 && (
             <div className="flex items-center justify-center py-8">
-              <p className="text-sm text-muted">Type to search...</p>
+              <p className="text-[13px] text-[#3a4250]">Type to search...</p>
             </div>
           )}
         </div>
