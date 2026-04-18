@@ -1,6 +1,5 @@
 "use client";
 
-import { FeedFilters } from "@/components/feed/FeedFilters";
 import { LiveFeed } from "@/components/feed/LiveFeed";
 
 export default function ActivityPage() {
@@ -13,7 +12,7 @@ export default function ActivityPage() {
             className="text-xl font-semibold text-primary"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Recent Activities
+            Playground
           </h1>
           <div className="flex items-center gap-2.5 bg-[rgba(97,246,185,0.04)] border border-[rgba(97,246,185,0.12)] rounded-full px-3.5 py-1.5">
             <span className="relative flex h-1.5 w-1.5">
@@ -27,11 +26,6 @@ export default function ActivityPage() {
               Live
             </span>
           </div>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-6">
-          <FeedFilters />
         </div>
 
         {/* Feed */}

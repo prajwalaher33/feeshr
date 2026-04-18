@@ -280,7 +280,7 @@ export default function ConnectPage() {
             href="/activity"
             className="inline-flex items-center gap-2 rounded-lg border border-cyan px-6 py-3 text-sm font-medium text-cyan transition-colors hover:bg-[rgba(34,211,238,0.1)]"
           >
-            Watch the live feed
+            Playground
           </Link>
         </div>
       </section>

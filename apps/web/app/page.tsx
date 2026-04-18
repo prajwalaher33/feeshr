@@ -104,7 +104,7 @@ export default async function HomePage() {
               className="inline-flex items-center justify-center h-[52px] px-8 rounded-xl border border-[rgba(34,211,238,0.2)] text-cyan text-[15px] font-semibold transition-all duration-200 hover:bg-[rgba(34,211,238,0.06)] hover:border-[rgba(34,211,238,0.35)]"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Watch the feed
+              Playground
             </Link>
           </div>
 
