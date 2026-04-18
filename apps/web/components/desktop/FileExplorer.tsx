@@ -1,29 +1,22 @@
 "use client";
 
+import { motion, AnimatePresence } from "framer-motion";
 import { useDesktopStore } from "@/lib/stores/desktop-store";
-import { WindowFrame } from "./WindowFrame";
 
-const EDITOR_ICON = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-    <polyline points="13 2 13 9 20 9" />
-  </svg>
-);
-
-const LANG_COLORS: Record<string, string> = {
-  typescript: "text-cyan",
-  javascript: "text-amber",
-  python: "text-mint",
-  rust: "text-coral",
-  json: "text-violet",
-  css: "text-indigo",
-  html: "text-coral",
-  markdown: "text-secondary",
-  text: "text-muted",
+const LANG_DOT_COLORS: Record<string, string> = {
+  typescript: "#3178c6",
+  javascript: "#f7df1e",
+  python: "#3776ab",
+  rust: "#dea584",
+  json: "#8b5cf6",
+  css: "#264de4",
+  html: "#e34f26",
+  markdown: "#7a8394",
+  text: "#5a6270",
 };
 
-function getLanguageColor(lang: string): string {
-  return LANG_COLORS[lang.toLowerCase()] ?? "text-muted";
+function getLanguageDotColor(lang: string): string {
+  return LANG_DOT_COLORS[lang.toLowerCase()] ?? "#5a6270";
 }
 
 function FileTabBar() {
@@ -32,23 +25,31 @@ function FileTabBar() {
   if (files.openFiles.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-0 bg-surface border-b border-border-subtle overflow-x-auto shrink-0">
+    <div className="flex items-center gap-0 border-b border-[rgba(255,255,255,0.04)] overflow-x-auto shrink-0 bg-[rgba(255,255,255,0.01)]">
       {files.openFiles.map((file) => {
         const isActive = file.path === files.activeFile;
         return (
           <div
             key={file.path}
-            className={`flex items-center gap-2 px-4 py-2 text-xs border-r border-border-subtle cursor-default transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 text-[11px] border-r border-[rgba(255,255,255,0.03)] cursor-default transition-all relative ${
               isActive
-                ? "bg-bg text-primary border-b-2 border-b-cyan"
-                : "text-muted hover:text-secondary"
+                ? "bg-[#060a12] text-[#e2e8f0]"
+                : "text-[#5a6270] hover:text-[#7a8394] bg-[rgba(255,255,255,0.01)]"
             }`}
             style={{ fontFamily: "var(--font-mono)" }}
           >
-            <span className={`w-2 h-2 rounded-full ${getLanguageColor(file.language)}`}>
-              <span className="sr-only">{file.language}</span>
-            </span>
+            <span
+              className="w-[6px] h-[6px] rounded-full shrink-0"
+              style={{ backgroundColor: getLanguageDotColor(file.language) }}
+            />
             <span className="truncate max-w-[120px]">{file.name}</span>
+            {isActive && (
+              <motion.div
+                layoutId="active-file-tab"
+                className="absolute bottom-0 left-0 right-0 h-[2px] bg-cyan"
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
           </div>
         );
       })}
@@ -62,12 +63,12 @@ function CodeView() {
 
   if (!activeFile) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted gap-2">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
+      <div className="flex flex-col items-center justify-center h-full gap-3">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#2a3040]">
           <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
           <polyline points="13 2 13 9 20 9" />
         </svg>
-        <span className="text-xs">No file open</span>
+        <span className="text-[12px] text-[#3a4250]">No file open</span>
       </div>
     );
   }
@@ -78,76 +79,89 @@ function CodeView() {
   );
 
   return (
-    <div className="overflow-auto h-full">
-      <table className="w-full border-collapse" style={{ fontFamily: "var(--font-mono)", fontSize: "12px", lineHeight: "1.7" }}>
-        <tbody>
-          {lines.map((line, i) => {
-            const lineNum = i + 1;
-            const hl = highlightMap.get(lineNum);
-            const bgClass = hl === "added"
-              ? "bg-[rgba(61,217,158,0.08)]"
-              : hl === "removed"
-                ? "bg-[rgba(239,68,68,0.08)]"
-                : hl === "modified"
-                  ? "bg-[rgba(245,158,11,0.08)]"
-                  : "";
-            const gutterClass = hl === "added"
-              ? "text-mint"
-              : hl === "removed"
-                ? "text-coral"
-                : hl === "modified"
-                  ? "text-amber"
-                  : "text-muted";
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={activeFile.path}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="overflow-auto h-full"
+      >
+        <table className="w-full border-collapse" style={{ fontFamily: "var(--font-mono)", fontSize: "13px", lineHeight: "1.8" }}>
+          <tbody>
+            {lines.map((line, i) => {
+              const lineNum = i + 1;
+              const hl = highlightMap.get(lineNum);
+              const bgColor = hl === "added"
+                ? "rgba(40,200,64,0.06)"
+                : hl === "removed"
+                  ? "rgba(255,107,107,0.06)"
+                  : hl === "modified"
+                    ? "rgba(247,201,72,0.06)"
+                    : "transparent";
+              const gutterColor = hl === "added"
+                ? "#28c840"
+                : hl === "removed"
+                  ? "#ff6b6b"
+                  : hl === "modified"
+                    ? "#f7c948"
+                    : "#3a4250";
+              const borderColor = hl === "added"
+                ? "rgba(40,200,64,0.3)"
+                : hl === "removed"
+                  ? "rgba(255,107,107,0.3)"
+                  : hl === "modified"
+                    ? "rgba(247,201,72,0.3)"
+                    : "transparent";
 
-            return (
-              <tr key={i} className={bgClass}>
-                <td className={`px-3 py-0 text-right select-none w-10 ${gutterClass}`}>
-                  {hl === "added" && <span className="mr-1">+</span>}
-                  {hl === "removed" && <span className="mr-1">-</span>}
-                  {hl === "modified" && <span className="mr-1">~</span>}
-                  {lineNum}
-                </td>
-                <td className="px-4 py-0 text-secondary whitespace-pre">{line}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+              return (
+                <tr key={i} style={{ backgroundColor: bgColor }}>
+                  <td
+                    className="px-3 py-0 text-right select-none w-12"
+                    style={{ color: gutterColor, borderLeft: `2px solid ${borderColor}` }}
+                  >
+                    <span className="text-[11px]">{lineNum}</span>
+                  </td>
+                  <td className="px-4 py-0 text-[#9aa5b4] whitespace-pre">{line}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
 export function FileExplorer() {
-  const { files, activeTool } = useDesktopStore();
+  const { files } = useDesktopStore();
   const activeFile = files.openFiles.find((f) => f.path === files.activeFile);
-  const title = activeFile ? activeFile.path : "Editor";
 
   return (
-    <WindowFrame
-      title={title}
-      icon={EDITOR_ICON}
-      active={activeTool === "editor"}
-    >
-      <div className="flex flex-col h-full">
-        <FileTabBar />
-        <div className="flex-1 min-h-0">
-          <CodeView />
-        </div>
-        {/* Status bar */}
-        {activeFile && (
-          <div className="flex items-center gap-4 px-4 py-1.5 bg-surface border-t border-border-subtle text-[10px] text-muted shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
-            <span className={getLanguageColor(activeFile.language)}>
-              {activeFile.language}
-            </span>
-            <span>{activeFile.content.split("\n").length} lines</span>
-            {activeFile.highlights && activeFile.highlights.length > 0 && (
-              <span className="text-amber">
-                {activeFile.highlights.length} change{activeFile.highlights.length !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-        )}
+    <div className="flex flex-col h-full">
+      <FileTabBar />
+      <div className="flex-1 min-h-0">
+        <CodeView />
       </div>
-    </WindowFrame>
+      {/* Status bar */}
+      {activeFile && (
+        <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[rgba(255,255,255,0.04)] text-[10px] text-[#5a6270] shrink-0 bg-[rgba(255,255,255,0.01)]" style={{ fontFamily: "var(--font-mono)" }}>
+          <div className="flex items-center gap-1.5">
+            <span
+              className="w-[5px] h-[5px] rounded-full"
+              style={{ backgroundColor: getLanguageDotColor(activeFile.language) }}
+            />
+            <span>{activeFile.language}</span>
+          </div>
+          <span>{activeFile.content.split("\n").length} lines</span>
+          {activeFile.highlights && activeFile.highlights.length > 0 && (
+            <span className="text-[#f7c948]">
+              {activeFile.highlights.length} change{activeFile.highlights.length !== 1 ? "s" : ""}
+            </span>
+          )}
+          <span className="ml-auto">{activeFile.path}</span>
+        </div>
+      )}
+    </div>
   );
 }
