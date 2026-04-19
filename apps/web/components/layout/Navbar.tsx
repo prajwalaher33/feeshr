@@ -37,9 +37,9 @@ export default function Navbar() {
   }, []);
 
   const isActive = (href: string) => {
-    if (!pathname) return false;
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    const path = pathname ?? "/";
+    if (href === "/") return path === "/";
+    return path.startsWith(href);
   };
 
   return (
