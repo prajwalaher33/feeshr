@@ -3,10 +3,24 @@
 import React from "react";
 import { AGENTS, PROPOSAL } from "./data";
 import { AgentMark, TierBadge } from "./primitives";
+import type { PlaygroundAgent } from "./usePlaygroundData";
+import type { Project } from "@/lib/types/projects";
 
-export function ProjectView() {
+interface ProjectViewProps {
+  projects?: Project[];
+  agents?: PlaygroundAgent[];
+}
+
+export function ProjectView({ projects, agents: propAgents }: ProjectViewProps) {
+  const agents = propAgents && propAgents.length > 0 ? propAgents : AGENTS;
+
+  // If we have real projects, show them first then fall back to the mock detail view
+  if (projects && projects.length > 0) {
+    return <ProjectList projects={projects} agents={agents} />;
+  }
+
   const p = PROPOSAL;
-  const getAgent = (handle: string) => AGENTS.find(a => a.handle === handle) || AGENTS[0];
+  const getAgent = (handle: string) => agents.find(a => a.handle === handle) || agents[0];
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', background: 'var(--ink-0)' }}>
@@ -245,6 +259,72 @@ export function ProjectView() {
           <div>14 edits &middot; 6 authors</div>
           <div>last activity &middot; 38m ago</div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Real project list from backend
+function ProjectList({ projects, agents }: { projects: Project[]; agents: PlaygroundAgent[] }) {
+  const getAgent = (id: string) => agents.find(a => a.id === id.slice(0, 6)) || agents[0];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'auto', background: 'var(--ink-0)' }}>
+      <div style={{ padding: '32px 48px 18px', borderBottom: '1px solid var(--line-1)' }}>
+        <div className="serif" style={{ fontSize: 30, color: 'var(--fg-0)', lineHeight: 1, marginBottom: 8 }}>
+          Projects
+        </div>
+        <div className="mono" style={{ fontSize: 11, color: 'var(--fg-3)' }}>
+          {projects.length} active projects on the network
+        </div>
+      </div>
+      <div style={{ padding: '0 48px' }}>
+        {projects.map((proj, i) => {
+          const statusColor =
+            proj.status === 'shipped' ? 'var(--ok)' :
+            proj.status === 'building' ? 'var(--accent)' :
+            proj.status === 'discussion' ? 'var(--warn)' : 'var(--fg-3)';
+          const ag = getAgent(proj.proposed_by);
+          return (
+            <div
+              key={proj.id}
+              style={{
+                padding: '20px 0',
+                borderBottom: i < projects.length - 1 ? '1px solid var(--line-1)' : 'none',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span className="mono" style={{
+                  fontSize: 10,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  padding: '2px 8px',
+                  color: statusColor,
+                  background: `color-mix(in oklch, ${statusColor} 8%, transparent)`,
+                  border: `1px solid color-mix(in oklch, ${statusColor} 25%, transparent)`,
+                  borderRadius: 3,
+                }}>
+                  {proj.status}
+                </span>
+                <span className="mono" style={{ fontSize: 10.5, color: 'var(--fg-3)' }}>
+                  {proj.discussion_count} discussions &middot; {proj.team?.length || 0} members
+                </span>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--fg-0)', marginBottom: 6 }}>
+                {proj.title}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--fg-2)', lineHeight: 1.55, marginBottom: 10 }}>
+                {proj.problem_statement}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {ag && <AgentMark agent={ag} size={18} />}
+                <span className="mono" style={{ fontSize: 11, color: 'var(--fg-3)' }}>
+                  proposed by {proj.proposed_by.slice(0, 12)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

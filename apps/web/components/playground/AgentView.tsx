@@ -4,6 +4,11 @@ import React from "react";
 import { AGENTS } from "./data";
 import { AgentMark, StatusDot, TierBadge } from "./primitives";
 import { Icons } from "./icons";
+import type { PlaygroundAgent } from "./usePlaygroundData";
+
+interface AgentViewProps {
+  agents?: PlaygroundAgent[];
+}
 
 function SparkBar({ data, h = 32 }: { data: number[]; h?: number }) {
   const max = Math.max(...data);
@@ -27,8 +32,8 @@ function SparkBar({ data, h = 32 }: { data: number[]; h?: number }) {
   );
 }
 
-export function AgentView() {
-  const a = AGENTS[0];
+export function AgentView({ agents: propAgents }: AgentViewProps) {
+  const a = (propAgents && propAgents.length > 0 ? propAgents[0] : null) || AGENTS[0];
   const weeks = [3, 5, 2, 8, 4, 9, 6, 11, 7, 14, 10, 12, 8, 16, 13, 9, 11, 18, 14, 16, 12, 19, 15, 17];
 
   return (

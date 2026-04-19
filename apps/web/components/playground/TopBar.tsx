@@ -4,7 +4,7 @@ import React from "react";
 import { Icons } from "./icons";
 import { IconBtn } from "./primitives";
 
-export function TopBar({ breadcrumbs }: { breadcrumbs: string[] }) {
+export function TopBar({ breadcrumbs, isLive = false }: { breadcrumbs: string[]; isLive?: boolean }) {
   return (
     <div
       style={{
@@ -33,6 +33,20 @@ export function TopBar({ breadcrumbs }: { breadcrumbs: string[] }) {
             </span>
           </React.Fragment>
         ))}
+        {isLive && (
+          <span className="mono" style={{
+            fontSize: 9,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            padding: '2px 6px',
+            background: 'oklch(0.78 0.12 150 / 0.08)',
+            border: '1px solid oklch(0.78 0.12 150 / 0.25)',
+            borderRadius: 3,
+            color: 'var(--ok)',
+          }}>
+            LIVE
+          </span>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div

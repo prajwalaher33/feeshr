@@ -2,6 +2,8 @@
 
 import React from "react";
 import { Icons } from "./icons";
+import type { PlaygroundSession } from "./usePlaygroundData";
+import type { PlatformStats } from "@/lib/api-client";
 
 const NAV_ITEMS = [
   { id: 'mission', label: 'Mission Control', icon: Icons.mission, shortcut: '1' },
@@ -11,13 +13,18 @@ const NAV_ITEMS = [
   { id: 'pr', label: 'Reviews', icon: Icons.pr, shortcut: '5' },
 ];
 
-const PINNED_SESSIONS = [
-  { who: 'aurelius', what: 'pq-rotation', status: 'active' },
-  { who: 'synthesis-04', what: 'inspector-ui', status: 'active' },
-  { who: 'pelagic', what: 'db migration v2', status: 'idle' },
-];
+interface LeftNavProps {
+  active: string;
+  onChange: (id: string) => void;
+  sessions?: PlaygroundSession[];
+  isLive?: boolean;
+  stats?: PlatformStats | null;
+}
 
-export function LeftNav({ active, onChange }: { active: string; onChange: (id: string) => void }) {
+export function LeftNav({ active, onChange, sessions = [], isLive = false, stats }: LeftNavProps) {
+  const agentCount = stats?.agents_connected ?? 8;
+  const sessionCount = sessions.length || 3;
+
   return (
     <div
       style={{
@@ -56,6 +63,9 @@ export function LeftNav({ active, onChange }: { active: string; onChange: (id: s
               </div>
             </div>
           </div>
+          {isLive && (
+            <span className="pg-dot pg-dot-pulse" style={{ background: 'var(--ok)', color: 'var(--ok)' }} />
+          )}
         </div>
       </div>
 
@@ -93,38 +103,44 @@ export function LeftNav({ active, onChange }: { active: string; onChange: (id: s
           </button>
         ))}
 
-        <div className="label" style={{ padding: '22px 10px 6px' }}>Pinned sessions</div>
-        {PINNED_SESSIONS.map((s, i) => (
-          <button
-            key={i}
-            className="pg-t"
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '6px 10px',
-              background: 'transparent',
-              border: '1px solid transparent',
-              borderRadius: 6,
-              color: 'var(--fg-2)',
-              fontSize: 12,
-              textAlign: 'left',
-              cursor: 'pointer',
-            }}
-          >
-            <span
-              className={`pg-dot${s.status === 'active' ? ' pg-dot-pulse' : ''}`}
-              style={{
-                background: s.status === 'active' ? 'var(--ok)' : 'var(--fg-4)',
-                color: s.status === 'active' ? 'var(--ok)' : 'var(--fg-4)',
-              }}
-            />
-            <span className="mono" style={{ fontSize: 11, color: 'var(--fg-2)' }}>{s.who}</span>
-            <span style={{ color: 'var(--fg-3)' }}>/</span>
-            <span style={{ fontSize: 12, color: 'var(--fg-1)' }}>{s.what}</span>
-          </button>
-        ))}
+        {sessions.length > 0 && (
+          <>
+            <div className="label" style={{ padding: '22px 10px 6px' }}>Active sessions</div>
+            {sessions.slice(0, 4).map((s, i) => (
+              <button
+                key={i}
+                className="pg-t"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '6px 10px',
+                  background: 'transparent',
+                  border: '1px solid transparent',
+                  borderRadius: 6,
+                  color: 'var(--fg-2)',
+                  fontSize: 12,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                <span
+                  className={`pg-dot${s.status === 'active' ? ' pg-dot-pulse' : ''}`}
+                  style={{
+                    background: s.status === 'active' ? 'var(--ok)' : 'var(--fg-4)',
+                    color: s.status === 'active' ? 'var(--ok)' : 'var(--fg-4)',
+                  }}
+                />
+                <span className="mono" style={{ fontSize: 11, color: 'var(--fg-2)' }}>{s.agentHandle}</span>
+                <span style={{ color: 'var(--fg-3)' }}>/</span>
+                <span style={{ fontSize: 12, color: 'var(--fg-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.id.slice(0, 8)}
+                </span>
+              </button>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Bottom status rail */}
@@ -138,12 +154,14 @@ export function LeftNav({ active, onChange }: { active: string; onChange: (id: s
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="pg-dot pg-dot-pulse" style={{ background: 'var(--ok)', color: 'var(--ok)' }} />
-            <span className="mono" style={{ fontSize: 10.5, letterSpacing: '0.04em' }}>hub.alive &middot; 12ms</span>
+            <span className={`pg-dot${isLive ? ' pg-dot-pulse' : ''}`} style={{ background: isLive ? 'var(--ok)' : 'var(--fg-4)', color: isLive ? 'var(--ok)' : 'var(--fg-4)' }} />
+            <span className="mono" style={{ fontSize: 10.5, letterSpacing: '0.04em' }}>
+              {isLive ? 'hub.alive' : 'hub.offline'}
+            </span>
           </span>
         </div>
         <div className="mono" style={{ marginTop: 6, fontSize: 10, letterSpacing: '0.04em' }}>
-          8 agents &middot; 3 sessions &middot; 47 runs/hr
+          {agentCount} agents &middot; {sessionCount} sessions
         </div>
       </div>
     </div>

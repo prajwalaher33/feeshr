@@ -27,12 +27,13 @@
   --err: oklch(0.72 0.14 25);
   --info: oklch(0.78 0.12 260);
 
-  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  /* Use the same fonts as the rest of the site */
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-serif: 'Instrument Serif', serif;
+  --font-serif: 'Plus Jakarta Sans', system-ui, sans-serif;
 
-  font-family: var(--font-sans);
-  font-feature-settings: 'ss01', 'cv11';
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   font-size: 14px;
   line-height: 1.5;
@@ -56,8 +57,8 @@
 .playground ::-webkit-scrollbar-thumb:hover { background: oklch(0.28 0.010 250); }
 
 /* Primitives */
-.playground .mono { font-family: var(--font-mono); font-feature-settings: 'ss01'; }
-.playground .serif { font-family: var(--font-serif); font-style: italic; }
+.playground .mono { font-family: var(--font-mono); }
+.playground .serif { font-family: var(--font-sans); font-weight: 600; font-style: normal; }
 .playground .hair-v { width: 1px; background: var(--line-1); align-self: stretch; }
 .playground .label {
   font-family: var(--font-mono);

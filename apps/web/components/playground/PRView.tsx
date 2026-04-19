@@ -4,10 +4,24 @@ import React from "react";
 import { AGENTS, PR_DATA } from "./data";
 import { AgentMark } from "./primitives";
 import { Icons } from "./icons";
+import type { PlaygroundAgent } from "./usePlaygroundData";
+import type { PullRequestDetail } from "@/lib/api";
 
-export function PRView() {
+interface PRViewProps {
+  prs?: PullRequestDetail[];
+  agents?: PlaygroundAgent[];
+}
+
+export function PRView({ prs, agents: propAgents }: PRViewProps) {
+  const agents = propAgents && propAgents.length > 0 ? propAgents : AGENTS;
+
+  // If we have real PRs from the API, show a list; otherwise show the detailed mock
+  if (prs && prs.length > 0) {
+    return <PRList prs={prs} agents={agents} />;
+  }
+
   const p = PR_DATA;
-  const getAgent = (handle: string) => AGENTS.find(a => a.handle === handle) || AGENTS[0];
+  const getAgent = (handle: string) => agents.find(a => a.handle === handle) || agents[0];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'auto', background: 'var(--ink-0)' }}>
@@ -147,6 +161,56 @@ export function PRView() {
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Real PR list from backend
+function PRList({ prs, agents }: { prs: PullRequestDetail[]; agents: PlaygroundAgent[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'auto', background: 'var(--ink-0)' }}>
+      <div style={{ padding: '28px 48px 18px', borderBottom: '1px solid var(--line-1)' }}>
+        <div className="serif" style={{ fontSize: 30, color: 'var(--fg-0)', lineHeight: 1, marginBottom: 8 }}>
+          Reviews
+        </div>
+        <div className="mono" style={{ fontSize: 11, color: 'var(--fg-3)' }}>
+          {prs.length} pull requests from the network
+        </div>
+      </div>
+      <div style={{ padding: '0 48px' }}>
+        {prs.map((pr, i) => {
+          const statusColor = pr.status === 'merged' ? 'var(--ok)' : pr.status === 'open' ? 'var(--accent)' : pr.status === 'approved' ? 'var(--ok)' : 'var(--warn)';
+          return (
+            <div
+              key={pr.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                padding: '16px 0',
+                borderBottom: i < prs.length - 1 ? '1px solid var(--line-1)' : 'none',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 4 }}>
+                <div style={{ fontSize: 14, color: 'var(--fg-0)', fontWeight: 500 }}>{pr.title}</div>
+                <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--fg-3)' }}>
+                  <span>{pr.source_branch} &rarr; {pr.target_branch}</span>
+                  <span style={{ color: 'var(--fg-4)' }}>&middot;</span>
+                  <span>{pr.files_changed} files</span>
+                  <span style={{ color: 'var(--ok)' }}>+{pr.additions}</span>
+                  <span style={{ color: 'var(--err)' }}>&minus;{pr.deletions}</span>
+                </div>
+              </div>
+              <span className="mono" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: statusColor }}>
+                {pr.status}
+              </span>
+              <span className="mono" style={{ fontSize: 10, color: pr.ci_status === 'passed' ? 'var(--ok)' : pr.ci_status === 'failed' ? 'var(--err)' : 'var(--fg-3)', letterSpacing: '0.04em' }}>
+                CI: {pr.ci_status}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

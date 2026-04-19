@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AGENTS, SESSION_EVENTS, FILE_TREE, DIFF_LINES } from "./data";
+import { AGENTS, SESSION_EVENTS, FILE_TREE, DIFF_LINES, type Agent } from "./data";
 import { AgentMark, StatusDot, TierBadge, IconBtn } from "./primitives";
 import { Icons, KIND_META } from "./icons";
+import type { PlaygroundAgent, PlaygroundSessionEvent } from "./usePlaygroundData";
+
+interface MissionControlProps {
+  events?: PlaygroundSessionEvent[];
+  agent?: PlaygroundAgent | null;
+  agents?: PlaygroundAgent[];
+}
 
 // Session header above canvas
-function SessionHeader() {
-  const agent = AGENTS[0];
+function SessionHeader({ agent: propAgent }: { agent?: PlaygroundAgent | null }) {
+  const agent = propAgent || AGENTS[0];
   return (
     <div
       style={{
@@ -71,7 +78,7 @@ function SessionHeader() {
 }
 
 // Event stream — left rail
-function EventStream({ cursor, onSeek }: { cursor: number; onSeek: (i: number) => void }) {
+function EventStream({ cursor, onSeek, events = SESSION_EVENTS }: { cursor: number; onSeek: (i: number) => void; events?: PlaygroundSessionEvent[] }) {
   return (
     <div
       style={{
@@ -84,7 +91,7 @@ function EventStream({ cursor, onSeek }: { cursor: number; onSeek: (i: number) =
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 8px' }}>
         <span className="label">Event stream</span>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--fg-4)' }}>{SESSION_EVENTS.length}</span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--fg-4)' }}>{events.length}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', padding: '0 8px 16px', position: 'relative' }}>
         {/* vertical line */}
@@ -98,7 +105,7 @@ function EventStream({ cursor, onSeek }: { cursor: number; onSeek: (i: number) =
             background: 'var(--line-1)',
           }}
         />
-        {SESSION_EVENTS.map((e, i) => {
+        {events.map((e, i) => {
           const meta = KIND_META[e.kind] || KIND_META.read;
           const isCur = i === cursor;
           const isPast = i <= cursor;
@@ -320,9 +327,9 @@ function CanvasDiff() {
 }
 
 // Inspector — right-side detail panel
-function Inspector({ cursor }: { cursor: number }) {
-  const agent = AGENTS[0];
-  const event = SESSION_EVENTS[cursor];
+function Inspector({ cursor, agent: propAgent, events = SESSION_EVENTS }: { cursor: number; agent?: PlaygroundAgent | null; events?: PlaygroundSessionEvent[] }) {
+  const agent = propAgent || AGENTS[0];
+  const event = events[cursor];
   const meta = KIND_META[event?.kind] || KIND_META.read;
 
   return (
@@ -495,13 +502,15 @@ function SessionTimeline({
   onSeek,
   playing,
   onTogglePlay,
+  events = SESSION_EVENTS,
 }: {
   cursor: number;
   onSeek: (i: number) => void;
   playing: boolean;
   onTogglePlay: () => void;
+  events?: PlaygroundSessionEvent[];
 }) {
-  const total = SESSION_EVENTS.length;
+  const total = events.length;
 
   return (
     <div
@@ -529,9 +538,9 @@ function SessionTimeline({
         <div className="hair-v" style={{ height: 20 }} />
 
         <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--fg-2)', letterSpacing: '0.03em' }}>
-          <span>{SESSION_EVENTS[cursor]?.t ?? '\u2014'}</span>
+          <span>{events[cursor]?.t ?? '\u2014'}</span>
           <span style={{ color: 'var(--fg-4)' }}>/</span>
-          <span style={{ color: 'var(--fg-3)' }}>{SESSION_EVENTS[total - 1]?.t}</span>
+          <span style={{ color: 'var(--fg-3)' }}>{events[total - 1]?.t}</span>
           <span style={{ color: 'var(--fg-4)' }}>&middot;</span>
           <span>event {cursor + 1} of {total}</span>
         </div>
@@ -582,7 +591,7 @@ function SessionTimeline({
           />
         ))}
         {/* event dots */}
-        {SESSION_EVENTS.map((e, i) => {
+        {events.map((e, i) => {
           const x = total > 1 ? (i / (total - 1)) * 100 : 0;
           const meta = KIND_META[e.kind] || KIND_META.read;
           const isCur = i === cursor;
@@ -628,7 +637,7 @@ function SessionTimeline({
           00:00
         </div>
         <div className="mono" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: 10, color: 'var(--fg-4)', letterSpacing: '0.04em' }}>
-          {SESSION_EVENTS[total - 1]?.t}
+          {events[total - 1]?.t}
         </div>
       </div>
     </div>
@@ -636,15 +645,21 @@ function SessionTimeline({
 }
 
 // Main Mission Control
-export function MissionControl() {
-  const [cursor, setCursor] = useState(SESSION_EVENTS.length - 1);
+export function MissionControl({ events: propEvents, agent: propAgent }: MissionControlProps) {
+  const events = propEvents && propEvents.length > 0 ? propEvents : SESSION_EVENTS;
+  const [cursor, setCursor] = useState(events.length - 1);
   const [playing, setPlaying] = useState(false);
+
+  // Reset cursor when events change
+  useEffect(() => {
+    setCursor(events.length - 1);
+  }, [events]);
 
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
       setCursor(c => {
-        if (c >= SESSION_EVENTS.length - 1) {
+        if (c >= events.length - 1) {
           setPlaying(false);
           return c;
         }
@@ -652,21 +667,22 @@ export function MissionControl() {
       });
     }, 900);
     return () => clearInterval(id);
-  }, [playing]);
+  }, [playing, events.length]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      <SessionHeader />
+      <SessionHeader agent={propAgent} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <EventStream cursor={cursor} onSeek={setCursor} />
+        <EventStream cursor={cursor} onSeek={setCursor} events={events} />
         <CanvasDiff />
-        <Inspector cursor={cursor} />
+        <Inspector cursor={cursor} agent={propAgent} events={events} />
       </div>
       <SessionTimeline
         cursor={cursor}
         onSeek={setCursor}
         playing={playing}
         onTogglePlay={() => setPlaying(p => !p)}
+        events={events}
       />
     </div>
   );

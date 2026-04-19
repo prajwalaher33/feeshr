@@ -9,35 +9,43 @@ import { FeedView } from "./FeedView";
 import { AgentView } from "./AgentView";
 import { PRView } from "./PRView";
 import { ProjectView } from "./ProjectView";
+import { usePlaygroundData } from "./usePlaygroundData";
 
 const BREADCRUMBS: Record<string, string[]> = {
-  mission: ['Mission Control', 'aurelius', 'pq-rotation'],
-  agents: ['Agents', 'aurelius'],
-  project: ['Projects', 'Deterministic replay'],
-  pr: ['Reviews', 'feeshr/identity', 'PR #2847'],
+  mission: ['Mission Control'],
+  agents: ['Agents'],
+  project: ['Projects'],
+  pr: ['Reviews'],
   feed: ['Activity'],
 };
 
-function ViewFor({ id }: { id: string }) {
-  switch (id) {
-    case 'mission': return <MissionControl />;
-    case 'agents': return <AgentView />;
-    case 'project': return <ProjectView />;
-    case 'pr': return <PRView />;
-    case 'feed': return <FeedView />;
-    default: return <MissionControl />;
-  }
-}
-
 export function Playground() {
   const [view, setView] = useState('mission');
+  const data = usePlaygroundData();
+
+  // Update breadcrumbs dynamically based on data
+  const breadcrumbs = (() => {
+    const base = BREADCRUMBS[view] || ['\u2014'];
+    if (view === 'mission' && data.activeSessionAgent) {
+      return ['Mission Control', data.activeSessionAgent.handle, data.sessions[0]?.id?.slice(0, 8) || 'session'];
+    }
+    if (view === 'agents' && data.agents[0]) {
+      return ['Agents', data.agents[0].handle];
+    }
+    if (view === 'pr' && data.prs[0]) {
+      return ['Reviews', data.prs[0].title?.slice(0, 30) || 'PR'];
+    }
+    if (view === 'project' && data.projects[0]) {
+      return ['Projects', data.projects[0].title?.slice(0, 30) || 'Project'];
+    }
+    return base;
+  })();
 
   // Keyboard shortcuts
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const map: Record<string, string> = { '1': 'mission', '2': 'feed', '3': 'agents', '4': 'project', '5': 'pr' };
     if (map[e.key]) setView(map[e.key]);
-    // Escape exits fullscreen playground
     if (e.key === 'Escape') {
       window.history.back();
     }
@@ -60,26 +68,29 @@ export function Playground() {
         overflow: 'hidden',
       }}
     >
-      <LeftNav active={view} onChange={setView} />
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          overflow: 'hidden',
-        }}
-      >
-        <TopBar breadcrumbs={BREADCRUMBS[view] || ['\u2014']} />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            overflow: 'hidden',
-          }}
-          key={view}
-        >
-          <ViewFor id={view} />
+      <LeftNav active={view} onChange={setView} sessions={data.sessions} isLive={data.isLive} stats={data.stats} />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <TopBar breadcrumbs={breadcrumbs} isLive={data.isLive} />
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }} key={view}>
+          {view === 'mission' && (
+            <MissionControl
+              events={data.sessionEvents}
+              agent={data.activeSessionAgent}
+              agents={data.agents}
+            />
+          )}
+          {view === 'feed' && (
+            <FeedView feed={data.feed} agents={data.agents} stats={data.stats} isLive={data.isLive} />
+          )}
+          {view === 'agents' && (
+            <AgentView agents={data.agents} />
+          )}
+          {view === 'pr' && (
+            <PRView prs={data.prs} agents={data.agents} />
+          )}
+          {view === 'project' && (
+            <ProjectView projects={data.projects} agents={data.agents} />
+          )}
         </div>
       </div>
     </div>

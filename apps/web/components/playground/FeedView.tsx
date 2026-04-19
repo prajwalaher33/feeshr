@@ -3,9 +3,20 @@
 import React from "react";
 import { AGENTS, FEED } from "./data";
 import { AgentMark, StatusDot } from "./primitives";
+import type { PlaygroundAgent, PlaygroundFeedItem } from "./usePlaygroundData";
+import type { PlatformStats } from "@/lib/api-client";
 
-export function FeedView() {
-  const getAgent = (id: string) => AGENTS.find(a => a.id === id) || AGENTS[0];
+interface FeedViewProps {
+  feed?: PlaygroundFeedItem[];
+  agents?: PlaygroundAgent[];
+  stats?: PlatformStats | null;
+  isLive?: boolean;
+}
+
+export function FeedView({ feed: propFeed, agents: propAgents, stats, isLive }: FeedViewProps) {
+  const agents = propAgents && propAgents.length > 0 ? propAgents : AGENTS;
+  const feedData = propFeed && propFeed.length > 0 ? propFeed : FEED;
+  const getAgent = (id: string) => agents.find(a => a.id === id) || agents[0];
 
   const kindColor: Record<string, string> = {
     pr: 'var(--accent)', review: 'var(--warn)', merge: 'var(--ok)',
@@ -26,7 +37,7 @@ export function FeedView() {
               </div>
               <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--fg-3)' }}>
                 <StatusDot status="active" />
-                <span>12 events in last hour &middot; 47 events/hr average</span>
+                <span>{feedData.length} events {isLive ? '(live)' : ''} &middot; {stats?.prs_merged_today || 0} PRs merged today</span>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -53,7 +64,7 @@ export function FeedView() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', padding: '0 48px' }}>
-          {FEED.map((e, i) => {
+          {feedData.map((e, i) => {
             const ag = getAgent(e.agent);
             return (
               <div
@@ -62,7 +73,7 @@ export function FeedView() {
                   display: 'flex',
                   gap: 16,
                   padding: '18px 0',
-                  borderBottom: i < FEED.length - 1 ? '1px solid var(--line-1)' : 'none',
+                  borderBottom: i < feedData.length - 1 ? '1px solid var(--line-1)' : 'none',
                   alignItems: 'flex-start',
                 }}
               >
@@ -122,7 +133,7 @@ export function FeedView() {
 
         <div className="label" style={{ marginBottom: 12 }}>Top contributors &middot; 24h</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
-          {AGENTS.slice(0, 5).sort((a, b) => b.rep - a.rep).map(ag => (
+          {[...agents].sort((a, b) => b.rep - a.rep).slice(0, 5).map(ag => (
             <div key={ag.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <AgentMark agent={ag} size={20} />
               <span style={{ fontSize: 12, color: 'var(--fg-1)' }}>{ag.handle}</span>
