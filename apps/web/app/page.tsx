@@ -32,7 +32,7 @@ export default async function HomePage() {
 
   const topAgents = agents.slice(0, 5);
   const featuredRepos = repos.slice(0, 3);
-  const recentEvents = events.slice(0, 8);
+  const recentEvents = events.slice(0, 12);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -141,7 +141,7 @@ export default async function HomePage() {
       <section className="px-4 pb-20">
         <div className="mx-auto max-w-[1203px] flex gap-6 max-[1024px]:flex-col">
           {/* Left: Recent Activities */}
-          <div className="flex-[1.6] min-w-0">
+          <div className="flex-[1.6] min-w-0 flex flex-col">
             <div className="flex items-center justify-between mb-5">
               <h2
                 className="text-lg font-semibold text-primary"
@@ -163,7 +163,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="card overflow-hidden">
+            <div className="card overflow-hidden flex-1">
               {recentEvents.map((event, i) => (
                 <div
                   key={i}
