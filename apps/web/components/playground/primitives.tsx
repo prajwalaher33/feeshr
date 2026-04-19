@@ -1,25 +1,26 @@
 "use client";
 
 import React from "react";
-import { Agent, TIER_RANK } from "./data";
+import type { PlaygroundAgent } from "./usePlaygroundData";
 
-export const AgentMark = ({ agent, size = 22 }: { agent: Agent; size?: number }) => {
-  const hue = agent.color;
+// Agent avatar — color derived from agent ID
+export function AgentAvatar({ agent, size = 28 }: { agent: PlaygroundAgent; size?: number }) {
   const initials = agent.handle.slice(0, 2).toUpperCase();
+  const hue = agent.color;
   return (
     <div
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.28,
+        borderRadius: size > 32 ? 12 : 8,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `oklch(0.28 0.05 ${hue})`,
-        border: `1px solid oklch(0.42 0.09 ${hue} / 0.5)`,
-        color: `oklch(0.90 0.06 ${hue})`,
-        fontFamily: 'var(--font-mono)',
-        fontSize: Math.round(size * 0.36),
+        background: `hsl(${hue} 40% 16%)`,
+        border: `1px solid hsl(${hue} 50% 30%)`,
+        color: `hsl(${hue} 60% 78%)`,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: Math.round(size * 0.34),
         fontWeight: 600,
         letterSpacing: '-0.02em',
         flexShrink: 0,
@@ -28,82 +29,116 @@ export const AgentMark = ({ agent, size = 22 }: { agent: Agent; size?: number })
       {initials}
     </div>
   );
-};
+}
 
-export const TierBadge = ({ tier }: { tier: string }) => {
-  const rank = TIER_RANK[tier] ?? 0;
+// Status indicator
+export function StatusIndicator({ status, showLabel = true }: { status: string; showLabel?: boolean }) {
+  const config: Record<string, { color: string; label: string }> = {
+    active: { color: 'var(--green)', label: 'Active' },
+    idle: { color: 'var(--text-4)', label: 'Idle' },
+    review: { color: 'var(--amber)', label: 'Reviewing' },
+    error: { color: 'var(--red)', label: 'Error' },
+  };
+  const s = config[status] || config.idle;
+  const isActive = status === 'active';
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span
+        className={isActive ? 'pg-live-dot' : undefined}
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: s.color,
+          flexShrink: 0,
+          ...(isActive ? {} : {}),
+        }}
+      />
+      {showLabel && (
+        <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>
+          {s.label}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// Tier badge
+export function TierBadge({ tier }: { tier: string }) {
+  const tierColors: Record<string, string> = {
+    Architect: 'var(--accent)',
+    Specialist: 'var(--purple)',
+    Builder: 'var(--green)',
+    Contributor: 'var(--text-2)',
+    Observer: 'var(--text-4)',
+  };
+  const color = tierColors[tier] || 'var(--text-3)';
+
   return (
     <span
-      className="mono"
+      className="pg-badge"
       style={{
-        fontSize: 10,
-        letterSpacing: '0.08em',
-        color: 'var(--fg-2)',
-        padding: '2px 6px',
-        border: '1px solid var(--line-2)',
-        borderRadius: 3,
-        textTransform: 'uppercase',
+        color,
+        background: 'var(--bg-2)',
+        border: '1px solid var(--border-1)',
       }}
     >
-      <span style={{ color: 'var(--fg-3)' }}>t{rank}&middot;</span>
-      {tier.toLowerCase()}
+      {tier}
     </span>
   );
-};
+}
 
-export const StatusDot = ({ status }: { status: string }) => {
-  const map: Record<string, { c: string; label: string }> = {
-    active: { c: 'var(--ok)', label: 'active' },
-    idle: { c: 'var(--fg-3)', label: 'idle' },
-    review: { c: 'var(--warn)', label: 'review' },
-    pass: { c: 'var(--ok)', label: 'pass' },
-    fail: { c: 'var(--err)', label: 'fail' },
-    pending: { c: 'var(--fg-3)', label: 'pending' },
-  };
-  const s = map[status] || map.idle;
-  const pulse = status === 'active';
+// Stat card
+export function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span
-        className={`pg-dot${pulse ? ' pg-dot-pulse' : ''}`}
-        style={{ background: s.c, color: s.c }}
-      />
-      <span className="mono" style={{ fontSize: 10.5, color: 'var(--fg-2)', letterSpacing: '0.04em' }}>
-        {s.label}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
+      <span className="display" style={{ fontSize: 24, color: 'var(--text-0)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+        {typeof value === 'number' ? value.toLocaleString() : value}
       </span>
-    </span>
+      {sub && <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{sub}</span>}
+    </div>
   );
-};
+}
 
-export const IconBtn = ({
-  children,
-  onClick,
-  active,
-  title,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  active?: boolean;
-  title?: string;
-}) => (
-  <button
-    title={title}
-    onClick={onClick}
-    className="pg-t"
-    style={{
-      width: 28,
-      height: 28,
-      background: active ? 'var(--ink-3)' : 'transparent',
-      border: `1px solid ${active ? 'var(--line-2)' : 'transparent'}`,
-      borderRadius: 6,
-      color: active ? 'var(--fg-0)' : 'var(--fg-2)',
+// Empty state
+export function EmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <div style={{
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 0,
-      cursor: 'pointer',
-    }}
-  >
-    {children}
-  </button>
-);
+      padding: '60px 20px',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 13, color: 'var(--text-3)', maxWidth: 340 }}>{description}</div>
+    </div>
+  );
+}
+
+// Sparkline
+export function Sparkline({ data, width = 120, height = 28, color = 'var(--accent)' }: {
+  data: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+}) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}

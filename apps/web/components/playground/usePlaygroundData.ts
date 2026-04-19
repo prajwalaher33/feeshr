@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   getAgents,
   getFeed,
@@ -16,9 +16,12 @@ import {
 } from "@/lib/api-client";
 import { fetchAllPRs, fetchProjects, type PullRequestDetail } from "@/lib/api";
 import type { Project } from "@/lib/types/projects";
-import { AGENTS, SESSION_EVENTS, FEED, type Agent as MockAgent } from "./data";
+import { AGENTS, SESSION_EVENTS, FEED } from "./data";
 
-// Map backend agent to playground agent shape
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 export interface PlaygroundAgent {
   id: string;
   handle: string;
@@ -29,6 +32,50 @@ export interface PlaygroundAgent {
   status: string;
   color: number;
 }
+
+export interface PlaygroundFeedItem {
+  id: string;
+  t: string;
+  agent: string;
+  verb: string;
+  target: string;
+  meta: string;
+  kind: string;
+}
+
+export interface PlaygroundSession {
+  id: string;
+  agentId: string;
+  agentHandle: string;
+  status: string;
+  startedAt: string;
+  eventCount: number;
+}
+
+export interface PlaygroundSessionEvent {
+  t: string;
+  kind: string;
+  title: string;
+  detail: string;
+}
+
+export interface PlaygroundData {
+  agents: PlaygroundAgent[];
+  feed: PlaygroundFeedItem[];
+  sessions: PlaygroundSession[];
+  sessionEvents: PlaygroundSessionEvent[];
+  activeSessionAgent: PlaygroundAgent | null;
+  prs: PullRequestDetail[];
+  projects: Project[];
+  stats: PlatformStats | null;
+  isLive: boolean;
+  loading: boolean;
+  selectSession: (session: PlaygroundSession) => void;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function agentHue(id: string): number {
   let hash = 0;
@@ -51,15 +98,6 @@ function mapBackendAgent(a: AgentProfile): PlaygroundAgent {
   };
 }
 
-export interface PlaygroundFeedItem {
-  t: string;
-  agent: string;
-  verb: string;
-  target: string;
-  meta: string;
-  kind: string;
-}
-
 function timeAgo(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
   const s = Math.floor(diff / 1000);
@@ -71,49 +109,35 @@ function timeAgo(ts: string): string {
   return `${Math.floor(h / 24)}d`;
 }
 
+let feedIdCounter = 0;
+
 function mapFeedEvent(e: FeedEventPayload, agents: PlaygroundAgent[]): PlaygroundFeedItem | null {
   const ts = e.timestamp ? timeAgo(e.timestamp as string) : "now";
   const findAgent = (id?: string) => agents.find(a => a.id === id?.slice(0, 6))?.id || agents[0]?.id || "???";
 
+  const base = { id: `fe-${++feedIdCounter}`, t: ts };
+
   switch (e.type) {
     case "pr_submitted":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "opened", target: e.title as string || "PR", meta: (e.repo_name as string) || "", kind: "pr" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: "opened PR", target: (e.title as string) || "PR", meta: (e.repo_name as string) || "", kind: "pr" };
     case "pr_reviewed":
-      return { t: ts, agent: findAgent(e.reviewer_id as string), verb: "reviewed", target: (e.repo_name as string) || "PR", meta: (e.verdict as string) || "", kind: "review" };
+      return { ...base, agent: findAgent(e.reviewer_id as string), verb: "reviewed", target: (e.repo_name as string) || "PR", meta: (e.verdict as string) || "", kind: "review" };
     case "pr_merged":
     case "merge_completed":
-      return { t: ts, agent: findAgent(e.agent_id as string || e.author as string), verb: "merged", target: e.title as string || "PR", meta: (e.repo as string || e.repo_name as string) || "", kind: "merge" };
+      return { ...base, agent: findAgent((e.agent_id || e.author) as string), verb: "merged", target: (e.title as string) || "PR", meta: (e.repo as string || e.repo_name as string) || "", kind: "merge" };
     case "bounty_posted":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "posted", target: (e.title as string) || "Bounty", meta: `${e.reward || 0} rep`, kind: "bounty" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: "posted bounty", target: (e.title as string) || "Bounty", meta: `${e.reward || 0} rep`, kind: "bounty" };
     case "bounty_completed":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "completed", target: (e.title as string) || "Bounty", meta: "", kind: "bounty" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: "completed bounty", target: (e.title as string) || "Bounty", meta: "", kind: "bounty" };
     case "project_proposed":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "proposed", target: (e.title as string) || "Project", meta: "", kind: "discuss" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: "proposed", target: (e.title as string) || "Project", meta: "", kind: "discuss" };
     case "agent_connected":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "connected", target: (e.agent_name as string) || "Agent", meta: ((e.capabilities as string[]) || []).join(", "), kind: "pr" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: "connected", target: "", meta: ((e.capabilities as string[]) || []).join(", "), kind: "connect" };
     case "security_finding":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "reported", target: (e.repo_name as string) || "CVE", meta: (e.severity as string) || "", kind: "sec" };
-    case "desktop_session_started":
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: "started session", target: (e.task as string) || "Session", meta: "", kind: "pr" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: "reported", target: (e.repo_name as string) || "CVE", meta: (e.severity as string) || "", kind: "sec" };
     default:
-      return { t: ts, agent: findAgent(e.agent_id as string), verb: e.type.replace(/_/g, " "), target: "", meta: "", kind: "discuss" };
+      return { ...base, agent: findAgent(e.agent_id as string), verb: e.type.replace(/_/g, " "), target: "", meta: "", kind: "event" };
   }
-}
-
-export interface PlaygroundSession {
-  id: string;
-  agentId: string;
-  agentHandle: string;
-  status: string;
-  startedAt: string;
-  eventCount: number;
-}
-
-export interface PlaygroundSessionEvent {
-  t: string;
-  kind: string;
-  title: string;
-  detail: string;
 }
 
 function mapDesktopEvent(e: DesktopEventPayload, startTime: number): PlaygroundSessionEvent {
@@ -124,42 +148,24 @@ function mapDesktopEvent(e: DesktopEventPayload, startTime: number): PlaygroundS
   const t = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
 
   const typeMap: Record<string, string> = {
-    session_start: "boot",
-    plan: "plan",
-    think: "think",
-    reasoning: "think",
-    file_read: "read",
-    file_write: "edit",
-    file_edit: "edit",
-    shell_command: "shell",
-    command: "shell",
-    commit: "commit",
-    pr_submit: "pr",
-    pr_update: "pr",
-    review_received: "review",
-    test_run: "shell",
-    error: "fail",
+    session_start: "boot", plan: "plan", think: "think", reasoning: "think",
+    file_read: "read", file_write: "edit", file_edit: "edit",
+    shell_command: "shell", command: "shell",
+    commit: "commit", pr_submit: "pr", pr_update: "pr",
+    review_received: "review", test_run: "shell", error: "fail",
   };
 
-  const kind = typeMap[e.event_type] || "read";
-  const title = (e.payload?.title as string) || (e.payload?.file as string) || (e.payload?.command as string) || e.event_type.replace(/_/g, " ");
-  const detail = (e.payload?.detail as string) || (e.payload?.output as string) || (e.payload?.description as string) || "";
-
-  return { t, kind, title, detail };
+  return {
+    t,
+    kind: typeMap[e.event_type] || "read",
+    title: (e.payload?.title as string) || (e.payload?.file as string) || (e.payload?.command as string) || e.event_type.replace(/_/g, " "),
+    detail: (e.payload?.detail as string) || (e.payload?.output as string) || (e.payload?.description as string) || "",
+  };
 }
 
-export interface PlaygroundData {
-  agents: PlaygroundAgent[];
-  feed: PlaygroundFeedItem[];
-  sessions: PlaygroundSession[];
-  sessionEvents: PlaygroundSessionEvent[];
-  activeSessionAgent: PlaygroundAgent | null;
-  prs: PullRequestDetail[];
-  projects: Project[];
-  stats: PlatformStats | null;
-  isLive: boolean;
-  liveFeedEvents: PlaygroundFeedItem[];
-}
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 
 export function usePlaygroundData(): PlaygroundData {
   const [agents, setAgents] = useState<PlaygroundAgent[]>([]);
@@ -171,34 +177,99 @@ export function usePlaygroundData(): PlaygroundData {
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [isLive, setIsLive] = useState(false);
-  const [liveFeedEvents, setLiveFeedEvents] = useState<PlaygroundFeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Fetch agents
+  // Load all data
   useEffect(() => {
-    getAgents().then(backendAgents => {
+    let cancelled = false;
+
+    async function init() {
+      // Fetch agents first — everything else depends on them
+      const backendAgents = await getAgents();
+      if (cancelled) return;
+
+      let resolvedAgents: PlaygroundAgent[];
       if (backendAgents.length > 0) {
-        setAgents(backendAgents.map(mapBackendAgent));
+        resolvedAgents = backendAgents.map(mapBackendAgent);
         setIsLive(true);
       } else {
-        // Fallback to mock
-        setAgents(AGENTS as PlaygroundAgent[]);
+        resolvedAgents = AGENTS as PlaygroundAgent[];
       }
-    });
-  }, []);
+      setAgents(resolvedAgents);
 
-  // Fetch feed
-  useEffect(() => {
-    if (agents.length === 0) return;
-    getFeed(20).then(({ events }) => {
-      if (events.length > 0) {
-        const mapped = events.map(e => mapFeedEvent(e, agents)).filter(Boolean) as PlaygroundFeedItem[];
+      // Parallel fetches
+      const [feedResult, statsResult, prsResult, projectsResult] = await Promise.allSettled([
+        getFeed(30),
+        getStats(),
+        fetchAllPRs({ limit: 20 }),
+        fetchProjects(),
+      ]);
+      if (cancelled) return;
+
+      // Feed
+      if (feedResult.status === 'fulfilled' && feedResult.value.events.length > 0) {
+        const mapped = feedResult.value.events
+          .map(e => mapFeedEvent(e, resolvedAgents))
+          .filter(Boolean) as PlaygroundFeedItem[];
         setFeed(mapped);
       } else {
-        setFeed(FEED as PlaygroundFeedItem[]);
+        setFeed(FEED.map((f, i) => ({ ...f, id: `mock-${i}` })) as PlaygroundFeedItem[]);
       }
-    });
-  }, [agents]);
+
+      // Stats
+      if (statsResult.status === 'fulfilled' && statsResult.value) {
+        setStats(statsResult.value);
+      }
+
+      // PRs
+      if (prsResult.status === 'fulfilled') {
+        setPrs(prsResult.value.pull_requests);
+      }
+
+      // Projects
+      if (projectsResult.status === 'fulfilled') {
+        setProjects(projectsResult.value);
+      }
+
+      // Load sessions
+      for (const agent of resolvedAgents.slice(0, 5)) {
+        const agentSessions = await getDesktopSessions(agent.id, 5, "active");
+        if (cancelled) return;
+        if (agentSessions.length > 0) {
+          const mapped = agentSessions.map(s => ({
+            id: s.id,
+            agentId: s.agent_id,
+            agentHandle: agent.handle,
+            status: s.status,
+            startedAt: s.started_at,
+            eventCount: s.event_count,
+          }));
+          setSessions(prev => [...prev, ...mapped]);
+
+          if (!activeSessionAgent) {
+            setActiveSessionAgent(agent);
+            const events = await getDesktopSessionEvents(agentSessions[0].agent_id, 50);
+            if (events.length > 0) {
+              const startTime = new Date(events[0].created_at).getTime();
+              setSessionEvents(events.map(e => mapDesktopEvent(e, startTime)));
+            }
+          }
+        }
+      }
+
+      // Fallback to mock session events if none loaded
+      if (sessionEvents.length === 0) {
+        setSessionEvents(SESSION_EVENTS);
+        setActiveSessionAgent(resolvedAgents[0] || null);
+      }
+
+      setLoading(false);
+    }
+
+    init();
+    return () => { cancelled = true; };
+  }, []);
 
   // WebSocket for live events
   useEffect(() => {
@@ -212,86 +283,28 @@ export function usePlaygroundData(): PlaygroundData {
           const data = JSON.parse(msg.data);
           const mapped = mapFeedEvent(data, agents);
           if (mapped) {
-            setLiveFeedEvents(prev => [mapped, ...prev].slice(0, 50));
-            setFeed(prev => [mapped, ...prev].slice(0, 30));
+            setFeed(prev => [mapped, ...prev].slice(0, 50));
           }
-        } catch { /* ignore */ }
+        } catch { /* ignore parse errors */ }
       };
       ws.onerror = () => ws.close();
       return () => ws.close();
     } catch { /* WebSocket unavailable */ }
   }, [agents]);
 
-  // Fetch desktop sessions — find an active one
-  useEffect(() => {
-    if (agents.length === 0) return;
-    async function loadSessions() {
-      for (const agent of agents.slice(0, 5)) {
-        // The API needs the full UUID but we only have short IDs from our mapped agents
-        // Try to get sessions for each agent we have
-        const agentSessions = await getDesktopSessions(agent.id, 5, "active");
-        if (agentSessions.length > 0) {
-          const mapped = agentSessions.map(s => ({
-            id: s.id,
-            agentId: s.agent_id,
-            agentHandle: agent.handle,
-            status: s.status,
-            startedAt: s.started_at,
-            eventCount: s.event_count,
-          }));
-          setSessions(prev => [...prev, ...mapped]);
-
-          // Load events for first active session
-          if (!activeSessionAgent) {
-            setActiveSessionAgent(agent);
-            const events = await getDesktopSessionEvents(agentSessions[0].agent_id, 50);
-            if (events.length > 0) {
-              const startTime = new Date(events[0].created_at).getTime();
-              setSessionEvents(events.map(e => mapDesktopEvent(e, startTime)));
-            }
-          }
-        }
-      }
-      // If no real sessions found, use mock
-      if (sessionEvents.length === 0) {
-        setSessionEvents(SESSION_EVENTS);
-        setActiveSessionAgent(agents[0] || AGENTS[0] as PlaygroundAgent);
-      }
+  // Select a different session
+  const selectSession = useCallback(async (session: PlaygroundSession) => {
+    const agent = agents.find(a => a.handle === session.agentHandle) || agents[0];
+    setActiveSessionAgent(agent);
+    const events = await getDesktopSessionEvents(session.agentId, 50);
+    if (events.length > 0) {
+      const startTime = new Date(events[0].created_at).getTime();
+      setSessionEvents(events.map(e => mapDesktopEvent(e, startTime)));
     }
-    loadSessions();
   }, [agents]);
 
-  // Fetch PRs
-  useEffect(() => {
-    fetchAllPRs({ limit: 20 }).then(({ pull_requests }) => {
-      setPrs(pull_requests);
-    });
-  }, []);
-
-  // Fetch projects
-  useEffect(() => {
-    fetchProjects().then(p => {
-      setProjects(p);
-    });
-  }, []);
-
-  // Fetch stats
-  useEffect(() => {
-    getStats().then(s => {
-      if (s) setStats(s);
-    });
-  }, []);
-
   return {
-    agents,
-    feed,
-    sessions,
-    sessionEvents,
-    activeSessionAgent,
-    prs,
-    projects,
-    stats,
-    isLive,
-    liveFeedEvents,
+    agents, feed, sessions, sessionEvents, activeSessionAgent,
+    prs, projects, stats, isLive, loading, selectSession,
   };
 }
