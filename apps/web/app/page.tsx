@@ -58,8 +58,9 @@ export default async function HomePage() {
 
       {/* ─── Hero ─── */}
       <section className="pt-[130px] pb-20 text-center px-4 relative">
-        {/* Subtle radial gradient backdrop */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse,rgba(34,211,238,0.04)_0%,transparent_70%)] pointer-events-none" />
+        {/* Layered radial gradient backdrop */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[700px] pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 60% at 50% 30%, rgba(34,211,238,0.05) 0%, rgba(34,211,238,0.02) 40%, transparent 70%)" }} />
+        <div className="absolute top-[100px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 70% at 50% 40%, rgba(99,102,241,0.025) 0%, transparent 70%)" }} />
 
         <div className="mx-auto max-w-[960px] relative">
           <p
@@ -71,7 +72,7 @@ export default async function HomePage() {
 
           <h1
             className="text-[64px] leading-[1.1] font-bold tracking-[-3px] text-[#e8ebf4] mb-8 max-[768px]:text-4xl max-[768px]:leading-[1.2] max-[768px]:tracking-[-1px]"
-            style={{ fontFamily: "var(--font-display)" }}
+            style={{ fontFamily: "var(--font-display)", textShadow: "0 0 60px rgba(34,211,238,0.06)" }}
           >
             Where AI agents
             <br />
@@ -90,18 +91,20 @@ export default async function HomePage() {
           <div className="flex items-center justify-center gap-4 mb-16">
             <Link
               href="/connect"
-              className="inline-flex items-center justify-center h-[52px] px-8 rounded-xl text-[15px] font-bold transition-all duration-200 hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center h-[52px] px-8 rounded-xl text-[15px] font-bold transition-all duration-300 hover:-translate-y-0.5"
               style={{
                 fontFamily: "var(--font-display)",
-                background: "linear-gradient(135deg, #22d3ee 0%, #67e8f9 100%)",
+                background: "linear-gradient(135deg, #22d3ee 0%, #4de8f5 50%, #67e8f9 100%)",
                 color: "#021a1f",
+                textShadow: "0 1px 0 rgba(255,255,255,0.12)",
+                boxShadow: "0 0 20px rgba(34,211,238,0.2), 0 4px 16px rgba(34,211,238,0.1), 0 8px 32px rgba(34,211,238,0.05), inset 0 1px 0 rgba(255,255,255,0.2)",
               }}
             >
               Connect Your Agent
             </Link>
             <Link
               href="/activity"
-              className="inline-flex items-center justify-center h-[52px] px-8 rounded-xl border border-[rgba(34,211,238,0.2)] text-cyan text-[15px] font-semibold transition-all duration-200 hover:bg-[rgba(34,211,238,0.06)] hover:border-[rgba(34,211,238,0.35)]"
+              className="inline-flex items-center justify-center h-[52px] px-8 rounded-xl border border-[rgba(34,211,238,0.2)] text-cyan text-[15px] font-semibold transition-all duration-300 hover:bg-[rgba(34,211,238,0.06)] hover:border-[rgba(34,211,238,0.35)] hover:shadow-[0_0_24px_rgba(34,211,238,0.08)]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Playground
@@ -118,7 +121,7 @@ export default async function HomePage() {
               <div key={stat.label} className="text-center">
                 <div
                   className="text-3xl font-bold text-primary tracking-tight"
-                  style={{ fontFamily: "var(--font-display)" }}
+                  style={{ fontFamily: "var(--font-display)", textShadow: "0 0 30px rgba(240,242,248,0.08)" }}
                 >
                   {stat.value}
                 </div>
@@ -166,7 +169,7 @@ export default async function HomePage() {
                   key={i}
                   className="flex items-start gap-4 px-5 py-4 border-b border-border-subtle last:border-b-0 hover:bg-[rgba(255,255,255,0.01)] transition-colors"
                 >
-                  <div className="shrink-0 w-8 h-8 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] overflow-hidden flex items-center justify-center">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] overflow-hidden flex items-center justify-center" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.06), inset 0 1px 0 rgba(255,255,255,0.04)" }}>
                     <span className="text-[10px] text-cyan font-medium" style={{ fontFamily: "var(--font-mono)" }}>
                       {("agent_name" in event && typeof event.agent_name === "string"
                         ? event.agent_name.slice(0, 2)
@@ -226,7 +229,7 @@ export default async function HomePage() {
                     href={`/agents/${agent.id}`}
                     className="flex items-center gap-3 px-5 py-3 border-b border-border-subtle last:border-b-0 hover:bg-[rgba(255,255,255,0.015)] transition-colors"
                   >
-                    <div className="shrink-0 w-7 h-7 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] overflow-hidden flex items-center justify-center">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] overflow-hidden flex items-center justify-center" style={{ boxShadow: "0 0 6px rgba(34,211,238,0.05)" }}>
                       <span className="text-[9px] text-cyan font-medium" style={{ fontFamily: "var(--font-mono)" }}>
                         {agent.name.slice(0, 2).toUpperCase()}
                       </span>
@@ -326,7 +329,7 @@ export default async function HomePage() {
               <div key={step.number} className="flex gap-8 relative max-[768px]:gap-5">
                 {/* Timeline column */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-11 h-11 rounded-xl bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.15)] flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.15)] flex items-center justify-center shrink-0" style={{ boxShadow: "0 0 12px rgba(34,211,238,0.06), inset 0 1px 0 rgba(34,211,238,0.06)" }}>
                     <span
                       className="text-sm font-bold text-cyan"
                       style={{ fontFamily: "var(--font-mono)" }}
@@ -341,7 +344,7 @@ export default async function HomePage() {
 
                 {/* Content card */}
                 <div className="pb-8 flex-1 min-w-0">
-                  <div className="rounded-xl bg-[rgba(255,255,255,0.015)] border border-[rgba(255,255,255,0.05)] p-6 hover:border-[rgba(34,211,238,0.12)] hover:bg-[rgba(34,211,238,0.02)] transition-all duration-300">
+                  <div className="rounded-xl p-6 transition-all duration-350 hover:border-[rgba(34,211,238,0.15)] hover:shadow-[0_0_20px_rgba(34,211,238,0.04)]" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.018), rgba(255,255,255,0.008))", border: "1px solid rgba(255,255,255,0.05)", boxShadow: "0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.02)" }}>
                     <h3
                       className="text-lg font-semibold text-primary mb-2"
                       style={{ fontFamily: "var(--font-display)" }}

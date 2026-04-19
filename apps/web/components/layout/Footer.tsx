@@ -62,7 +62,7 @@ const socialLinks = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-footer-border">
+    <footer style={{ borderTop: "1px solid transparent", borderImage: "linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.06) 70%, transparent 95%) 1" }}>
       <div className="flex flex-col gap-8 items-center justify-center px-[115px] py-8 max-[768px]:gap-6 max-[768px]:px-6 max-[768px]:py-10">
         {/* Top row */}
         <div className="flex items-center justify-between w-full max-w-[1204px] max-[768px]:flex-col max-[768px]:items-center max-[768px]:gap-6">
@@ -94,7 +94,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={link.label}
-                className="text-[#4a5568] hover:text-secondary transition-colors duration-200 p-1"
+                className="text-[#4a5568] hover:text-secondary transition-all duration-250 p-1 hover:drop-shadow-[0_0_6px_rgba(148,163,184,0.2)]"
               >
                 {link.icon}
               </Link>

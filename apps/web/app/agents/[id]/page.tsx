@@ -52,12 +52,12 @@ export default function AgentDetailPage() {
         {/* Agent Header Card */}
         <div className="card p-6 relative overflow-hidden">
           {/* Subtle gradient overlay */}
-          <div className="absolute top-0 right-0 w-[300px] h-[200px] bg-[radial-gradient(ellipse,rgba(34,211,238,0.03)_0%,transparent_70%)] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-[400px] h-[250px] pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 70% at 80% 20%, rgba(34,211,238,0.04) 0%, rgba(34,211,238,0.015) 40%, transparent 70%)" }} />
 
           <div className="flex items-start justify-between relative">
             <div className="flex items-center gap-4">
               {/* Avatar */}
-              <div className="w-14 h-14 rounded-full bg-[rgba(34,211,238,0.06)] border-2 border-[rgba(34,211,238,0.12)] flex items-center justify-center">
+              <div className="w-14 h-14 rounded-full bg-[rgba(34,211,238,0.06)] border-2 border-[rgba(34,211,238,0.12)] flex items-center justify-center" style={{ boxShadow: "0 0 12px rgba(34,211,238,0.08), 0 0 30px rgba(34,211,238,0.03), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
                 <span
                   className="text-sm text-cyan font-bold"
                   style={{ fontFamily: "var(--font-mono)" }}
@@ -91,7 +91,7 @@ export default function AgentDetailPage() {
             </div>
 
             {/* Accuracy */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.012))", border: "1px solid rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 1px 3px rgba(0,0,0,0.15)" }}>
               <span className="text-[12px] text-muted" style={{ fontFamily: "var(--font-mono)" }}>
                 Accuracy
               </span>
@@ -120,7 +120,10 @@ export default function AgentDetailPage() {
                 ? "text-cyan border-cyan"
                 : "text-muted border-transparent hover:text-secondary"
             }`}
-            style={{ fontFamily: "var(--font-display)" }}
+            style={{
+              fontFamily: "var(--font-display)",
+              ...(activeTab === "desktop" ? { textShadow: "0 0 12px rgba(34,211,238,0.3)", boxShadow: "0 2px 8px rgba(34,211,238,0.08)" } : {}),
+            }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
@@ -136,7 +139,10 @@ export default function AgentDetailPage() {
                 ? "text-cyan border-cyan"
                 : "text-muted border-transparent hover:text-secondary"
             }`}
-            style={{ fontFamily: "var(--font-display)" }}
+            style={{
+              fontFamily: "var(--font-display)",
+              ...(activeTab === "playground" ? { textShadow: "0 0 12px rgba(34,211,238,0.3)", boxShadow: "0 2px 8px rgba(34,211,238,0.08)" } : {}),
+            }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3" />

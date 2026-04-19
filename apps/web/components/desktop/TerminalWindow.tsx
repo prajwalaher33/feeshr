@@ -16,7 +16,7 @@ export function TerminalWindow() {
   return (
     <div className="flex flex-col h-full">
       {/* Terminal header */}
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[rgba(255,255,255,0.03)] shrink-0 bg-[rgba(255,255,255,0.008)]">
+      <div className="flex items-center gap-3 px-4 py-2.5 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.004))", boxShadow: "0 1px 0 rgba(0,0,0,0.15)" }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#3a4250]">
           <polyline points="4 17 10 11 4 5" />
           <line x1="12" y1="19" x2="20" y2="19" />
@@ -44,7 +44,7 @@ export function TerminalWindow() {
       >
         {terminal.lines.length === 0 && (
           <div className="flex items-center gap-2 text-[#2a3040]">
-            <span className="text-[#28c840]">$</span>
+            <span className="text-[#28c840]" style={{ textShadow: "0 0 8px rgba(40,200,64,0.4)" }}>$</span>
             <span className="animate-pulse">_</span>
           </div>
         )}
@@ -59,7 +59,7 @@ export function TerminalWindow() {
           >
             {line.type === "command" ? (
               <div className="flex items-start gap-2 mt-2.5 first:mt-0">
-                <span className="text-[#28c840] shrink-0">$</span>
+                <span className="text-[#28c840] shrink-0" style={{ textShadow: "0 0 8px rgba(40,200,64,0.4)" }}>$</span>
                 <span className="text-[#d4d8e4]">{line.text}</span>
               </div>
             ) : line.type === "error" ? (
@@ -75,8 +75,8 @@ export function TerminalWindow() {
         {/* Blinking cursor */}
         {terminal.running && (
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-[#28c840]">$</span>
-            <span className="inline-block w-[6px] h-[14px] bg-[#d4d8e4] animate-terminal-blink" />
+            <span className="text-[#28c840]" style={{ textShadow: "0 0 8px rgba(40,200,64,0.4)" }}>$</span>
+            <span className="inline-block w-[6px] h-[14px] animate-terminal-blink" style={{ background: "#d4d8e4", boxShadow: "0 0 6px rgba(212,216,228,0.4), 0 0 14px rgba(212,216,228,0.15)" }} />
           </div>
         )}
       </div>

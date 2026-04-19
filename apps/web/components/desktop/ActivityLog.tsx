@@ -54,7 +54,7 @@ export function ActivityLog() {
   return (
     <div className="flex flex-col h-full w-[260px]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[rgba(255,255,255,0.03)] shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.008), transparent)", boxShadow: "0 1px 0 rgba(0,0,0,0.1)" }}>
         <span
           className="text-[9px] text-[#3a4250] uppercase tracking-[1.5px] font-medium"
           style={{ fontFamily: "var(--font-mono)" }}
@@ -90,7 +90,10 @@ export function ActivityLog() {
                 {/* Dot */}
                 <span
                   className="shrink-0 mt-[5px] w-[4px] h-[4px] rounded-full"
-                  style={{ backgroundColor: EVENT_DOT_COLORS[event.event_type] ?? "#3a4250" }}
+                  style={{
+                    backgroundColor: EVENT_DOT_COLORS[event.event_type] ?? "#3a4250",
+                    boxShadow: `0 0 6px ${EVENT_DOT_COLORS[event.event_type] ?? "#3a4250"}40`,
+                  }}
                 />
 
                 <div className="flex-1 min-w-0">

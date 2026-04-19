@@ -47,10 +47,13 @@ export default function Navbar() {
       <div
         className="transition-all duration-300"
         style={{
-          backdropFilter: "blur(40px) saturate(1.5)",
-          WebkitBackdropFilter: "blur(40px) saturate(1.5)",
-          background: scrolled ? "rgba(3,5,6,0.82)" : "rgba(3,5,6,0.6)",
-          borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)"}`,
+          backdropFilter: "blur(48px) saturate(1.8)",
+          WebkitBackdropFilter: "blur(48px) saturate(1.8)",
+          background: scrolled
+            ? "linear-gradient(180deg, rgba(6,10,18,0.88) 0%, rgba(3,5,6,0.85) 100%)"
+            : "linear-gradient(180deg, rgba(3,5,6,0.65) 0%, rgba(3,5,6,0.55) 100%)",
+          borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)"}`,
+          boxShadow: scrolled ? "0 4px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.02) inset" : "none",
         }}
       >
         <div className="flex items-center justify-between px-[118px] py-3 max-[1024px]:px-6 max-[768px]:px-4">
@@ -72,12 +75,15 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative px-4 py-2 rounded-lg text-[13px] tracking-[-0.2px] transition-all duration-200 ${
+                className={`relative px-4 py-2 rounded-lg text-[13px] tracking-[-0.2px] transition-all duration-250 ${
                   isActive(link.href)
                     ? "font-semibold text-cyan-light bg-[rgba(34,211,238,0.06)]"
                     : "font-medium text-secondary hover:text-primary hover:bg-[rgba(255,255,255,0.04)]"
                 }`}
-                style={{ fontFamily: "var(--font-display)" }}
+                style={{
+                  fontFamily: "var(--font-display)",
+                  textShadow: isActive(link.href) ? "0 0 14px rgba(103,232,249,0.3)" : "none",
+                }}
               >
                 {link.label}
               </Link>
@@ -88,7 +94,14 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] rounded-xl px-3.5 py-2.5 h-10 cursor-pointer hover:border-[rgba(255,255,255,0.12)] hover:bg-[rgba(255,255,255,0.05)] transition-all duration-200"
+              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 h-10 cursor-pointer transition-all duration-250"
+              style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.015))",
+                border: "1px solid rgba(255,255,255,0.06)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 1px 3px rgba(0,0,0,0.2)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)"; e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025))"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.015))"; }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-muted shrink-0">
                 <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -100,11 +113,13 @@ export default function Navbar() {
             </button>
             <Link
               href="/connect"
-              className="shrink-0 flex items-center h-10 px-6 rounded-lg font-semibold text-sm transition-all duration-200 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]"
+              className="shrink-0 flex items-center h-10 px-6 rounded-lg font-semibold text-sm transition-all duration-250"
               style={{
                 fontFamily: "var(--font-display)",
-                background: "linear-gradient(135deg, #22d3ee, #67e8f9)",
+                background: "linear-gradient(135deg, #22d3ee 0%, #4de8f5 50%, #67e8f9 100%)",
                 color: "#021a1f",
+                textShadow: "0 1px 0 rgba(255,255,255,0.12)",
+                boxShadow: "0 0 16px rgba(34,211,238,0.15), 0 2px 8px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.15)",
               }}
             >
               Signup

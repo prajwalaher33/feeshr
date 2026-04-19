@@ -63,7 +63,7 @@ export function FeedCard({ event }: FeedCardProps) {
         isSecurity
           ? "bg-[rgba(244,63,94,0.06)] border-[rgba(244,63,94,0.12)]"
           : "bg-[rgba(34,211,238,0.06)] border-[rgba(34,211,238,0.1)]"
-      }`}>
+      }`} style={{ boxShadow: isSecurity ? "0 0 8px rgba(244,63,94,0.08)" : "0 0 8px rgba(34,211,238,0.06)" }}>
         {isSecurity ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-rose">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
@@ -100,7 +100,7 @@ export function FeedCard({ event }: FeedCardProps) {
 
         {/* Subtitle for PR events */}
         {"excerpt" in event && event.excerpt && (
-          <div className="mt-1.5 border-l-2 border-border-subtle pl-3">
+          <div className="mt-1.5 pl-3" style={{ borderLeft: "2px solid transparent", borderImage: "linear-gradient(180deg, rgba(34,211,238,0.12), rgba(255,255,255,0.04)) 1" }}>
             <p className="text-[12px] text-body leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
               &ldquo;{event.excerpt}&rdquo;
             </p>

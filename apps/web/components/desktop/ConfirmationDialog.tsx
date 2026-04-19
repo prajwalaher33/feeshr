@@ -29,18 +29,24 @@ export function ConfirmationDialog() {
           className="absolute bottom-4 left-4 right-4 z-50"
         >
           <div
-            className="rounded-xl border border-[rgba(255,255,255,0.05)] p-4"
+            className="rounded-xl p-4"
             style={{
-              background: `linear-gradient(135deg, rgba(8,12,20,0.96), rgba(5,8,16,0.98))`,
-              backdropFilter: "blur(20px)",
-              boxShadow: `0 0 30px ${SEVERITY_GLOW[permissionRequest.severity] ?? SEVERITY_GLOW.medium}, 0 8px 24px rgba(0,0,0,0.4)`,
+              background: `linear-gradient(135deg, rgba(10,14,24,0.97), rgba(6,10,18,0.98), rgba(4,8,14,0.99))`,
+              backdropFilter: "blur(32px) saturate(1.6)",
+              WebkitBackdropFilter: "blur(32px) saturate(1.6)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: `0 0 40px ${SEVERITY_GLOW[permissionRequest.severity] ?? SEVERITY_GLOW.medium}, 0 0 80px ${SEVERITY_GLOW[permissionRequest.severity] ?? SEVERITY_GLOW.medium}80, 0 4px 12px rgba(0,0,0,0.5), 0 12px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)`,
             }}
           >
             <div className="flex items-start gap-3">
               {/* Accent bar */}
               <div
-                className="w-[2px] rounded-full shrink-0 self-stretch opacity-70"
-                style={{ backgroundColor: SEVERITY_ACCENT[permissionRequest.severity] ?? SEVERITY_ACCENT.medium }}
+                className="w-[2px] rounded-full shrink-0 self-stretch"
+                style={{
+                  backgroundColor: SEVERITY_ACCENT[permissionRequest.severity] ?? SEVERITY_ACCENT.medium,
+                  boxShadow: `0 0 8px ${SEVERITY_ACCENT[permissionRequest.severity] ?? SEVERITY_ACCENT.medium}50`,
+                  opacity: 0.8,
+                }}
               />
 
               <div className="flex-1 min-w-0">

@@ -174,7 +174,7 @@ export default function ConnectPage() {
             { level: "Level 3", time: "45 min", count: "3 challenges", desc: "Adversarial review, architecture, decomposition", gate: "Required for Builder tier actions" },
           ].map((b, i) => (
             <div key={i} className="flex items-start gap-4 px-6 py-5 border-b border-border-subtle last:border-b-0">
-              <div className="w-10 h-10 rounded-lg bg-[rgba(34,211,238,0.08)] border border-[rgba(34,211,238,0.2)] flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-[rgba(34,211,238,0.08)] border border-[rgba(34,211,238,0.2)] flex items-center justify-center shrink-0" style={{ boxShadow: "0 0 10px rgba(34,211,238,0.06), inset 0 1px 0 rgba(34,211,238,0.06)" }}>
                 <span className="text-xs font-bold text-cyan" style={{ fontFamily: "var(--font-mono)" }}>L{i + 1}</span>
               </div>
               <div className="flex-1">
@@ -210,7 +210,7 @@ export default function ConnectPage() {
                 </span>
               </div>
               <div className="flex flex-col items-center shrink-0">
-                <div className="h-3 w-3 rounded-full bg-cyan border-2 border-bg" />
+                <div className="h-3 w-3 rounded-full bg-cyan border-2 border-bg" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.4), 0 0 20px rgba(34,211,238,0.1)" }} />
                 {i < timelineSteps.length - 1 && (
                   <div className="w-px h-8 bg-divider" />
                 )}

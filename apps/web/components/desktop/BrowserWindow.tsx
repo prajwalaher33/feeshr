@@ -9,7 +9,7 @@ export function BrowserWindow() {
   return (
     <div className="flex flex-col h-full">
       {/* Address bar */}
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-[rgba(255,255,255,0.03)] shrink-0 bg-[rgba(255,255,255,0.008)]">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.004))", boxShadow: "0 1px 0 rgba(0,0,0,0.15)" }}>
         {/* Nav buttons */}
         <div className="flex items-center gap-1">
           <button className="p-1 rounded-md hover:bg-[rgba(255,255,255,0.03)] text-[#3a4250] transition-colors" aria-label="Back">
@@ -37,7 +37,7 @@ export function BrowserWindow() {
         </div>
 
         {/* URL bar */}
-        <div className="flex-1 flex items-center gap-2 px-3 py-[4px] bg-[rgba(255,255,255,0.02)] rounded-lg border border-[rgba(255,255,255,0.03)]">
+        <div className="flex-1 flex items-center gap-2 px-3 py-[4px] rounded-lg" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.012))", border: "1px solid rgba(255,255,255,0.04)", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,0.01)" }}>
           {browser.url.startsWith("https") && (
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-[#28c840]/70 shrink-0">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
@@ -61,7 +61,8 @@ export function BrowserWindow() {
             animate={{ scaleX: 0.7 }}
             exit={{ scaleX: 1, opacity: 0 }}
             transition={{ duration: 1.5, ease: "easeOut" }}
-            className="h-[1.5px] bg-gradient-to-r from-cyan/60 via-cyan/40 to-transparent origin-left"
+            className="h-[1.5px] origin-left"
+            style={{ background: "linear-gradient(90deg, #22d3ee 0%, #4de8f5 40%, rgba(34,211,238,0.3) 80%, transparent 100%)", boxShadow: "0 0 8px rgba(34,211,238,0.3), 0 0 20px rgba(34,211,238,0.1)" }}
           />
         )}
       </AnimatePresence>
@@ -81,9 +82,9 @@ export function BrowserWindow() {
 
         {browser.loading && !browser.content && (
           <div className="space-y-3">
-            <motion.div animate={{ opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 1.8, repeat: Infinity }} className="h-5 w-3/4 bg-[rgba(255,255,255,0.02)] rounded" />
-            <motion.div animate={{ opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 1.8, repeat: Infinity, delay: 0.1 }} className="h-3.5 w-full bg-[rgba(255,255,255,0.02)] rounded" />
-            <motion.div animate={{ opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 1.8, repeat: Infinity, delay: 0.2 }} className="h-3.5 w-5/6 bg-[rgba(255,255,255,0.02)] rounded" />
+            <motion.div animate={{ opacity: [0.08, 0.25, 0.08] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className="h-5 w-3/4 rounded" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.02), rgba(34,211,238,0.03), rgba(255,255,255,0.02))" }} />
+            <motion.div animate={{ opacity: [0.08, 0.25, 0.08] }} transition={{ duration: 2, repeat: Infinity, delay: 0.15, ease: "easeInOut" }} className="h-3.5 w-full rounded" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.02), rgba(34,211,238,0.03), rgba(255,255,255,0.02))" }} />
+            <motion.div animate={{ opacity: [0.08, 0.25, 0.08] }} transition={{ duration: 2, repeat: Infinity, delay: 0.3, ease: "easeInOut" }} className="h-3.5 w-5/6 rounded" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.02), rgba(34,211,238,0.03), rgba(255,255,255,0.02))" }} />
           </div>
         )}
 

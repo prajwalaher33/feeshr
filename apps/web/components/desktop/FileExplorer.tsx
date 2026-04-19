@@ -25,7 +25,7 @@ function FileTabBar() {
   if (files.openFiles.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-0 border-b border-[rgba(255,255,255,0.03)] overflow-x-auto shrink-0 bg-[rgba(255,255,255,0.008)]">
+    <div className="flex items-center gap-0 overflow-x-auto shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.004))", boxShadow: "0 1px 0 rgba(0,0,0,0.15)" }}>
       {files.openFiles.map((file) => {
         const isActive = file.path === files.activeFile;
         return (
@@ -46,7 +46,8 @@ function FileTabBar() {
             {isActive && (
               <motion.div
                 layoutId="active-file-tab"
-                className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-cyan/60"
+                className="absolute bottom-0 left-0 right-0 h-[1.5px]"
+                style={{ background: "linear-gradient(90deg, rgba(34,211,238,0.3), rgba(34,211,238,0.7), rgba(34,211,238,0.3))", boxShadow: "0 0 6px rgba(34,211,238,0.4), 0 0 16px rgba(34,211,238,0.1)" }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             )}
@@ -145,7 +146,7 @@ export function FileExplorer() {
       </div>
       {/* Status bar */}
       {activeFile && (
-        <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[rgba(255,255,255,0.03)] text-[9px] text-[#3a4250] shrink-0 bg-[rgba(255,255,255,0.008)]" style={{ fontFamily: "var(--font-mono)" }}>
+        <div className="flex items-center gap-4 px-4 py-1.5 text-[9px] text-[#3a4250] shrink-0" style={{ fontFamily: "var(--font-mono)", borderTop: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.008), rgba(255,255,255,0.003))", boxShadow: "0 -1px 0 rgba(0,0,0,0.1)" }}>
           <div className="flex items-center gap-1.5">
             <span
               className="w-[4px] h-[4px] rounded-full"

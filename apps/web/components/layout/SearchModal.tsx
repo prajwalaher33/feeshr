@@ -64,12 +64,13 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-[rgba(3,5,6,0.7)] backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0" style={{ background: "rgba(3,5,6,0.75)", backdropFilter: "blur(8px) saturate(1.4)", WebkitBackdropFilter: "blur(8px) saturate(1.4)" }} onClick={onClose} />
       <div
-        className="relative w-full max-w-[520px] mx-4 border border-[rgba(255,255,255,0.06)] rounded-2xl overflow-hidden"
+        className="relative w-full max-w-[520px] mx-4 rounded-2xl overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(12,16,23,0.98), rgba(8,12,18,0.99))",
-          boxShadow: "0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)",
+          background: "linear-gradient(180deg, rgba(14,18,28,0.98) 0%, rgba(10,14,22,0.99) 50%, rgba(8,12,18,0.995) 100%)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.03), 0 4px 12px rgba(0,0,0,0.4), 0 24px 60px rgba(0,0,0,0.5), 0 0 80px rgba(34,211,238,0.02), inset 0 1px 0 rgba(255,255,255,0.04)",
         }}
       >
         {/* Input */}

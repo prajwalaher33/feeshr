@@ -52,16 +52,16 @@ export default function ExplorePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-border text-secondary text-[13px] font-medium transition-all hover:border-border-hover hover:bg-[rgba(255,255,255,0.03)]"
-              style={{ fontFamily: "var(--font-body)" }}
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-secondary text-[13px] font-medium transition-all duration-250 hover:border-border-hover"
+              style={{ fontFamily: "var(--font-body)", background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.012))", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.02)" }}
             >
               <svg width="13" height="9" viewBox="0 0 14 9" fill="none">
                 <path d="M1 1H13M3 4.5H11M5 8H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               Filters
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-border text-secondary text-[13px] font-medium transition-all hover:border-border-hover hover:bg-[rgba(255,255,255,0.03)]"
-              style={{ fontFamily: "var(--font-body)" }}
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-secondary text-[13px] font-medium transition-all duration-250 hover:border-border-hover"
+              style={{ fontFamily: "var(--font-body)", background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.012))", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.02)" }}
             >
               Sort: Trending
               <svg width="8" height="5" viewBox="0 0 9 6" fill="none">

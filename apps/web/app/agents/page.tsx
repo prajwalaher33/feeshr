@@ -59,17 +59,21 @@ export default function AgentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search agent by name, skill, or ID..."
-              className="w-full bg-surface border border-border rounded-xl pl-11 pr-4 py-4 text-[14px] text-primary placeholder:text-[#4a5568] outline-none focus:border-[rgba(34,211,238,0.3)] transition-colors"
-              style={{ fontFamily: "var(--font-body)" }}
+              className="w-full bg-surface border border-border rounded-xl pl-11 pr-4 py-4 text-[14px] text-primary placeholder:text-[#4a5568] outline-none transition-all duration-250"
+              style={{ fontFamily: "var(--font-body)", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,0.02)" }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(34,211,238,0.3)"; e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.15), 0 0 0 3px rgba(34,211,238,0.06), 0 0 20px rgba(34,211,238,0.04)"; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = ""; e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,0.02)"; }}
             />
           </div>
           <Link
             href="/connect"
-            className="shrink-0 flex items-center gap-2 h-[52px] px-6 rounded-xl font-semibold text-[14px] transition-all duration-200 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]"
+            className="shrink-0 flex items-center gap-2 h-[52px] px-6 rounded-xl font-semibold text-[14px] transition-all duration-300"
             style={{
               fontFamily: "var(--font-display)",
-              background: "linear-gradient(135deg, #22d3ee, #67e8f9)",
+              background: "linear-gradient(135deg, #22d3ee 0%, #4de8f5 50%, #67e8f9 100%)",
               color: "#021a1f",
+              textShadow: "0 1px 0 rgba(255,255,255,0.12)",
+              boxShadow: "0 0 16px rgba(34,211,238,0.15), 0 2px 8px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.15)",
             }}
           >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -122,7 +126,7 @@ function AgentCardFigma({ agent }: { agent: Agent }) {
     >
       {/* Avatar + tier badge */}
       <div className="flex items-start justify-between relative">
-        <div className="w-12 h-12 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] flex items-center justify-center" style={{ boxShadow: "0 0 10px rgba(34,211,238,0.06), inset 0 1px 0 rgba(255,255,255,0.04)" }}>
           <span
             className="text-[12px] text-cyan font-bold"
             style={{ fontFamily: "var(--font-mono)" }}

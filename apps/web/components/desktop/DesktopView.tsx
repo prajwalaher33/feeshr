@@ -100,9 +100,9 @@ export function DesktopView({ agentId }: DesktopViewProps) {
           {/* Left: traffic lights + status */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-[6px]">
-              <span className="w-[10px] h-[10px] rounded-full bg-[#ff5f57] opacity-80" />
-              <span className="w-[10px] h-[10px] rounded-full bg-[#febc2e] opacity-80" />
-              <span className="w-[10px] h-[10px] rounded-full bg-[#28c840] opacity-80" />
+              <span className="w-[10px] h-[10px] rounded-full bg-[#ff5f57]" style={{ boxShadow: "0 0 6px rgba(255,95,87,0.3), inset 0 1px 0 rgba(255,255,255,0.15)" }} />
+              <span className="w-[10px] h-[10px] rounded-full bg-[#febc2e]" style={{ boxShadow: "0 0 6px rgba(254,188,46,0.3), inset 0 1px 0 rgba(255,255,255,0.15)" }} />
+              <span className="w-[10px] h-[10px] rounded-full bg-[#28c840]" style={{ boxShadow: "0 0 6px rgba(40,200,64,0.3), inset 0 1px 0 rgba(255,255,255,0.15)" }} />
             </div>
 
             <AnimatePresence mode="wait">
@@ -141,17 +141,31 @@ export function DesktopView({ agentId }: DesktopViewProps) {
           </div>
 
           {/* Center: tool tabs */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[rgba(255,255,255,0.025)] rounded-lg p-[3px]">
+          <div
+            className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5 rounded-lg p-[3px]"
+            style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.04)",
+            }}
+          >
             {TOOL_TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTool(tab.key)}
-                className={`desktop-tab flex items-center gap-1.5 px-3 py-[5px] rounded-md text-[11px] font-medium transition-all duration-200 ${
+                className={`desktop-tab flex items-center gap-1.5 px-3 py-[5px] rounded-md text-[11px] font-medium transition-all duration-250 ${
                   activeTool === tab.key
-                    ? "desktop-tab-active bg-[rgba(255,255,255,0.05)] text-[#c8d0e0]"
-                    : "text-[#4a5568] hover:text-[#6b7280] hover:bg-[rgba(255,255,255,0.02)]"
+                    ? "desktop-tab-active text-[#c8d0e0]"
+                    : "text-[#4a5568] hover:text-[#6b7280]"
                 }`}
-                style={{ fontFamily: "var(--font-mono)" }}
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  ...(activeTool === tab.key ? {
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)",
+                  } : {}),
+                }}
               >
                 {tab.icon}
                 <span className="max-[768px]:hidden">{tab.label}</span>
@@ -162,7 +176,7 @@ export function DesktopView({ agentId }: DesktopViewProps) {
           {/* Right: observer badge + live indicator + sidebar toggle */}
           <div className="flex items-center gap-3">
             {/* Observer badge */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(255,255,255,0.02)]">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01))", border: "1px solid rgba(255,255,255,0.03)" }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#4a5568]">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                 <circle cx="12" cy="12" r="3" />
@@ -243,8 +257,9 @@ export function DesktopView({ agentId }: DesktopViewProps) {
       </div>
 
       {/* Monitor stand */}
-      <div className="flex justify-center -mt-1">
-        <div className="w-20 h-[3px] rounded-full bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.04)] to-transparent" />
+      <div className="flex flex-col items-center -mt-1 gap-0.5">
+        <div className="w-24 h-[3px] rounded-full" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.06) 70%, transparent 100%)" }} />
+        <div className="w-16 h-[1px] rounded-full" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.06) 30%, rgba(34,211,238,0.08) 50%, rgba(34,211,238,0.06) 70%, transparent 100%)" }} />
       </div>
 
       {/* Idle state */}
