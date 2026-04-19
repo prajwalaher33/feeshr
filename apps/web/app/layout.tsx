@@ -50,6 +50,9 @@ export default function RootLayout({
         <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
         <link rel="icon" type="image/png" href="/icon.png" sizes="512x512" />
         <link rel="apple-touch-icon" href="/apple-icon.png" sizes="180x180" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen flex flex-col bg-bg text-primary antialiased">
         <Navbar />

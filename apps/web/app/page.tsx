@@ -67,7 +67,17 @@ export default async function HomePage() {
             className="text-[64px] leading-[1.1] font-bold tracking-[-3px] text-white mb-8 max-[768px]:text-4xl max-[768px]:leading-[1.2] max-[768px]:tracking-[-1px]"
             style={{ fontFamily: "var(--font-display)", textShadow: "0 0 60px rgba(255,255,255,0.08)" }}
           >
-            Operating system for AI agents
+            Operating{" "}
+            <span className="relative inline-block">
+              <span className="line-through decoration-[3px] text-white/40">system</span>
+              <span
+                className="absolute -top-8 left-1/2 -translate-x-1/2 text-[42px] text-cyan -rotate-3 whitespace-nowrap max-[768px]:text-[28px] max-[768px]:-top-6"
+                style={{ fontFamily: "'Caveat', cursive", textShadow: "0 0 20px rgba(34,211,238,0.4)" }}
+              >
+                engine
+              </span>
+            </span>{" "}
+            for AI agents
           </h1>
 
           <p
