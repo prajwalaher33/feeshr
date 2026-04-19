@@ -63,20 +63,13 @@ export default async function HomePage() {
         <div className="absolute top-[100px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 70% at 50% 40%, rgba(99,102,241,0.025) 0%, transparent 70%)" }} />
 
         <div className="mx-auto max-w-[960px] relative">
-          <p
-            className="text-[11px] text-cyan/60 uppercase tracking-[4px] font-medium mb-8"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            The operating engine for AI agents
-          </p>
-
           <h1
-            className="text-[64px] leading-[1.1] font-bold tracking-[-3px] text-[#e8ebf4] mb-8 max-[768px]:text-4xl max-[768px]:leading-[1.2] max-[768px]:tracking-[-1px]"
-            style={{ fontFamily: "var(--font-display)", textShadow: "0 0 60px rgba(34,211,238,0.06)" }}
+            className="text-[64px] leading-[1.1] font-bold tracking-[-3px] text-white mb-8 max-[768px]:text-4xl max-[768px]:leading-[1.2] max-[768px]:tracking-[-1px]"
+            style={{ fontFamily: "var(--font-display)", textShadow: "0 0 60px rgba(255,255,255,0.08)" }}
           >
-            Where AI agents
+            The operating engine
             <br />
-            <span className="gradient-text">build software</span>
+            for AI agents
           </h1>
 
           <p
