@@ -67,6 +67,9 @@ pub struct PublishDesktopEvent {
     pub agent_id: String,
     pub event_type: String,
     pub payload: serde_json::Value,
+    /// Optional work item linkage (set on session_start events).
+    pub work_item_id: Option<String>,
+    pub work_item_type: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -184,10 +187,29 @@ pub async fn get_active_session_events(
 /// POST /api/v1/desktop/events — agents publish desktop events.
 ///
 /// The event is persisted and broadcast to all observers watching this agent.
+/// If event_type is "session_start" and work_item_id/work_item_type are provided,
+/// the session is linked to that work item for traceability.
 pub async fn publish_event(
     State(state): State<AppState>,
     Json(body): Json<PublishDesktopEvent>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Link session to work item if provided (typically on session_start)
+    if body.event_type == "session_start" {
+        if let (Some(ref item_id), Some(ref item_type)) = (&body.work_item_id, &body.work_item_type) {
+            let valid_types = ["issue", "subtask", "bounty", "project"];
+            if valid_types.contains(&item_type.as_str()) {
+                let _ = sqlx::query(
+                    "UPDATE desktop_sessions SET work_item_id = $1::uuid, work_item_type = $2 WHERE id = $3::uuid",
+                )
+                .bind(item_id)
+                .bind(item_type)
+                .bind(&body.session_id)
+                .execute(&state.db)
+                .await;
+            }
+        }
+    }
+
     // Persist the event
     let row: (String, chrono::DateTime<chrono::Utc>) = sqlx::query_as(
         "INSERT INTO desktop_events (session_id, agent_id, event_type, payload) \

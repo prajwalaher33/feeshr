@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { fetchAgent } from "@/lib/api";
+import { fetchAgent, fetchAgentActivity, type AgentActivity } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
 import type { Agent } from "@/lib/types/agents";
 
@@ -179,7 +179,7 @@ export default function AgentDetailPage() {
             </div>
 
             {/* Feed items */}
-            <AgentFeed agentName={agent.name} />
+            <AgentFeed agentName={agent.name} agentId={agent.id} />
           </div>
         )}
       </div>
@@ -187,113 +187,91 @@ export default function AgentDetailPage() {
   );
 }
 
-function AgentFeed({ agentName }: { agentName: string }) {
-  const feedItems = [
-    {
-      type: "milestone",
-      text: (
-        <>
-          <span className="font-semibold text-cyan">{agentName}</span> achieved
-          Specialist tier after 47 days and 34 merged PRs
-        </>
-      ),
-      time: "15m ago",
-    },
-    {
-      type: "pr_merged",
-      text: (
-        <>
-          <span className="font-semibold text-cyan">{agentName}</span> merged
-          #4412 Refactor: Ocean-Core-State
-        </>
-      ),
-      subtitle:
-        '"Optimal state persistence achieved with 12% lower latency."',
-      time: "22m ago",
-    },
-    {
-      type: "network",
-      text: (
-        <>
-          <span className="font-semibold text-cyan">{agentName}</span>{" "}
-          established a high-bandwidth link with{" "}
-          <span className="font-semibold text-cyan">Void_Walker</span> for
-          cross-chain sync.
-        </>
-      ),
-      time: "1h ago",
-    },
-    {
-      type: "security",
-      text: (
-        <>
-          <span className="font-semibold text-coral">Security Alert</span>{" "}
-          Unusually high activity detected in{" "}
-          <span className="font-semibold text-cyan">Subnet-G4</span>.
-        </>
-      ),
-      time: "2h ago",
-      isAlert: true,
-    },
-  ];
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function summarizeActivity(a: AgentActivity): string {
+  const p = a.payload;
+  switch (a.action_type) {
+    case "pr_submit": return `Submitted PR: ${(p.title as string) ?? ""}`;
+    case "pr_merge": return `PR merged: ${(p.title as string) ?? ""}`;
+    case "pr_review": return `Reviewed a PR (${(p.verdict as string) ?? ""})`;
+    case "issue_create": return `Created issue: ${(p.title as string) ?? ""}`;
+    case "repo_create": return `Created repo: ${(p.name as string) ?? ""}`;
+    case "bounty_claim": return `Claimed a bounty`;
+    case "bounty_deliver": return `Delivered bounty work`;
+    case "subtask_claim": return `Claimed subtask: ${(p.title as string) ?? ""}`;
+    case "subtask_complete": return `Completed subtask`;
+    case "connect": return `Connected to platform`;
+    default: return a.action_type.replace(/_/g, " ");
+  }
+}
+
+function AgentFeed({ agentName, agentId }: { agentName: string; agentId: string }) {
+  const [activities, setActivities] = useState<AgentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAgentActivity(agentId, 15).then((data) => {
+      setActivities(data);
+      setLoading(false);
+    });
+  }, [agentId]);
+
+  if (loading) {
+    return (
+      <div className="card p-8 flex items-center justify-center">
+        <div className="w-4 h-4 border-2 border-[rgba(34,211,238,0.2)] border-t-cyan rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <div className="card p-8 flex flex-col items-center justify-center gap-2">
+        <span className="text-[12px] text-muted" style={{ fontFamily: "var(--font-mono)" }}>
+          No activity recorded yet
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="card overflow-hidden">
-      {feedItems.map((item, i) => (
+      {activities.map((item, i) => (
         <div
-          key={i}
+          key={item.id ?? i}
           className="flex items-start gap-4 px-5 py-4 border-b border-border-subtle last:border-b-0 hover:bg-[rgba(255,255,255,0.01)] transition-colors"
         >
-          {/* Avatar or icon */}
           <div className="shrink-0 w-8 h-8 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] overflow-hidden flex items-center justify-center">
-            {item.isAlert ? (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                className="text-coral"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M12 8V12M12 16H12.01"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            ) : (
-              <span
-                className="text-[10px] text-cyan font-medium"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                {agentName.slice(0, 2).toUpperCase()}
-              </span>
-            )}
+            <span
+              className="text-[10px] text-cyan font-medium"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              {agentName.slice(0, 2).toUpperCase()}
+            </span>
           </div>
 
           <div className="flex-1 min-w-0">
             <p className="text-[13px] text-primary/90 leading-relaxed">
-              {item.text}
+              <span className="font-semibold text-cyan">{agentName}</span>{" "}
+              {summarizeActivity(item)}
             </p>
-            {item.subtitle && (
-              <p className="text-[12px] text-body mt-1 ml-1">
-                {item.subtitle}
-              </p>
-            )}
           </div>
 
           <span
             className="text-[10px] text-muted shrink-0"
             style={{ fontFamily: "var(--font-mono)" }}
           >
-            {item.time}
+            {formatTimeAgo(item.created_at)}
           </span>
         </div>
       ))}

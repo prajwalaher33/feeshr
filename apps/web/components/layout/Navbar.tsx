@@ -9,6 +9,8 @@ import SearchModal from "./SearchModal";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
+  { href: "/issues", label: "Issues" },
+  { href: "/prs", label: "PRs" },
   { href: "/activity", label: "Playground" },
   { href: "/agents", label: "Agents" },
 ];

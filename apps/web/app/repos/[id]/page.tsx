@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchRepo } from "@/lib/api";
+import { fetchRepo, fetchRepoFiles, fetchRepoIssues, fetchRepoPRs, type RepoFile } from "@/lib/api";
 import type { Repo } from "@/lib/types/repos";
 
 const TABS = ["Code", "Issues", "Pull Request", "Discussions", "Actions"];
 
-const MOCK_FILES = [
+const FALLBACK_FILES: { name: string; type: string; lastCommit: string; time: string }[] = [
   { name: "src", type: "folder", lastCommit: "feat: implement hierarchical task allocation for swarm nod...", time: "2 days ago" },
   { name: "tests", type: "folder", lastCommit: "test: add stress tests for p2p message propagation", time: "5 days ago" },
   { name: "Cargo.toml", type: "file", lastCommit: "chore: bump dependencies to v1.4.2", time: "2 days ago" },
@@ -19,14 +19,45 @@ export default function RepoDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const [repo, setRepo] = useState<Repo | null>(null);
+  const [files, setFiles] = useState<{ name: string; type: string; lastCommit: string; time: string }[]>([]);
+  const [isDemo, setIsDemo] = useState(false);
+  const [issueCount, setIssueCount] = useState(0);
+  const [prCount, setPrCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Code");
 
   useEffect(() => {
-    fetchRepo(id).then((data) => {
-      setRepo(data);
+    const load = async () => {
+      const [repoData, repoFiles, issuesData, prsData] = await Promise.all([
+        fetchRepo(id),
+        fetchRepoFiles(id),
+        fetchRepoIssues(id, { limit: 1 }),
+        fetchRepoPRs(id, { limit: 1 }),
+      ]);
+      setRepo(repoData);
+      setIssueCount(issuesData.total);
+      setPrCount(prsData.total);
+      if (repoFiles.length > 0) {
+        const mapped = repoFiles.map((f: RepoFile) => ({
+          name: f.name,
+          type: f.type === "folder" ? "folder" : "file",
+          lastCommit: "",
+          time: "",
+        }));
+        // Sort: folders first, then files alphabetically
+        mapped.sort((a, b) => {
+          if (a.type === b.type) return a.name.localeCompare(b.name);
+          return a.type === "folder" ? -1 : 1;
+        });
+        setFiles(mapped);
+        setIsDemo(false);
+      } else {
+        setFiles(FALLBACK_FILES);
+        setIsDemo(true);
+      }
       setLoading(false);
-    });
+    };
+    load();
   }, [id]);
 
   if (loading) {
@@ -130,7 +161,13 @@ export default function RepoDetailPage() {
           {/* Left column */}
           <div className="flex-[1.5] min-w-0 flex flex-col gap-6">
             {/* File browser */}
-            <div className="card overflow-hidden">
+            <div className="card overflow-hidden relative">
+              {isDemo && (
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                  style={{ fontFamily: "var(--font-mono)", color: "#f7c948", background: "rgba(247,201,72,0.08)", border: "1px solid rgba(247,201,72,0.15)" }}>
+                  Demo
+                </div>
+              )}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border-subtle text-left text-body">
@@ -140,7 +177,7 @@ export default function RepoDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_FILES.map((file) => (
+                  {files.map((file) => (
                     <tr key={file.name} className="border-b border-border-subtle last:border-b-0 hover:bg-[rgba(255,255,255,0.02)] transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -271,11 +308,11 @@ export default function RepoDetailPage() {
                 </div>
                 <div className="bg-card-bg p-4 text-center">
                   <p className="text-[10px] uppercase tracking-wider text-muted mb-1">Issues</p>
-                  <p className="text-xl font-semibold text-primary">12</p>
+                  <p className="text-xl font-semibold text-primary">{issueCount}</p>
                 </div>
                 <div className="bg-card-bg p-4 text-center">
                   <p className="text-[10px] uppercase tracking-wider text-muted mb-1">PRs</p>
-                  <p className="text-xl font-semibold text-primary">4</p>
+                  <p className="text-xl font-semibold text-primary">{prCount}</p>
                 </div>
               </div>
             </div>

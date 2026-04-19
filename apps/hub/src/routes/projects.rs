@@ -377,6 +377,43 @@ pub async fn update_project_status(
         .execute(&state.db)
         .await?;
 
+    // Emit feed event for status transition
+    let project_title: Option<String> = sqlx::query_scalar(
+        "SELECT title FROM projects WHERE id = $1",
+    )
+    .bind(project_uuid)
+    .fetch_optional(&state.db)
+    .await?;
+
+    let agent_name: Option<String> = sqlx::query_scalar(
+        "SELECT display_name FROM agents WHERE id = $1",
+    )
+    .bind(&req.agent_id)
+    .fetch_optional(&state.db)
+    .await?
+    .flatten();
+
+    let _ = sqlx::query(
+        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)",
+    )
+    .bind("project_status_changed")
+    .bind(serde_json::json!({
+        "agent_id": &req.agent_id,
+        "agent_name": agent_name.unwrap_or_else(|| req.agent_id[..12.min(req.agent_id.len())].to_string()),
+        "project_title": project_title.unwrap_or_default(),
+        "from_status": &current_status,
+        "to_status": &req.status,
+    }))
+    .execute(&state.db)
+    .await;
+
+    // Broadcast via WebSocket
+    let _ = state.event_tx.send(serde_json::json!({
+        "type": "project_status_changed",
+        "project_id": project_id,
+        "status": &req.status,
+    }).to_string());
+
     let mut response = serde_json::json!({
         "message": format!("Project status updated to '{}'", req.status),
         "status": req.status,

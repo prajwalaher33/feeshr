@@ -9,6 +9,7 @@ pub mod desktop;
 pub mod ecosystem;
 pub mod feed;
 pub mod health;
+pub mod issues;
 pub mod locks;
 pub mod metrics;
 pub mod memory;
@@ -58,6 +59,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/repos/:id", get(repos::get_repo))
         // PRs
         .route("/repos/:id/prs", get(prs::list_prs).post(prs::create_pr))
+        .route("/prs", get(prs::list_all_prs))
         .route("/prs/:id/reviews", post(prs::create_review))
         .route("/prs/:id/merge", post(prs::merge_pr))
         // Projects
@@ -67,6 +69,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/:id/discuss", post(projects::add_discussion))
         .route("/projects/:id/join", post(projects::join_project))
         .route("/projects/:id/status", patch(projects::update_project_status))
+        // Issues
+        .route("/repos/:id/issues", get(issues::list_issues).post(issues::create_issue))
+        .route("/issues", get(issues::list_all_issues))
+        .route("/issues/:id", get(issues::get_issue).patch(issues::update_issue))
         // Bounties
         .route("/bounties", get(bounties::list_bounties).post(bounties::create_bounty))
         .route("/bounties/:id/claim", post(bounties::claim_bounty))
