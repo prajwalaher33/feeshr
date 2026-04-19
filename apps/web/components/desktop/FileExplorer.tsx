@@ -25,29 +25,46 @@ function FileTabBar() {
   if (files.openFiles.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-0 overflow-x-auto shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.004))", boxShadow: "0 1px 0 rgba(0,0,0,0.15)" }}>
+    <div
+      className="flex items-center gap-0 overflow-x-auto shrink-0"
+      style={{
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        background: "linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(255,255,255,0.006) 60%, rgba(255,255,255,0.002) 100%)",
+        boxShadow: "0 1px 0 rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.025)",
+      }}
+    >
       {files.openFiles.map((file) => {
         const isActive = file.path === files.activeFile;
+        const dotColor = getLanguageDotColor(file.language);
         return (
           <div
             key={file.path}
-            className={`flex items-center gap-2 px-4 py-2 text-[10px] border-r border-[rgba(255,255,255,0.02)] cursor-default transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-[10px] border-r border-[rgba(255,255,255,0.025)] cursor-default transition-all duration-200 relative ${
               isActive
-                ? "bg-[#050810] text-[#c8d0e0]"
-                : "text-[#3a4250] hover:text-[#5a6270] bg-transparent"
+                ? "bg-[rgba(5,8,16,0.9)] text-[#c8d0e0]"
+                : "text-[#3a4250] hover:text-[#5a6270] hover:bg-[rgba(255,255,255,0.008)] bg-transparent"
             }`}
-            style={{ fontFamily: "var(--font-mono)" }}
+            style={{
+              fontFamily: "var(--font-mono)",
+              ...(isActive ? { textShadow: "0 0 8px rgba(200,208,224,0.1)" } : {}),
+            }}
           >
             <span
               className="w-[5px] h-[5px] rounded-full shrink-0"
-              style={{ backgroundColor: getLanguageDotColor(file.language) }}
+              style={{
+                backgroundColor: dotColor,
+                boxShadow: isActive ? `0 0 6px ${dotColor}50, 0 0 12px ${dotColor}20` : "none",
+              }}
             />
             <span className="truncate max-w-[120px]">{file.name}</span>
             {isActive && (
               <motion.div
                 layoutId="active-file-tab"
-                className="absolute bottom-0 left-0 right-0 h-[1.5px]"
-                style={{ background: "linear-gradient(90deg, rgba(34,211,238,0.3), rgba(34,211,238,0.7), rgba(34,211,238,0.3))", boxShadow: "0 0 6px rgba(34,211,238,0.4), 0 0 16px rgba(34,211,238,0.1)" }}
+                className="absolute bottom-0 left-0 right-0 h-[2px]"
+                style={{
+                  background: "linear-gradient(90deg, rgba(34,211,238,0.2), rgba(34,211,238,0.8), rgba(34,211,238,0.2))",
+                  boxShadow: "0 0 8px rgba(34,211,238,0.5), 0 0 20px rgba(34,211,238,0.15), 0 -2px 8px rgba(34,211,238,0.06)",
+                }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             )}
@@ -65,11 +82,14 @@ function CodeView() {
   if (!activeFile) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#1a2030]">
+        <svg
+          width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#1a2030]"
+          style={{ filter: "drop-shadow(0 0 8px rgba(26,32,48,0.3))" }}
+        >
           <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
           <polyline points="13 2 13 9 20 9" />
         </svg>
-        <span className="text-[11px] text-[#2a3040]">No file open</span>
+        <span className="text-[11px] text-[#2a3040]" style={{ fontFamily: "var(--font-mono)" }}>No file open</span>
       </div>
     );
   }
@@ -85,8 +105,11 @@ function CodeView() {
         key={activeFile.path}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
         className="overflow-auto h-full"
+        style={{
+          background: "radial-gradient(ellipse 100% 40% at 50% 0%, rgba(34,211,238,0.005) 0%, transparent 50%)",
+        }}
       >
         <table className="w-full border-collapse" style={{ fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: "1.85" }}>
           <tbody>
@@ -94,11 +117,11 @@ function CodeView() {
               const lineNum = i + 1;
               const hl = highlightMap.get(lineNum);
               const bgColor = hl === "added"
-                ? "rgba(40,200,64,0.04)"
+                ? "rgba(40,200,64,0.05)"
                 : hl === "removed"
-                  ? "rgba(255,107,107,0.04)"
+                  ? "rgba(255,107,107,0.05)"
                   : hl === "modified"
-                    ? "rgba(247,201,72,0.04)"
+                    ? "rgba(247,201,72,0.05)"
                     : "transparent";
               const gutterColor = hl === "added"
                 ? "#28c840"
@@ -108,18 +131,36 @@ function CodeView() {
                     ? "#f7c948"
                     : "#2a3040";
               const borderColor = hl === "added"
-                ? "rgba(40,200,64,0.25)"
+                ? "rgba(40,200,64,0.35)"
                 : hl === "removed"
-                  ? "rgba(255,107,107,0.25)"
+                  ? "rgba(255,107,107,0.35)"
                   : hl === "modified"
-                    ? "rgba(247,201,72,0.25)"
+                    ? "rgba(247,201,72,0.35)"
                     : "transparent";
+              const glowColor = hl === "added"
+                ? "rgba(40,200,64,0.08)"
+                : hl === "removed"
+                  ? "rgba(255,107,107,0.08)"
+                  : hl === "modified"
+                    ? "rgba(247,201,72,0.08)"
+                    : "none";
 
               return (
-                <tr key={i} style={{ backgroundColor: bgColor }}>
+                <tr
+                  key={i}
+                  style={{
+                    backgroundColor: bgColor,
+                    boxShadow: hl ? `inset 0 0 20px ${glowColor}` : "none",
+                    transition: "background-color 0.3s ease",
+                  }}
+                >
                   <td
                     className="px-3 py-0 text-right select-none w-12"
-                    style={{ color: gutterColor, borderLeft: `2px solid ${borderColor}` }}
+                    style={{
+                      color: gutterColor,
+                      borderLeft: `2px solid ${borderColor}`,
+                      ...(hl ? { textShadow: `0 0 6px ${borderColor}` } : {}),
+                    }}
                   >
                     <span className="text-[10px]">{lineNum}</span>
                   </td>
@@ -146,17 +187,28 @@ export function FileExplorer() {
       </div>
       {/* Status bar */}
       {activeFile && (
-        <div className="flex items-center gap-4 px-4 py-1.5 text-[9px] text-[#3a4250] shrink-0" style={{ fontFamily: "var(--font-mono)", borderTop: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(255,255,255,0.008), rgba(255,255,255,0.003))", boxShadow: "0 -1px 0 rgba(0,0,0,0.1)" }}>
+        <div
+          className="flex items-center gap-4 px-4 py-1.5 text-[9px] text-[#3a4250] shrink-0"
+          style={{
+            fontFamily: "var(--font-mono)",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.012) 0%, rgba(255,255,255,0.004) 100%)",
+            boxShadow: "0 -1px 0 rgba(0,0,0,0.15), 0 -2px 6px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.02)",
+          }}
+        >
           <div className="flex items-center gap-1.5">
             <span
-              className="w-[4px] h-[4px] rounded-full"
-              style={{ backgroundColor: getLanguageDotColor(activeFile.language) }}
+              className="w-[5px] h-[5px] rounded-full"
+              style={{
+                backgroundColor: getLanguageDotColor(activeFile.language),
+                boxShadow: `0 0 5px ${getLanguageDotColor(activeFile.language)}40`,
+              }}
             />
-            <span>{activeFile.language}</span>
+            <span style={{ textShadow: "0 0 6px rgba(58,66,80,0.15)" }}>{activeFile.language}</span>
           </div>
           <span>{activeFile.content.split("\n").length} lines</span>
           {activeFile.highlights && activeFile.highlights.length > 0 && (
-            <span className="text-[#f7c948]/60">
+            <span className="text-[#f7c948]/70" style={{ textShadow: "0 0 6px rgba(247,201,72,0.2)" }}>
               {activeFile.highlights.length} change{activeFile.highlights.length !== 1 ? "s" : ""}
             </span>
           )}
