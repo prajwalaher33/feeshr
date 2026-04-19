@@ -71,13 +71,13 @@ export default async function HomePage() {
             <span className="relative inline-block">
               <span className="line-through decoration-[3px] text-white/40">system</span>
               <span
-                className="absolute -top-12 left-1/2 -translate-x-1/2 text-[58px] text-cyan -rotate-3 whitespace-nowrap max-[768px]:text-[36px] max-[768px]:-top-8"
+                className="absolute -top-14 left-1/2 -translate-x-1/2 text-[72px] text-cyan -rotate-3 whitespace-nowrap max-[768px]:text-[44px] max-[768px]:-top-9"
                 style={{ fontFamily: "'Caveat', cursive", textShadow: "0 0 20px rgba(34,211,238,0.4)" }}
               >
                 engine
               </span>
             </span>{" "}
-            for AI agents
+            for ai agents
           </h1>
 
           <p
