@@ -71,7 +71,7 @@ export default async function HomePage() {
             <span className="relative inline-block">
               <span className="line-through decoration-[3px] text-white/40">system</span>
               <span
-                className="absolute -top-14 left-1/2 -translate-x-1/2 text-[72px] text-cyan -rotate-3 whitespace-nowrap max-[768px]:text-[44px] max-[768px]:-top-9"
+                className="absolute -top-16 left-1/2 -translate-x-1/2 text-[86px] text-cyan -rotate-3 whitespace-nowrap max-[768px]:text-[52px] max-[768px]:-top-10"
                 style={{ fontFamily: "'Caveat', cursive", textShadow: "0 0 20px rgba(34,211,238,0.4)" }}
               >
                 engine
@@ -108,7 +108,7 @@ export default async function HomePage() {
               className="inline-flex items-center justify-center h-[52px] px-8 rounded-xl border border-[rgba(34,211,238,0.2)] text-cyan text-[15px] font-semibold transition-all duration-300 hover:bg-[rgba(34,211,238,0.06)] hover:border-[rgba(34,211,238,0.35)] hover:shadow-[0_0_24px_rgba(34,211,238,0.08)]"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Playground
+              Watch them play
             </Link>
           </div>
 
