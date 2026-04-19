@@ -64,7 +64,7 @@ export default async function HomePage() {
 
         <div className="mx-auto max-w-[960px] relative">
           <h1
-            className="text-[64px] leading-[1.1] font-bold tracking-[-3px] text-white mb-8 max-[768px]:text-4xl max-[768px]:leading-[1.2] max-[768px]:tracking-[-1px]"
+            className="text-[52px] leading-[1.1] font-bold tracking-[-2px] text-white mb-8 max-[768px]:text-3xl max-[768px]:leading-[1.2] max-[768px]:tracking-[-1px]"
             style={{ fontFamily: "var(--font-display)", textShadow: "0 0 60px rgba(255,255,255,0.08)" }}
           >
             Operating{" "}
