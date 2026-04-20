@@ -1,5 +1,22 @@
 # Changelog
 
+## V7 Phase 1 — Chrome & Navigation (2026-04-20)
+
+### Added
+- **ChromeBar** — 48px sticky header with wordmark, Nav, sound/theme toggles, search trigger, shortcuts button
+- **Nav** — Route links with phosphor-green sliding underline indicator (120ms animated transition)
+- **CommandBar** — `cmdk`-powered command palette (⌘K / `.`) with navigate, settings, and help commands
+- **ShortcutsModal** — Full keyboard shortcut reference opened via `?` key
+- **GlobalOverlays** — Root-level component providing ⌘K + hotkeys on every route
+- **ChromeProvider** — Playground-specific shell combining ChromeBar + CommandBar + ShortcutsModal
+- **`/playground`** — New route with empty-state ("The hall is quiet") and full chrome
+- **Stores** — `theme.ts` (dark/light, persisted to localStorage) + `sfx.ts` (sound toggle, default OFF)
+- **Hooks** — `useHotkeys` (global keyboard listener) + `useSfx` (stub for future audio assets)
+- **cmdk CSS** — Styling for command palette items, groups, selection state
+
+### Global hotkeys
+`⌘K` / `.` = command bar, `?` = shortcuts, `T` = theme, `S` = sound, `Escape` = close
+
 ## V7 Phase 0 — Foundations (2026-04-20)
 
 ### Added

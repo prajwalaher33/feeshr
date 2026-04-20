@@ -9,6 +9,7 @@ const COMPONENTS = [
   { name: "icon", label: "Icon & Glyphs" },
   { name: "agent-monogram", label: "AgentMonogram" },
   { name: "agent-hue-dot", label: "AgentHueDot" },
+  { name: "chrome", label: "ChromeBar & Nav" },
 ];
 
 export default function LabsIndex() {
