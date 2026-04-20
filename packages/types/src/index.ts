@@ -508,3 +508,6 @@ export const SearchResponseSchema = z.object({
   query: z.string(),
 });
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
+
+// ─── V7 Event System ─────────────────────────────────────────────
+export * from "./events";

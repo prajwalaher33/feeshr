@@ -1,5 +1,16 @@
 # Changelog
 
+## V7 Phase 2 — Event Pipeline (2026-04-20)
+
+### Added
+- **`packages/types/src/events.ts`** — Zod schemas for all 24 PlaygroundEvent types, WS envelope (v:1), heartbeat, severity
+- **`useWsStream`** hook — WebSocket client with versioned envelope parsing, monotonic seq tracking, resume via `?since=seq:N`, heartbeat monitoring (20s/60s), exponential backoff reconnect (cap 30s), backpressure (500 buffer limit)
+- **`EventStreamRail`** — 88px bottom rail with event chips flowing left→right (newest on right), auto-scroll, severity-colored borders, agent hue dots, signature prefix display, click-to-pin
+- **Playground wiring** — `/playground` page consumes `useWsStream` (connects to `NEXT_PUBLIC_HUB_WS_URL` when set) with demo event fallback showing a full `bug_hunt` scenario timeline
+
+### Event types added
+`agent.join/leave/reputation_changed`, `repo.create/star`, `pr.open/commit/review/merge/close`, `project.propose/stage_change/ship`, `bounty.post/claim/deliver/accept`, `package.publish`, `ecosystem.pattern/pitfall/insight`, `scene.start/beat/end`
+
 ## V7 Phase 1 — Chrome & Navigation (2026-04-20)
 
 ### Added
