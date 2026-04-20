@@ -470,3 +470,167 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   V7 DESIGN SYSTEM — "Obsidian & Phosphor"
+   Dark canonical. Light as faithful inversion.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Surface layers */
+  --bg-0: #07080A;
+  --bg-1: #0B0D10;
+  --bg-2: #111418;
+  --bg-3: #171B20;
+
+  /* Borders */
+  --line: #1E242B;
+  --line-strong: #2A3138;
+
+  /* Ink */
+  --ink-0: #F4F5F7;
+  --ink-1: #C5CBD3;
+  --ink-2: #8A919B;
+  --ink-3: #5A616B;
+  --ink-4: #3A4049;
+
+  /* Accent — phosphor green */
+  --phos-50:  #EFFFE9;
+  --phos-200: #B6F5A3;
+  --phos-400: #64E04B;
+  --phos-500: #3BD01F;
+  --phos-600: #2AA815;
+  --phos-900: #0E3A08;
+
+  /* Semantic */
+  --ok:    #3BD01F;
+  --warn:  #E8B339;
+  --err:   #E5484D;
+  --info:  #5B8DEF;
+
+  /* Agent identity hues */
+  --hue-a: #7FB4FF;
+  --hue-b: #B28CFF;
+  --hue-c: #FF9AA8;
+  --hue-d: #FFC978;
+  --hue-e: #7FE0C2;
+  --hue-f: #F088D5;
+
+  /* Typography scale */
+  --fs-xs:  0.6875rem;
+  --fs-sm:  0.8125rem;
+  --fs-md:  0.9375rem;
+  --fs-lg:  1.125rem;
+  --fs-xl:  1.5rem;
+  --fs-2xl: 2.25rem;
+  --fs-3xl: clamp(3rem, 6vw, 5.5rem);
+  --fs-display: clamp(5rem, 12vw, 11rem);
+
+  /* Spacing base: 4px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+  --space-11: 96px;
+  --space-12: 128px;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Elevation (border-based, no soft shadows) */
+  --elev-1: 0 0 0 1px var(--line);
+  --elev-2: 0 0 0 1px var(--line), 0 1px 0 0 rgba(255,255,255,0.03) inset;
+  --elev-phos: 0 0 0 1px var(--phos-500), 0 0 24px -8px var(--phos-500);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-cinema: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-xs: 80ms;
+  --dur-sm: 140ms;
+  --dur-md: 220ms;
+  --dur-lg: 340ms;
+  --dur-cinema: 720ms;
+}
+
+/* ─── Light theme inversion ──────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  --bg-0: #FAFBFC;
+  --bg-1: #F4F5F7;
+  --bg-2: #EBEDF0;
+  --bg-3: #DDE0E4;
+  --line: #D5D9E0;
+  --line-strong: #C5CBD3;
+  --ink-0: #111418;
+  --ink-1: #3A4049;
+  --ink-2: #5A616B;
+  --ink-3: #8A919B;
+  --ink-4: #C5CBD3;
+  --phos-500: #2AA815;
+  --phos-600: #1E8A0E;
+  --phos-400: #3BD01F;
+  --ok: #2AA815;
+  --warn: #B8860B;
+  --err: #D32F2F;
+  --info: #3A6FD8;
+  --elev-1: 0 0 0 1px var(--line);
+  --elev-2: 0 0 0 1px var(--line), 0 1px 0 0 rgba(0,0,0,0.03) inset;
+  --elev-phos: 0 0 0 1px var(--phos-500), 0 0 24px -8px rgba(42,168,21,0.2);
+}
+
+/* ─── V7 Utility Classes ─────────────────────────────────────────────────── */
+
+.v7-mono {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+.v7-display {
+  font-family: var(--font-instrument), Georgia, serif;
+}
+
+.v7-body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.v7-micro-label {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ─── V7 Focus ───────────────────────────────────────────────────────────── */
+
+.v7-focus-ring:focus-visible {
+  outline: 2px solid var(--phos-500);
+  outline-offset: 2px;
+}
+
+/* ─── V7 Animations ──────────────────────────────────────────────────────── */
+
+@keyframes v7-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes v7-entrance {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v7-pulse-motion { animation: none !important; }
+}
