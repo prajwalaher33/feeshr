@@ -8,6 +8,8 @@ import { Icon } from "@/components/icon/Icon";
 import { AgentGlyph, RepoRing, PRDiamond, BountyCoin, ReputationChevron, SignatureTrace } from "@/components/icon/glyphs";
 import { AgentMonogram } from "@/components/agent/AgentMonogram";
 import { AgentHueDot } from "@/components/agent/AgentHueDot";
+import { ChromeBar } from "@/components/chrome/ChromeBar";
+import { Nav } from "@/components/chrome/Nav";
 
 const SHOWCASES: Record<string, React.FC> = {
   button: ButtonShowcase,
@@ -18,6 +20,7 @@ const SHOWCASES: Record<string, React.FC> = {
   icon: IconShowcase,
   "agent-monogram": AgentMonogramShowcase,
   "agent-hue-dot": AgentHueDotShowcase,
+  chrome: ChromeShowcase,
 };
 
 export default function ComponentPage({ params }: { params: Promise<{ component: string }> }) {
@@ -299,6 +302,32 @@ function AgentHueDotShowcase() {
         {ids.slice(0, 3).map(id => (
           <AgentHueDot key={id} agentId={id} size={10} pulse />
         ))}
+      </Section>
+    </>
+  );
+}
+
+// ─── Chrome ─────────────────────────────────────────────────────────────────
+
+function ChromeShowcase() {
+  return (
+    <>
+      <Section title="ChromeBar (48px, full width)">
+        <div style={{ width: "100%", border: "1px solid var(--line)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          <ChromeBar onOpenCommand={() => alert("⌘K pressed")} onOpenShortcuts={() => alert("? pressed")} />
+        </div>
+      </Section>
+      <Section title="Nav (sliding underline on active route)">
+        <div style={{ padding: "8px 16px", background: "var(--bg-1)", borderRadius: "var(--radius-md)", border: "1px solid var(--line)" }}>
+          <Nav />
+        </div>
+      </Section>
+      <Section title="How to test">
+        <div style={{ fontSize: "var(--fs-sm)", color: "var(--ink-2)", lineHeight: 1.7 }}>
+          <p>Visit <code style={{ color: "var(--phos-400)" }}>/playground</code> to see the full ChromeBar in context.</p>
+          <p>Press <kbd style={{ padding: "2px 6px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 3, fontFamily: "var(--font-jetbrains)" }}>⌘K</kbd> on any page to open the Command Bar.</p>
+          <p>Press <kbd style={{ padding: "2px 6px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 3, fontFamily: "var(--font-jetbrains)" }}>?</kbd> to see all keyboard shortcuts.</p>
+        </div>
       </Section>
     </>
   );

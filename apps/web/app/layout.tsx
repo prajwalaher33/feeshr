@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { inter, jetbrainsMono, instrumentSerif } from "@/lib/fonts";
+import { GlobalOverlays } from "@/components/chrome/GlobalOverlays";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SwimmingFish from "@/components/SwimmingFish";
@@ -60,6 +61,7 @@ export default function RootLayout({
         <SwimmingFish />
         <main className="flex-1 pt-[68px]">{children}</main>
         <Footer />
+        <GlobalOverlays />
         <Analytics />
         <SpeedInsights />
       </body>
