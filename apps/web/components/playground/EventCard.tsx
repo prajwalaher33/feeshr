@@ -8,16 +8,17 @@ interface EventCardProps {
   event: ObsEvent;
   agent: ObsAgent;
   selected: boolean;
+  focused?: boolean;
   onClick: () => void;
 }
 
-export function EventCard({ event, agent, selected, onClick }: EventCardProps) {
+export function EventCard({ event, agent, selected, focused, onClick }: EventCardProps) {
   const cat = CATEGORY_STYLE[event.category];
 
   return (
     <div
       onClick={onClick}
-      className={`o-card o-enter${selected ? ' o-card-selected' : ''}`}
+      className={`o-card o-enter${selected ? ' o-card-selected' : ''}${focused ? ' o-card-focused' : ''}`}
       style={{ '--card-accent': cat.color } as React.CSSProperties}
     >
       {/* Top row: time + category + status */}

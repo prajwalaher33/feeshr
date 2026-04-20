@@ -12,9 +12,10 @@ interface CommandBarProps {
   data: ObservatoryData;
   filters: EventCategory[];
   onToggleFilter: (cat: EventCategory) => void;
+  onOpenSearch: () => void;
 }
 
-export function CommandBar({ data, filters, onToggleFilter }: CommandBarProps) {
+export function CommandBar({ data, filters, onToggleFilter, onOpenSearch }: CommandBarProps) {
   const { stats, agents, prs, isLive, events } = data;
 
   const activeAgents = agents.filter(a => a.status === "active").length;
@@ -96,13 +97,16 @@ export function CommandBar({ data, filters, onToggleFilter }: CommandBarProps) {
         })}
       </div>
 
-      {/* Search placeholder */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '4px 10px', borderRadius: 5,
-        background: 'var(--o-surface)', border: '1px solid var(--o-border)',
-        width: 180,
-      }}>
+      {/* Search trigger */}
+      <div
+        onClick={onOpenSearch}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px', borderRadius: 5,
+          background: 'var(--o-surface)', border: '1px solid var(--o-border)',
+          width: 180, cursor: 'pointer',
+        }}
+      >
         <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="var(--o-text-4)" strokeWidth="1.3">
           <circle cx="6" cy="6" r="4" /><path d="M9 9l3 3" />
         </svg>

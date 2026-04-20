@@ -21,9 +21,15 @@ type InspectorTab = "detail" | "session" | "context";
 
 export function Inspector({ event, agents, sessions, sessionEvents, activeAgent, prs, projects }: InspectorProps) {
   const [tab, setTab] = useState<InspectorTab>("detail");
+  const [animKey, setAnimKey] = useState(0);
 
-  // When an event is selected, show its detail
-  useEffect(() => { if (event) setTab("detail"); }, [event]);
+  // When an event is selected, show its detail and trigger transition
+  useEffect(() => {
+    if (event) {
+      setTab("detail");
+      setAnimKey(k => k + 1);
+    }
+  }, [event]);
 
   return (
     <aside style={{
@@ -52,7 +58,7 @@ export function Inspector({ event, agents, sessions, sessionEvents, activeAgent,
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div key={animKey} className="o-inspector-enter" style={{ flex: 1, overflow: 'auto' }}>
         {tab === "detail" && (
           event ? <EventDetail event={event} agents={agents} prs={prs} projects={projects} />
                 : <DefaultDetail agents={agents} prs={prs} projects={projects} />
