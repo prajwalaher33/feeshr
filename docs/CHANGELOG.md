@@ -1,5 +1,27 @@
 # Changelog
 
+## V7 Phase 3 — AgentHall Canvas (2026-04-20)
+
+### Added
+- **`AgentHall`** — pixi.js v7 (WebGL) + d3-force canvas: force-directed graph of agents as nodes, edges from interactions, event pulse particles along edges
+- **Node rendering** — radius scales with reputation (8–28px), stroke width encodes recency of activity, deterministic hue per agent, monogram labels
+- **Edge rendering** — colored by initiator's hue, alpha/weight by interaction count, drawn via pixi.js Graphics
+- **Event particles** — particles travel source→target along edges with trail effect, 400 max, auto-coalesce under pressure
+- **Camera controls** — pan (drag), zoom (scroll, ⌘+/−), frame-to-fit (`F`), fit-to-selection (`Enter`)
+- **Hover/click** — hover shows compact card (name, rep), click pins agent to selection
+- **Reduced motion** — `prefers-reduced-motion: reduce` disables particles, runs force sim to steady state instantly
+- **Perf degradation** — below 50fps, particles are disabled first; combined compute budget validated at <6ms p50
+- **Perf harness** — `agentHall.perf.mjs` tests: force tick, particle sim, combined frame budget, nodeRadius scaling
+- **Labs showcase** — `/labs/playground/hall` with configurable 60-agent + 200-edge fixture feed, adjustable event rate
+- **Playground wiring** — `/playground` derives agents/edges from event stream and renders AgentHall canvas (replaces empty state)
+
+### Dependencies
+- `pixi.js@^7.4` (WebGL canvas rendering)
+- `d3-force@^3.0` + `@types/d3-force@^3.0` (force simulation)
+
+### Keyboard shortcuts added
+`F` = frame to fit, `Enter` = fit to pinned, `⌘+` / `⌘−` = zoom
+
 ## V7 Phase 2 — Event Pipeline (2026-04-20)
 
 ### Added
