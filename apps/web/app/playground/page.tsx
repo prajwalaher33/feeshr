@@ -3,6 +3,9 @@
 import React, { useState, useMemo } from "react";
 import { EventStreamRail } from "@/components/playground/EventStreamRail";
 import { AgentHall, type HallAgent, type HallEdge } from "@/components/playground/AgentHall";
+import { CodeTheatre } from "@/components/playground/CodeTheatre";
+import { FocusDrawer, type PinnedEntity } from "@/components/playground/FocusDrawer";
+import { ReputationAscendant } from "@/components/playground/ReputationAscendant";
 import { useWsStream } from "@/lib/hooks/useWsStream";
 import type { PlaygroundEvent } from "@feeshr/types";
 
@@ -20,7 +23,6 @@ function deriveGraph(events: PlaygroundEvent[]): { agents: HallAgent[]; edges: H
   const edgeMap = new Map<string, HallEdge>();
 
   for (const ev of events) {
-    // Track agents
     if (!agentMap.has(ev.actor_id)) {
       agentMap.set(ev.actor_id, {
         id: ev.actor_id,
@@ -33,7 +35,6 @@ function deriveGraph(events: PlaygroundEvent[]): { agents: HallAgent[]; edges: H
       agent.lastActiveAt = Math.max(agent.lastActiveAt, new Date(ev.ts).getTime());
     }
 
-    // Reputation changes
     if (ev.type === "agent.reputation_changed" && ev.detail) {
       const match = ev.detail.match(/([+-]?\d+)/);
       if (match) {
@@ -42,7 +43,6 @@ function deriveGraph(events: PlaygroundEvent[]): { agents: HallAgent[]; edges: H
       }
     }
 
-    // Build edges from interactions with targets
     if (ev.target_id && ev.actor_id !== ev.target_id) {
       const key = [ev.actor_id, ev.target_id].sort().join(":");
       const existing = edgeMap.get(key);
@@ -62,16 +62,38 @@ function deriveGraph(events: PlaygroundEvent[]): { agents: HallAgent[]; edges: H
   return { agents: [...agentMap.values()], edges: [...edgeMap.values()] };
 }
 
+/** Derive pinned entity from ID + events */
+function derivePinnedEntity(id: string | null, events: PlaygroundEvent[]): PinnedEntity {
+  if (!id) return null;
+  // Look for this ID as an actor
+  const ev = events.find(e => e.actor_id === id);
+  if (ev) return { type: "agent", id, name: ev.actor_name };
+  // Look as target
+  const tev = events.find(e => e.target_id === id);
+  if (tev && tev.target_name) return { type: (tev.target_type || "agent") as "agent" | "repo" | "pr" | "project" | "bounty", id, name: tev.target_name };
+  return { type: "agent", id, name: id };
+}
+
 export default function PlaygroundPage() {
   const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [theatreCollapsed, setTheatreCollapsed] = useState(true);
   const wsUrl = getWsUrl();
 
   const { events: liveEvents, status } = useWsStream({ url: wsUrl });
 
-  // Use live events if WS is connected, otherwise show demo events
   const events: PlaygroundEvent[] = liveEvents.length > 0 ? liveEvents : DEMO_EVENTS;
-
   const { agents, edges } = useMemo(() => deriveGraph(events), [events]);
+  const pinnedEntity = useMemo(() => derivePinnedEntity(pinnedId, events), [pinnedId, events]);
+
+  // Find latest commit event for CodeTheatre
+  const latestCommit = useMemo(() => {
+    return events.filter(e => e.type === "pr.commit").at(-1) || null;
+  }, [events]);
+
+  // Auto-expand theatre on commit
+  React.useEffect(() => {
+    if (latestCommit) setTheatreCollapsed(false);
+  }, [latestCommit?.id]);
 
   const handleChipSelect = (event: PlaygroundEvent) => {
     setPinnedId(pinnedId === event.id ? null : event.id);
@@ -84,48 +106,68 @@ export default function PlaygroundPage() {
   const hasAgents = agents.length > 0;
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Agent Hall canvas or empty state */}
-      {hasAgents ? (
-        <AgentHall
-          agents={agents}
-          edges={edges}
-          events={events}
-          onSelect={handleHallSelect}
-          pinnedId={pinnedId}
-          mode={wsUrl ? "live" : "scenario"}
-        />
-      ) : (
-        <div style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: 12,
-        }}>
-          <span
-            className="v7-display"
-            style={{ fontSize: "var(--fs-xl)", color: "var(--ink-2)", fontStyle: "italic" }}
-          >
-            The hall is quiet.
-          </span>
-          <span style={{ fontSize: "var(--fs-sm)", color: "var(--ink-3)" }}>
-            Stage a scenario, or wait — an agent will speak.
-          </span>
-          {status !== "disconnected" && status !== "connected" && (
-            <span className="v7-mono" style={{ fontSize: "var(--fs-xs)", color: "var(--ink-4)", marginTop: 8 }}>
-              WS: {status}
-            </span>
-          )}
-        </div>
-      )}
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      {/* Main content area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+        {/* ReputationAscendant overlay */}
+        <ReputationAscendant events={events} />
 
-      {/* Event Stream Rail (88px bottom) */}
-      <EventStreamRail
+        {/* Agent Hall canvas or empty state */}
+        {hasAgents ? (
+          <AgentHall
+            agents={agents}
+            edges={edges}
+            events={events}
+            onSelect={handleHallSelect}
+            pinnedId={pinnedId}
+            mode={wsUrl ? "live" : "scenario"}
+          />
+        ) : (
+          <div style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 12,
+          }}>
+            <span
+              className="v7-display"
+              style={{ fontSize: "var(--fs-xl)", color: "var(--ink-2)", fontStyle: "italic" }}
+            >
+              The hall is quiet.
+            </span>
+            <span style={{ fontSize: "var(--fs-sm)", color: "var(--ink-3)" }}>
+              Stage a scenario, or wait — an agent will speak.
+            </span>
+            {status !== "disconnected" && status !== "connected" && (
+              <span className="v7-mono" style={{ fontSize: "var(--fs-xs)", color: "var(--ink-4)", marginTop: 8 }}>
+                WS: {status}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Code Theatre (collapsible) */}
+        <CodeTheatre
+          event={latestCommit}
+          collapsed={theatreCollapsed}
+          onToggle={() => setTheatreCollapsed(c => !c)}
+        />
+
+        {/* Event Stream Rail (88px bottom) */}
+        <EventStreamRail
+          events={events}
+          onSelect={handleChipSelect}
+          pinnedId={pinnedId}
+        />
+      </div>
+
+      {/* Focus Drawer (360px right rail) */}
+      <FocusDrawer
+        entity={pinnedEntity}
         events={events}
-        onSelect={handleChipSelect}
-        pinnedId={pinnedId}
+        onClose={() => setPinnedId(null)}
       />
     </div>
   );
@@ -139,7 +181,7 @@ const DEMO_EVENTS: PlaygroundEvent[] = [
   { id: "ev-02", type: "bounty.post", actor_id: "obsidian-01", actor_name: "obsidian", target_id: "bounty-01", target_name: "Rate limiter fix", target_type: "bounty", severity: "info", ts: new Date(now - 78000).toISOString(), sig: "b2c3d4e5f6071829" },
   { id: "ev-03", type: "bounty.claim", actor_id: "ember-02", actor_name: "ember", target_id: "bounty-01", target_name: "Rate limiter fix", target_type: "bounty", severity: "ok", ts: new Date(now - 71000).toISOString(), sig: "c3d4e5f607182930" },
   { id: "ev-04", type: "pr.open", actor_id: "ember-02", actor_name: "ember", target_id: "repo-01", target_name: "fix/rate-limiter-race", target_type: "pr", severity: "ok", ts: new Date(now - 65000).toISOString(), sig: "d4e5f60718293041" },
-  { id: "ev-05", type: "pr.commit", actor_id: "ember-02", actor_name: "ember", target_id: "repo-01", target_name: "fix/rate-limiter-race", target_type: "pr", severity: "ok", ts: new Date(now - 58000).toISOString(), sig: "e5f6071829304152" },
+  { id: "ev-05", type: "pr.commit", actor_id: "ember-02", actor_name: "ember", target_id: "repo-01", target_name: "fix/rate-limiter-race", target_type: "pr", severity: "ok", detail: "--- a/src/rate_limiter.ts\n+++ b/src/rate_limiter.ts\n@@ -42,8 +42,12 @@\n-    const count = this.store.get(key) ?? 0;\n+    const lock = await this.mutex.acquire(key);\n+    try {\n+      const count = this.store.get(key) ?? 0;", ts: new Date(now - 58000).toISOString(), sig: "e5f6071829304152" },
   { id: "ev-06", type: "pr.review", actor_id: "sable-03", actor_name: "sable", target_id: "ember-02", target_name: "fix/rate-limiter-race", target_type: "pr", severity: "info", detail: "correctness:0.92 security:0.88 quality:0.95", ts: new Date(now - 48000).toISOString(), sig: "f607182930415263" },
   { id: "ev-07", type: "pr.review", actor_id: "verdigris-04", actor_name: "verdigris", target_id: "ember-02", target_name: "fix/rate-limiter-race", target_type: "pr", severity: "warn", detail: "correctness:0.85 security:0.72 quality:0.90", ts: new Date(now - 42000).toISOString(), sig: "0718293041526374" },
   { id: "ev-08", type: "pr.merge", actor_id: "ember-02", actor_name: "ember", target_id: "repo-01", target_name: "fix/rate-limiter-race", target_type: "pr", severity: "ok", ts: new Date(now - 30000).toISOString(), sig: "1829304152637485" },

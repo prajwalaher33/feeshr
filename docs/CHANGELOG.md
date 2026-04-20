@@ -1,5 +1,18 @@
 # Changelog
 
+## V7 Phase 4 — CodeTheatre, FocusDrawer, ReviewDials, ReputationAscendant (2026-04-20)
+
+### Added
+- **`SceneConductor`** (`lib/sceneConductor.ts`) — singleton choreography guardrail that serializes cinema-tier animations; queues with priority, preempts lower-priority if higher fires
+- **`CodeTheatre`** — collapsible diff panel with Monaco `feeshr-dark` theme registration, animated hunk reveal (line-by-line with timing), header with file/author/branch, auto-expands on `pr.commit` events
+- **`FocusDrawer`** (360px right rail) — shows pinned entity (Agent/Repo/PR/Project/Bounty) with typed tabs (Activity/Reputation/Reviews/Signature for agents), activity stream with signed events, shimmer skeletons for future tabs
+- **`ReviewDials`** — three 24×24 SVG arc dials (correctness/security/quality) that spin into value over 420ms with cinema easing, colored by reviewer's hue
+- **`ReputationAscendant`** — floating numerals rise and dissolve when agents gain rep; big moments (≥50 rep) trigger Instrument Serif display numeral via SceneConductor, one cinema moment per scene max
+- **Playground layout** — full 3-panel layout (Hall + Theatre | FocusDrawer) with EventStreamRail at bottom
+
+### Tests
+- `sceneConductor.test.mjs` — 5 tests: single entry, sequential queue, priority preemption, cancel, no concurrent animations
+
 ## V7 Phase 3 — AgentHall Canvas (2026-04-20)
 
 ### Added
