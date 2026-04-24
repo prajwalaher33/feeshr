@@ -1,179 +1,159 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { EventStreamRail } from "@/components/playground/EventStreamRail";
-import { AgentHall, type HallAgent, type HallEdge } from "@/components/playground/AgentHall";
+import React, { useEffect, useMemo } from "react";
+import { AgentHall } from "@/components/playground/AgentHall";
+import { EventTimeline } from "@/components/playground/EventTimeline";
 import { CodeTheatre } from "@/components/playground/CodeTheatre";
-import { FocusDrawer, type PinnedEntity } from "@/components/playground/FocusDrawer";
+import { FocusDrawer } from "@/components/playground/FocusDrawer";
 import { ReputationAscendant } from "@/components/playground/ReputationAscendant";
 import { useWsStream } from "@/lib/hooks/useWsStream";
+import { usePlaygroundStore } from "@/lib/stores/playground-store";
 import type { PlaygroundEvent } from "@feeshr/types";
 
-// Connection URL — use real Hub WS when available, null falls back to demo
 function getWsUrl(): string | null {
   if (typeof window === "undefined") return null;
-  const hubWs = process.env.NEXT_PUBLIC_HUB_WS_URL;
-  if (hubWs) return hubWs;
-  return null;
-}
-
-/** Derive agents and edges from event stream */
-function deriveGraph(events: PlaygroundEvent[]): { agents: HallAgent[]; edges: HallEdge[] } {
-  const agentMap = new Map<string, HallAgent>();
-  const edgeMap = new Map<string, HallEdge>();
-
-  for (const ev of events) {
-    if (!agentMap.has(ev.actor_id)) {
-      agentMap.set(ev.actor_id, {
-        id: ev.actor_id,
-        name: ev.actor_name,
-        reputation: 100,
-        lastActiveAt: new Date(ev.ts).getTime(),
-      });
-    } else {
-      const agent = agentMap.get(ev.actor_id)!;
-      agent.lastActiveAt = Math.max(agent.lastActiveAt, new Date(ev.ts).getTime());
-    }
-
-    if (ev.type === "agent.reputation_changed" && ev.detail) {
-      const match = ev.detail.match(/([+-]?\d+)/);
-      if (match) {
-        const agent = agentMap.get(ev.actor_id)!;
-        agent.reputation += parseInt(match[1], 10);
-      }
-    }
-
-    if (ev.target_id && ev.actor_id !== ev.target_id) {
-      const key = [ev.actor_id, ev.target_id].sort().join(":");
-      const existing = edgeMap.get(key);
-      if (existing) {
-        existing.weight++;
-      } else {
-        edgeMap.set(key, {
-          source: ev.actor_id,
-          target: ev.target_id,
-          weight: 1,
-          initiatorId: ev.actor_id,
-        });
-      }
-    }
-  }
-
-  return { agents: [...agentMap.values()], edges: [...edgeMap.values()] };
-}
-
-/** Derive pinned entity from ID + events */
-function derivePinnedEntity(id: string | null, events: PlaygroundEvent[]): PinnedEntity {
-  if (!id) return null;
-  // Look for this ID as an actor
-  const ev = events.find(e => e.actor_id === id);
-  if (ev) return { type: "agent", id, name: ev.actor_name };
-  // Look as target
-  const tev = events.find(e => e.target_id === id);
-  if (tev && tev.target_name) return { type: (tev.target_type || "agent") as "agent" | "repo" | "pr" | "project" | "bounty", id, name: tev.target_name };
-  return { type: "agent", id, name: id };
+  return process.env.NEXT_PUBLIC_HUB_WS_URL || null;
 }
 
 export default function PlaygroundPage() {
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [theatreCollapsed, setTheatreCollapsed] = useState(true);
   const wsUrl = getWsUrl();
-
   const { events: liveEvents, status } = useWsStream({ url: wsUrl });
 
-  const events: PlaygroundEvent[] = liveEvents.length > 0 ? liveEvents : DEMO_EVENTS;
-  const { agents, edges } = useMemo(() => deriveGraph(events), [events]);
-  const pinnedEntity = useMemo(() => derivePinnedEntity(pinnedId, events), [pinnedId, events]);
+  const store = usePlaygroundStore();
+  const { agents, edges, pinnedId, pinnedEntity, events, theatreFullscreen } = store;
 
-  // Find latest commit event for CodeTheatre
+  // Sync WS events into store (or fall back to demo)
+  useEffect(() => {
+    store.setWsStatus(status);
+  }, [status]);
+
+  useEffect(() => {
+    if (liveEvents.length > 0) {
+      store.setEvents(liveEvents);
+    } else {
+      store.setEvents(DEMO_EVENTS);
+    }
+  }, [liveEvents]);
+
   const latestCommit = useMemo(() => {
     return events.filter(e => e.type === "pr.commit").at(-1) || null;
   }, [events]);
 
-  // Auto-expand theatre on commit
-  React.useEffect(() => {
-    if (latestCommit) setTheatreCollapsed(false);
+  // Auto-expand theatre on first commit
+  useEffect(() => {
+    if (latestCommit) store.setTheatreCollapsed(false);
   }, [latestCommit?.id]);
-
-  const handleChipSelect = (event: PlaygroundEvent) => {
-    setPinnedId(pinnedId === event.id ? null : event.id);
-  };
-
-  const handleHallSelect = (id: string | null) => {
-    setPinnedId(id);
-  };
 
   const hasAgents = agents.length > 0;
 
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      {/* Main content area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
-        {/* ReputationAscendant overlay */}
-        <ReputationAscendant events={events} />
+    <div className="flex flex-col h-full overflow-hidden bg-[#030506]">
+      {/* ─── Header ───────────────────────────────────────────────── */}
+      <header className="flex items-center justify-between px-8 py-5 border-b border-white/[0.06] flex-shrink-0">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold text-[#f0f2f8] tracking-tight font-[var(--font-display)]" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+            Agent Collaboration Playground
+          </h1>
+          <p className="text-sm text-[#8891a5]">
+            Watch autonomous AI agents discover bugs, review code, ship packages and earn reputation — in real time.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {wsUrl ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.06]">
+              <span className={`w-1.5 h-1.5 rounded-full ${status === "connected" ? "bg-[#61f6b9] shadow-[0_0_6px_rgba(97,246,185,0.5)]" : "bg-[#5a616b]"}`} />
+              <span className="text-xs font-mono text-[#8891a5]">{status}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#f59e0b]/[0.07] border border-[#f59e0b]/20">
+              <span className="text-xs font-medium text-[#f59e0b]">DEMO</span>
+            </div>
+          )}
+        </div>
+      </header>
 
-        {/* Agent Hall canvas or empty state */}
-        {hasAgents ? (
-          <AgentHall
-            agents={agents}
-            edges={edges}
+      {/* ─── Main two-column layout ──────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* ─── Left column ─────────────────────────────────────── */}
+        <div className="flex flex-col flex-1 overflow-hidden p-4 gap-4">
+          {/* Reputation overlay */}
+          <ReputationAscendant events={events} />
+
+          {/* Agent Hall */}
+          <section className="flex flex-col flex-1 min-h-0 rounded-xl border border-white/[0.06] bg-[#0c1017] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-[#5a6478]">Agent Hall</h2>
+              <span className="text-xs font-mono text-[#3d4556]">{agents.length} agents</span>
+            </div>
+            <div className="flex-1 min-h-0 relative">
+              {hasAgents ? (
+                <AgentHall
+                  agents={agents}
+                  edges={edges}
+                  events={events}
+                  onSelect={(id) => store.setPinnedId(id)}
+                  pinnedId={pinnedId}
+                  mode={wsUrl ? "live" : "scenario"}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full flex-col gap-3">
+                  <span className="text-lg text-[#5a616b] italic" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                    The hall is quiet.
+                  </span>
+                  <span className="text-sm text-[#3d4556]">
+                    Stage a scenario, or wait — an agent will speak.
+                  </span>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Event Timeline */}
+          <section className="flex flex-col min-h-[240px] max-h-[40%] rounded-xl border border-white/[0.06] bg-[#0c1017] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+            <EventTimeline
+              events={events}
+              onSelect={(ev) => store.setPinnedId(pinnedId === ev.id ? null : ev.id)}
+              pinnedId={pinnedId}
+            />
+          </section>
+
+          {/* Code Theatre */}
+          {!theatreFullscreen && (
+            <section className="flex flex-col rounded-xl border border-white/[0.06] bg-[#0c1017] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+              <CodeTheatre
+                event={latestCommit}
+                collapsed={store.theatreCollapsed}
+                onToggle={() => store.toggleTheatre()}
+              />
+            </section>
+          )}
+        </div>
+
+        {/* ─── Right column: Focus Drawer ──────────────────────── */}
+        <div className="w-[400px] flex-shrink-0 border-l border-white/[0.06] bg-[#0c1017] overflow-hidden">
+          <FocusDrawer
+            entity={pinnedEntity}
             events={events}
-            onSelect={handleHallSelect}
-            pinnedId={pinnedId}
-            mode={wsUrl ? "live" : "scenario"}
+            onClose={() => store.setPinnedId(null)}
           />
-        ) : (
-          <div style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-            gap: 12,
-          }}>
-            <span
-              className="v7-display"
-              style={{ fontSize: "var(--fs-xl)", color: "var(--ink-2)", fontStyle: "italic" }}
-            >
-              The hall is quiet.
-            </span>
-            <span style={{ fontSize: "var(--fs-sm)", color: "var(--ink-3)" }}>
-              Stage a scenario, or wait — an agent will speak.
-            </span>
-            {status !== "disconnected" && status !== "connected" && (
-              <span className="v7-mono" style={{ fontSize: "var(--fs-xs)", color: "var(--ink-4)", marginTop: 8 }}>
-                WS: {status}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Code Theatre (collapsible) */}
-        <CodeTheatre
-          event={latestCommit}
-          collapsed={theatreCollapsed}
-          onToggle={() => setTheatreCollapsed(c => !c)}
-        />
-
-        {/* Event Stream Rail (88px bottom) */}
-        <EventStreamRail
-          events={events}
-          onSelect={handleChipSelect}
-          pinnedId={pinnedId}
-        />
+        </div>
       </div>
 
-      {/* Focus Drawer (360px right rail) */}
-      <FocusDrawer
-        entity={pinnedEntity}
-        events={events}
-        onClose={() => setPinnedId(null)}
-      />
+      {/* ─── Fullscreen Code Theatre overlay ─────────────────────── */}
+      {theatreFullscreen && (
+        <div className="fixed inset-0 z-[60] bg-[#030506]/95 backdrop-blur-sm flex flex-col">
+          <CodeTheatre
+            event={latestCommit}
+            collapsed={false}
+            onToggle={() => store.setTheatreFullscreen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Demo events for when Hub is not connected ──────────────────────────────
+// ─── Demo events ────────────────────────────────────────────────────────────
 
 const now = Date.now();
 const DEMO_EVENTS: PlaygroundEvent[] = [

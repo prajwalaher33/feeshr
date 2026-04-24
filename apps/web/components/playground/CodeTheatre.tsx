@@ -1,44 +1,19 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { PlaygroundEvent } from "@feeshr/types";
 import { AgentHueDot } from "@/components/agent/AgentHueDot";
+import { usePlaygroundStore } from "@/lib/stores/playground-store";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface CodeTheatreProps {
-  event: PlaygroundEvent | null; // current PR commit event with diff
+  event: PlaygroundEvent | null;
   collapsed: boolean;
   onToggle: () => void;
 }
 
-// ─── Monaco Theme (registered on first mount) ───────────────────────────────
-
-const FEESHR_DARK_THEME = {
-  base: "vs-dark" as const,
-  inherit: false,
-  rules: [
-    { token: "", foreground: "F4F5F7", background: "0B0D10" },
-    { token: "comment", foreground: "5A616B", fontStyle: "italic" },
-    { token: "keyword", foreground: "B28CFF" },
-    { token: "string", foreground: "64E04B" },
-    { token: "number", foreground: "FFC978" },
-    { token: "type", foreground: "7FE0C2" },
-    { token: "function", foreground: "7FB4FF" },
-    { token: "variable", foreground: "F4F5F7" },
-  ],
-  colors: {
-    "editor.background": "#0B0D10",
-    "editor.foreground": "#F4F5F7",
-    "editorLineNumber.foreground": "#3A4049",
-    "editor.lineHighlightBackground": "#111418",
-    "editor.selectionBackground": "#2AA815AA",
-    "diffEditor.insertedTextBackground": "#3BD01F22",
-    "diffEditor.removedTextBackground": "#E5484D22",
-  },
-};
-
-// ─── Demo diff content ──────────────────────────────────────────────────────
+// ─── Demo diff ──────────────────────────────────────────────────────────────
 
 const DEMO_DIFF = `--- a/src/rate_limiter.ts
 +++ b/src/rate_limiter.ts
@@ -61,194 +36,205 @@ const DEMO_DIFF = `--- a/src/rate_limiter.ts
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function CodeTheatre({ event, collapsed, onToggle }: CodeTheatreProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [animatedContent, setAnimatedContent] = useState("");
+  const [animatedLines, setAnimatedLines] = useState<string[]>([]);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { commitHistory, theatreFullscreen, setTheatreFullscreen } = usePlaygroundStore();
 
-  // Determine display content
+  const currentIdx = commitHistory.findIndex(e => e.id === event?.id);
+  const hasPrev = currentIdx > 0;
+  const hasNext = currentIdx < commitHistory.length - 1 && currentIdx >= 0;
+
   const diffContent = event?.detail || DEMO_DIFF;
-  const filename = event?.target_name || "src/rate_limiter.ts";
+  const lines = diffContent.split("\n");
+
+  // Extract file info from diff header or event
+  const fileMatch = diffContent.match(/^---\s+a\/(.+)$/m);
+  const filename = fileMatch?.[1] || event?.target_name || "rate_limiter.ts";
   const authorId = event?.actor_id || "";
   const authorName = event?.actor_name || "unknown";
-  const branch = event?.target_name || "fix/rate-limiter-race";
+  const branchMatch = event?.target_name || "fix/rate-limiter-race";
 
-  // Load Monaco dynamically
-  useEffect(() => {
-    if (collapsed || loaded) return;
-
-    async function loadMonaco() {
-      const monaco = await import("monaco-editor");
-      const { loader } = await import("@monaco-editor/react");
-      loader.config({ monaco });
-
-      // Register theme
-      monaco.editor.defineTheme("feeshr-dark", FEESHR_DARK_THEME);
-      setLoaded(true);
-    }
-
-    loadMonaco().catch(() => {
-      // Fallback: show raw text without Monaco
-      setLoaded(true);
-    });
-  }, [collapsed, loaded]);
-
-  // Animate content appearing (hunk-by-hunk)
+  // Line-by-line animation
   useEffect(() => {
     if (collapsed) return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      setAnimatedLines(lines);
+      return;
+    }
 
-    const lines = diffContent.split("\n");
+    setAnimatedLines([]);
     let idx = 0;
 
     function revealNext() {
       if (idx >= lines.length) return;
       idx++;
-      setAnimatedContent(lines.slice(0, idx).join("\n"));
-      const delay = lines[idx - 1]?.startsWith("+") ? 60 : lines[idx - 1]?.startsWith("-") ? 40 : 20;
+      setAnimatedLines(lines.slice(0, idx));
+      const line = lines[idx - 1] || "";
+      const delay = line.startsWith("+") ? 55 : line.startsWith("-") ? 35 : 18;
       animTimerRef.current = setTimeout(revealNext, delay);
     }
 
-    // Check reduced motion
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) {
-      setAnimatedContent(diffContent);
-    } else {
-      setAnimatedContent("");
-      animTimerRef.current = setTimeout(revealNext, 200);
-    }
-
-    return () => {
-      if (animTimerRef.current) clearTimeout(animTimerRef.current);
-    };
+    animTimerRef.current = setTimeout(revealNext, 150);
+    return () => { if (animTimerRef.current) clearTimeout(animTimerRef.current); };
   }, [diffContent, collapsed]);
 
+  const stepCommit = useCallback((dir: -1 | 1) => {
+    const target = commitHistory[currentIdx + dir];
+    if (target) {
+      usePlaygroundStore.getState().setPinnedId(target.id);
+    }
+  }, [currentIdx, commitHistory]);
+
+  // Collapsed state
   if (collapsed) {
     return (
       <button
         onClick={onToggle}
-        className="v7-focus-ring"
-        style={{
-          height: 32,
-          flexShrink: 0,
-          borderTop: "1px solid var(--line)",
-          background: "var(--bg-1)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          cursor: "pointer",
-          border: "none",
-          borderBottom: "none",
-          width: "100%",
-          padding: "0 16px",
-          color: "var(--ink-3)",
-          fontSize: "var(--fs-xs)",
-          fontFamily: "var(--font-jetbrains)",
-        }}
+        className="w-full h-9 flex items-center justify-center gap-2 text-xs text-[#5a616b] cursor-pointer bg-transparent border-none hover:bg-white/[0.02] transition-colors"
+        style={{ fontFamily: "'JetBrains Mono', monospace" }}
       >
-        <span style={{ fontSize: 10 }}>&#9654;</span>
+        <span className="text-[10px]">▶</span>
         Code Theatre
+        {commitHistory.length > 0 && (
+          <span className="text-[#3d4556]">· {commitHistory.length} commits</span>
+        )}
       </button>
     );
   }
 
   return (
-    <div
-      style={{
-        height: 240,
-        flexShrink: 0,
-        borderTop: "1px solid var(--line)",
-        background: "var(--bg-1)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <div className={theatreFullscreen ? "flex flex-col flex-1" : "flex flex-col"} style={theatreFullscreen ? undefined : { height: 280 }}>
       {/* Header */}
-      <div
-        style={{
-          height: 32,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 12px",
-          gap: 8,
-          borderBottom: "1px solid var(--line)",
-        }}
-      >
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] flex-shrink-0">
+        {/* Collapse/close */}
         <button
           onClick={onToggle}
-          className="v7-focus-ring"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--ink-3)",
-            fontSize: 10,
-            padding: "2px 4px",
-          }}
-          aria-label="Collapse Code Theatre"
+          className="text-[#5a616b] hover:text-[#8891a5] transition-colors cursor-pointer bg-transparent border-none text-xs p-1"
+          aria-label={theatreFullscreen ? "Exit fullscreen" : "Collapse"}
         >
-          &#9660;
+          {theatreFullscreen ? "✕" : "▼"}
         </button>
 
-        <span className="v7-mono" style={{ fontSize: "var(--fs-xs)", color: "var(--ink-1)" }}>
-          {filename}
-        </span>
+        {/* File name */}
+        <span className="text-xs font-mono font-medium text-[#c5cbd3]">{filename}</span>
 
+        <span className="text-[#1E242B]">|</span>
+
+        {/* Author */}
         {authorId && (
-          <>
-            <span style={{ color: "var(--line)" }}>|</span>
+          <div className="flex items-center gap-1.5">
             <AgentHueDot agentId={authorId} size={6} />
-            <span style={{ fontSize: "var(--fs-xs)", color: "var(--ink-2)" }}>
-              {authorName}
-            </span>
-          </>
+            <span className="text-xs text-[#8891a5]">{authorName}</span>
+          </div>
         )}
 
-        <span style={{ flex: 1 }} />
+        <span className="text-[#1E242B]">|</span>
 
-        <span className="v7-mono" style={{ fontSize: 9, color: "var(--ink-4)" }}>
-          {branch}
+        {/* Branch */}
+        <span className="text-[10px] font-mono text-[#3d4556] px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.06]">
+          {branchMatch}
         </span>
+
+        <div className="flex-1" />
+
+        {/* Commit stepper */}
+        {commitHistory.length > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => stepCommit(-1)}
+              disabled={!hasPrev}
+              className="w-6 h-6 flex items-center justify-center rounded text-xs text-[#5a616b] hover:text-[#c5cbd3] hover:bg-white/[0.04] disabled:opacity-30 disabled:cursor-default cursor-pointer bg-transparent border-none transition-colors"
+            >
+              ←
+            </button>
+            <span className="text-[10px] font-mono text-[#3d4556]">
+              {currentIdx >= 0 ? currentIdx + 1 : "?"}/{commitHistory.length}
+            </span>
+            <button
+              onClick={() => stepCommit(1)}
+              disabled={!hasNext}
+              className="w-6 h-6 flex items-center justify-center rounded text-xs text-[#5a616b] hover:text-[#c5cbd3] hover:bg-white/[0.04] disabled:opacity-30 disabled:cursor-default cursor-pointer bg-transparent border-none transition-colors"
+            >
+              →
+            </button>
+          </div>
+        )}
+
+        {/* Fullscreen toggle */}
+        <button
+          onClick={() => setTheatreFullscreen(!theatreFullscreen)}
+          className="w-6 h-6 flex items-center justify-center rounded text-xs text-[#5a616b] hover:text-[#c5cbd3] hover:bg-white/[0.04] cursor-pointer bg-transparent border-none transition-colors"
+          aria-label="Toggle fullscreen"
+        >
+          {theatreFullscreen ? "⊟" : "⊞"}
+        </button>
       </div>
 
-      {/* Editor / Diff content */}
+      {/* Diff content */}
       <div
-        ref={editorRef}
+        className="flex-1 overflow-auto"
         style={{
-          flex: 1,
-          overflow: "auto",
-          background: "var(--bg-0)",
-          padding: "8px 16px",
-          fontFamily: "var(--font-jetbrains)",
-          fontSize: "var(--fs-xs)",
-          lineHeight: 1.6,
-          whiteSpace: "pre",
+          background: "#07080A",
+          padding: "12px 0",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 12,
+          lineHeight: 1.7,
         }}
       >
-        {animatedContent.split("\n").map((line, i) => (
-          <div
-            key={i}
-            style={{
-              color: line.startsWith("+")
-                ? "var(--ok)"
-                : line.startsWith("-")
-                ? "var(--err)"
-                : line.startsWith("@@")
-                ? "var(--info)"
-                : "var(--ink-2)",
-              background: line.startsWith("+")
-                ? "color-mix(in srgb, var(--ok) 6%, transparent)"
-                : line.startsWith("-")
-                ? "color-mix(in srgb, var(--err) 6%, transparent)"
-                : "transparent",
-              padding: "0 4px",
-              borderRadius: 2,
-            }}
-          >
-            {line || "\u00A0"}
-          </div>
-        ))}
+        {animatedLines.map((line, i) => {
+          const isAdd = line.startsWith("+") && !line.startsWith("+++");
+          const isDel = line.startsWith("-") && !line.startsWith("---");
+          const isHunk = line.startsWith("@@");
+          const isHeader = line.startsWith("---") || line.startsWith("+++");
+
+          return (
+            <div
+              key={i}
+              className="flex"
+              style={{
+                background: isAdd
+                  ? "rgba(59, 208, 31, 0.06)"
+                  : isDel
+                  ? "rgba(229, 72, 77, 0.06)"
+                  : "transparent",
+              }}
+            >
+              {/* Line number gutter */}
+              <span className="w-12 text-right pr-4 flex-shrink-0 select-none text-[#2A3138] text-[11px]">
+                {isHunk || isHeader ? "" : i + 1}
+              </span>
+
+              {/* +/- indicator */}
+              <span
+                className="w-5 flex-shrink-0 select-none text-center"
+                style={{
+                  color: isAdd ? "#3BD01F" : isDel ? "#E5484D" : isHunk ? "#5B8DEF" : "transparent",
+                }}
+              >
+                {isAdd ? "+" : isDel ? "-" : isHunk ? "@" : " "}
+              </span>
+
+              {/* Content */}
+              <span
+                className="pr-4"
+                style={{
+                  color: isAdd
+                    ? "#64E04B"
+                    : isDel
+                    ? "#E5484D"
+                    : isHunk
+                    ? "#5B8DEF"
+                    : isHeader
+                    ? "#5a616b"
+                    : "#C5CBD3",
+                }}
+              >
+                {line.replace(/^[+-@]{1,3}\s?/, "") || "\u00A0"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

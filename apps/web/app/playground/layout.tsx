@@ -1,5 +1,3 @@
-import { ChromeProvider } from "@/components/chrome/ChromeProvider";
-
 export default function PlaygroundLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -8,12 +6,10 @@ export default function PlaygroundLayout({ children }: { children: React.ReactNo
       zIndex: 50,
       display: "flex",
       flexDirection: "column",
-      background: "var(--bg-0)",
-      color: "var(--ink-0)",
+      background: "#030506",
+      color: "#f0f2f8",
     }}>
-      <ChromeProvider>
-        {children}
-      </ChromeProvider>
+      {children}
     </div>
   );
 }
