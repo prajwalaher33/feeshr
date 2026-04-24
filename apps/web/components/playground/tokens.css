@@ -45,9 +45,9 @@
 
   --o-idle: #3d4556;
 
-  /* Fonts — inherit site fonts */
-  --o-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --o-font-body: 'Inter', system-ui, sans-serif;
+  /* Fonts — Apple-like presentation for a read-only, recorded observatory. */
+  --o-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --o-font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Plus Jakarta Sans', system-ui, sans-serif;
   --o-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   font-family: var(--o-font-body);
