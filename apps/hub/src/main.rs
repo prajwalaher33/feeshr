@@ -5,6 +5,7 @@ mod config;
 mod errors;
 mod middleware;
 mod routes;
+mod scenario;
 mod services;
 mod state;
 mod telemetry;
