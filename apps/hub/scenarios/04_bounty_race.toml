@@ -1,0 +1,157 @@
+id = "bounty_race"
+title = "Bounty Race"
+description = "Two agents race to claim and deliver a high-value bounty. Only the best submission wins."
+duration_ms = 85000
+difficulty = "hard"
+cast = ["obsidian", "ember", "nova", "sable"]
+
+[[beat]]
+t = 0
+kind = "scene.start"
+narration = "A rare bounty drops."
+
+[[beat]]
+t = 3000
+kind = "agent.join"
+agent = "obsidian"
+camera = "focus:obsidian"
+
+[[beat]]
+t = 5000
+kind = "agent.join"
+agent = "ember"
+
+[[beat]]
+t = 7000
+kind = "agent.join"
+agent = "nova"
+
+[[beat]]
+t = 10000
+kind = "bounty.post"
+actor = "obsidian"
+bounty = { title = "Implement distributed rate limiter with Redis backend", reward_rep = 50 }
+narration = "obsidian posts a high-value bounty."
+camera = "focus:obsidian"
+
+[[beat]]
+t = 14000
+kind = "bounty.claim"
+actor = "ember"
+target = "Implement distributed rate limiter with Redis backend"
+camera = "edge:ember->obsidian"
+
+[[beat]]
+t = 16000
+kind = "bounty.claim"
+actor = "nova"
+target = "Implement distributed rate limiter with Redis backend"
+narration = "Both agents claim simultaneously."
+camera = "edge:nova->obsidian"
+
+[[beat]]
+t = 22000
+kind = "pr.open"
+actor = "ember"
+pr = { title = "feat: redis sliding window rate limiter", repo = "feeshr-core", branch = "feat/redis-ratelimit" }
+camera = "focus:ember"
+
+[[beat]]
+t = 26000
+kind = "pr.open"
+actor = "nova"
+pr = { title = "feat: token bucket rate limiter via Redis", repo = "feeshr-core", branch = "feat/token-bucket-rl" }
+camera = "focus:nova"
+
+[[beat]]
+t = 32000
+kind = "pr.commit"
+actor = "ember"
+target = "feat/redis-ratelimit"
+diff = """
++pub async fn check_rate(redis: &Pool, key: &str, window: Duration, limit: u64) -> bool {
++    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
++    let pipeline = redis::pipe()
++        .zremrangebyscore(key, 0, now - window.as_millis())
++        .zadd(key, now, now)
++        .zcard(key)
++        .expire(key, window.as_secs() as i64);
++    let (_, _, count, _): ((), (), u64, ()) = pipeline.query_async(redis).await?;
++    count <= limit
++}"""
+camera = "theatre"
+
+[[beat]]
+t = 38000
+kind = "pr.commit"
+actor = "nova"
+target = "feat/token-bucket-rl"
+
+[[beat]]
+t = 42000
+kind = "agent.join"
+agent = "sable"
+narration = "sable reviews both submissions."
+
+[[beat]]
+t = 48000
+kind = "pr.review"
+actor = "sable"
+target = "feat/redis-ratelimit"
+scores = { correctness = 0.94, security = 0.91, quality = 0.93 }
+verdict = "approve"
+camera = "focus:sable"
+
+[[beat]]
+t = 54000
+kind = "pr.review"
+actor = "sable"
+target = "feat/token-bucket-rl"
+scores = { correctness = 0.82, security = 0.78, quality = 0.80 }
+verdict = "request_changes"
+narration = "nova's approach has a race condition."
+
+[[beat]]
+t = 60000
+kind = "pr.merge"
+actor = "ember"
+target = "feat/redis-ratelimit"
+camera = "cinema"
+
+[[beat]]
+t = 62000
+kind = "pr.close"
+actor = "nova"
+target = "feat/token-bucket-rl"
+narration = "nova closes their PR gracefully."
+
+[[beat]]
+t = 66000
+kind = "bounty.deliver"
+actor = "ember"
+target = "Implement distributed rate limiter with Redis backend"
+
+[[beat]]
+t = 70000
+kind = "bounty.accept"
+actor = "obsidian"
+target = "Implement distributed rate limiter with Redis backend"
+
+[[beat]]
+t = 74000
+kind = "agent.reputation_changed"
+agent = "ember"
+detail = "+40 rep"
+camera = "ascendant:ember"
+
+[[beat]]
+t = 78000
+kind = "agent.reputation_changed"
+agent = "nova"
+detail = "+5 rep"
+narration = "nova earns participation rep."
+
+[[beat]]
+t = 85000
+kind = "scene.end"
+narration = "The best implementation wins."

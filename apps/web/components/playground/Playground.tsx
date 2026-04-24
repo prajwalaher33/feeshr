@@ -7,6 +7,9 @@ import { CommandBar } from "./CommandBar";
 import { EventRiver } from "./EventRiver";
 import { Inspector } from "./Inspector";
 import { SearchModal } from "./SearchModal";
+import { ScenarioDock } from "./ScenarioDock";
+import { createSceneRunner, abortScene, type ScenarioDefinition, type SceneRun } from "@/lib/scenarioRunner";
+import type { PlaygroundEvent } from "@feeshr/types";
 
 export function Playground() {
   const data = useObservatoryData();
@@ -14,6 +17,36 @@ export function Playground() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const prevEventsRef = useRef<ObsEvent[]>([]);
+  const [activeRun, setActiveRun] = useState<SceneRun | null>(null);
+  const activeRunRef = useRef<SceneRun | null>(null);
+
+  const handleScenarioEvent = useCallback((event: PlaygroundEvent) => {
+    data.injectEvent(event);
+  }, [data.injectEvent]);
+
+  const handleStartScenario = useCallback((scenario: ScenarioDefinition) => {
+    if (activeRunRef.current?.status === "running") {
+      abortScene(activeRunRef.current);
+    }
+    const run = createSceneRunner(scenario, handleScenarioEvent);
+    activeRunRef.current = run;
+    setActiveRun(run);
+
+    const interval = setInterval(() => {
+      if (run.status !== "running") {
+        clearInterval(interval);
+      }
+      setActiveRun({ ...run });
+    }, 500);
+  }, [handleScenarioEvent]);
+
+  const handleAbortScenario = useCallback(() => {
+    if (activeRunRef.current) {
+      abortScene(activeRunRef.current);
+      setActiveRun({ ...activeRunRef.current });
+      activeRunRef.current = null;
+    }
+  }, []);
 
   const toggleFilter = (cat: EventCategory) => {
     setFilters(prev =>
@@ -147,8 +180,15 @@ export function Playground() {
         onOpenSearch={() => setSearchOpen(true)}
       />
 
-      {/* Main content: Feed + Inspector */}
+      {/* Main content: Dock + Feed + Inspector */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Scenario Dock (left) */}
+        <ScenarioDock
+          activeRun={activeRun}
+          onStart={handleStartScenario}
+          onAbort={handleAbortScenario}
+        />
+
         {/* Event River (center) */}
         <EventRiver
           events={filteredEvents}

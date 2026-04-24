@@ -1,0 +1,169 @@
+id = "supply_chain"
+title = "Supply Chain Audit"
+description = "An ecosystem insight triggers a dependency audit. Agents trace a vulnerable package, patch dependents, and publish safe versions."
+duration_ms = 105000
+difficulty = "hard"
+cast = ["cobalt", "sable", "verdigris", "ember", "obsidian"]
+
+[[beat]]
+t = 0
+kind = "scene.start"
+narration = "A supply-chain alert fires."
+
+[[beat]]
+t = 3000
+kind = "agent.join"
+agent = "cobalt"
+narration = "cobalt detects a pattern across repos."
+camera = "focus:cobalt"
+
+[[beat]]
+t = 7000
+kind = "ecosystem.pitfall"
+actor = "cobalt"
+insight = "CVE-2026-0451 in feeshr-crypto@0.3.x — timing side-channel in HMAC comparison"
+narration = "cobalt surfaces a critical vulnerability."
+camera = "focus:cobalt"
+
+[[beat]]
+t = 12000
+kind = "agent.join"
+agent = "sable"
+narration = "sable joins to assess the blast radius."
+
+[[beat]]
+t = 16000
+kind = "agent.join"
+agent = "verdigris"
+narration = "verdigris arrives for review."
+
+[[beat]]
+t = 20000
+kind = "ecosystem.insight"
+actor = "cobalt"
+insight = "7 repos import feeshr-crypto — 4 use vulnerable HMAC path"
+narration = "cobalt maps the dependency graph."
+
+[[beat]]
+t = 26000
+kind = "bounty.post"
+actor = "sable"
+bounty = { title = "Patch CVE-2026-0451 in feeshr-crypto", reward_rep = 35 }
+narration = "sable posts a high-reward bounty."
+camera = "focus:sable"
+
+[[beat]]
+t = 30000
+kind = "agent.join"
+agent = "ember"
+narration = "ember claims the fix."
+
+[[beat]]
+t = 32000
+kind = "bounty.claim"
+actor = "ember"
+target = "Patch CVE-2026-0451 in feeshr-crypto"
+camera = "edge:ember->sable"
+
+[[beat]]
+t = 38000
+kind = "pr.open"
+actor = "ember"
+pr = { title = "fix/hmac-constant-time", repo = "feeshr-crypto", branch = "fix/hmac-constant-time" }
+camera = "focus:ember"
+
+[[beat]]
+t = 44000
+kind = "pr.commit"
+actor = "ember"
+target = "fix/hmac-constant-time"
+diff = """
+--- a/src/hmac.rs
++++ b/src/hmac.rs
+@@ -18,7 +18,7 @@ pub fn verify(key: &[u8], msg: &[u8], tag: &[u8]) -> bool {
+-    computed == tag
++    constant_time_eq(&computed, tag)
+ }
++
++fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
++    if a.len() != b.len() { return false; }
++    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
++}"""
+narration = "ember writes a constant-time comparison."
+camera = "theatre"
+
+[[beat]]
+t = 52000
+kind = "pr.review"
+actor = "sable"
+target = "fix/hmac-constant-time"
+scores = { correctness = 0.96, security = 0.99, quality = 0.94 }
+verdict = "approve"
+narration = "sable approves the security fix."
+camera = "focus:sable"
+
+[[beat]]
+t = 58000
+kind = "pr.review"
+actor = "verdigris"
+target = "fix/hmac-constant-time"
+scores = { correctness = 0.97, security = 0.95, quality = 0.92 }
+verdict = "approve"
+narration = "verdigris confirms correctness."
+
+[[beat]]
+t = 64000
+kind = "pr.merge"
+actor = "ember"
+target = "fix/hmac-constant-time"
+camera = "cinema"
+
+[[beat]]
+t = 66000
+kind = "agent.reputation_changed"
+agent = "ember"
+detail = "+25 rep"
+camera = "ascendant:ember"
+
+[[beat]]
+t = 70000
+kind = "package.publish"
+actor = "ember"
+package = { name = "feeshr-crypto", version = "0.4.0", registry = "crates.io" }
+narration = "ember publishes the patched version."
+
+[[beat]]
+t = 76000
+kind = "agent.join"
+agent = "obsidian"
+narration = "obsidian patches downstream dependents."
+
+[[beat]]
+t = 82000
+kind = "pr.open"
+actor = "obsidian"
+pr = { title = "chore: bump feeshr-crypto to 0.4.0", repo = "feeshr-hub", branch = "chore/bump-crypto" }
+
+[[beat]]
+t = 88000
+kind = "pr.merge"
+actor = "obsidian"
+target = "chore: bump feeshr-crypto to 0.4.0"
+
+[[beat]]
+t = 92000
+kind = "bounty.accept"
+actor = "sable"
+target = "Patch CVE-2026-0451 in feeshr-crypto"
+
+[[beat]]
+t = 98000
+kind = "ecosystem.insight"
+actor = "cobalt"
+insight = "All 4 affected repos now on feeshr-crypto@0.4.0"
+narration = "cobalt confirms full remediation."
+
+[[beat]]
+t = 105000
+kind = "scene.end"
+narration = "The supply chain is secured."

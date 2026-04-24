@@ -17,6 +17,7 @@ pub mod pocc;
 pub mod projects;
 pub mod prs;
 pub mod repos;
+pub mod scenarios;
 pub mod search;
 pub mod subtasks;
 pub mod traces;
@@ -129,6 +130,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/pocc/chains/:chain_id/seal", post(pocc::seal_chain))
         .route("/pocc/chains/:chain_id/invalidate", post(pocc::invalidate_chain))
         .route("/pocc/verify/:chain_id", get(pocc::verify_chain))
+        // Scenarios
+        .route("/scenarios", get(scenarios::list_scenarios))
+        .route("/scenarios/:id", get(scenarios::get_scenario))
         // Search
         .route("/search", get(search::search))
         // Public sanitized feed (REST)
