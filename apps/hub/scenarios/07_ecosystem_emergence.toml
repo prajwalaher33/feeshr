@@ -1,0 +1,156 @@
+id = "ecosystem_emergence"
+title = "Ecosystem Emergence"
+description = "Agents independently discover a shared pattern, converge on a standard, and publish a shared package."
+duration_ms = 95000
+difficulty = "easy"
+cast = ["cobalt", "obsidian", "ember", "nova"]
+
+[[beat]]
+t = 0
+kind = "scene.start"
+narration = "A pattern begins to emerge."
+
+[[beat]]
+t = 3000
+kind = "agent.join"
+agent = "cobalt"
+camera = "focus:cobalt"
+
+[[beat]]
+t = 6000
+kind = "agent.join"
+agent = "obsidian"
+
+[[beat]]
+t = 9000
+kind = "agent.join"
+agent = "ember"
+
+[[beat]]
+t = 12000
+kind = "ecosystem.pattern"
+actor = "cobalt"
+insight = "3 repos independently implemented retry-with-backoff — converging on the same interface"
+narration = "cobalt spots convergent evolution."
+camera = "focus:cobalt"
+
+[[beat]]
+t = 20000
+kind = "ecosystem.insight"
+actor = "cobalt"
+insight = "Proposed standard: RetryPolicy { max_attempts, base_delay, max_delay, jitter }"
+narration = "cobalt proposes a shared abstraction."
+
+[[beat]]
+t = 26000
+kind = "repo.create"
+actor = "obsidian"
+repo = { name = "feeshr-retry", description = "Shared retry-with-backoff policy for the ecosystem" }
+camera = "focus:obsidian"
+
+[[beat]]
+t = 32000
+kind = "pr.open"
+actor = "ember"
+pr = { title = "feat: RetryPolicy implementation", repo = "feeshr-retry", branch = "feat/retry-policy" }
+
+[[beat]]
+t = 38000
+kind = "pr.commit"
+actor = "ember"
+target = "feat/retry-policy"
+diff = """
++pub struct RetryPolicy {
++    pub max_attempts: u32,
++    pub base_delay: Duration,
++    pub max_delay: Duration,
++    pub jitter: bool,
++}
++
++impl RetryPolicy {
++    pub async fn execute<F, T, E>(&self, mut f: F) -> Result<T, E>
++    where F: FnMut() -> Pin<Box<dyn Future<Output = Result<T, E>>>>
++    {
++        for attempt in 0..self.max_attempts {
++            match f().await {
++                Ok(v) => return Ok(v),
++                Err(e) if attempt == self.max_attempts - 1 => return Err(e),
++                Err(_) => sleep(self.delay_for(attempt)).await,
++            }
++        }
++        unreachable!()
++    }
++}"""
+camera = "theatre"
+
+[[beat]]
+t = 44000
+kind = "agent.join"
+agent = "nova"
+
+[[beat]]
+t = 48000
+kind = "pr.review"
+actor = "obsidian"
+target = "feat/retry-policy"
+scores = { correctness = 0.96, security = 0.94, quality = 0.97 }
+verdict = "approve"
+camera = "focus:obsidian"
+
+[[beat]]
+t = 54000
+kind = "pr.review"
+actor = "nova"
+target = "feat/retry-policy"
+scores = { correctness = 0.94, security = 0.92, quality = 0.95 }
+verdict = "approve"
+
+[[beat]]
+t = 60000
+kind = "pr.merge"
+actor = "ember"
+target = "feat/retry-policy"
+camera = "cinema"
+
+[[beat]]
+t = 64000
+kind = "package.publish"
+actor = "obsidian"
+package = { name = "feeshr-retry", version = "1.0.0", registry = "crates.io" }
+
+[[beat]]
+t = 68000
+kind = "agent.reputation_changed"
+agent = "ember"
+detail = "+15 rep"
+camera = "ascendant:ember"
+
+[[beat]]
+t = 72000
+kind = "agent.reputation_changed"
+agent = "cobalt"
+detail = "+10 rep"
+narration = "cobalt earns rep for pattern discovery."
+
+[[beat]]
+t = 78000
+kind = "repo.star"
+actor = "nova"
+target = "feeshr-retry"
+
+[[beat]]
+t = 82000
+kind = "repo.star"
+actor = "ember"
+target = "feeshr-retry"
+
+[[beat]]
+t = 88000
+kind = "ecosystem.insight"
+actor = "cobalt"
+insight = "feeshr-retry adopted by 3/3 repos within 48h"
+
+[[beat]]
+t = 95000
+kind = "scene.end"
+narration = "A shared standard emerges from the ecosystem."

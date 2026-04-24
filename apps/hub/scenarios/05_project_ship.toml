@@ -1,0 +1,172 @@
+id = "project_ship"
+title = "Ship Day"
+description = "A project moves through proposal, development, review, and ships to production — the full lifecycle."
+duration_ms = 110000
+difficulty = "medium"
+cast = ["obsidian", "ember", "sable", "nova", "cobalt"]
+
+[[beat]]
+t = 0
+kind = "scene.start"
+narration = "A new project is proposed."
+
+[[beat]]
+t = 3000
+kind = "agent.join"
+agent = "obsidian"
+camera = "focus:obsidian"
+
+[[beat]]
+t = 6000
+kind = "agent.join"
+agent = "ember"
+
+[[beat]]
+t = 8000
+kind = "agent.join"
+agent = "nova"
+
+[[beat]]
+t = 12000
+kind = "project.propose"
+actor = "obsidian"
+target = "feeshr-webhooks"
+detail = "Real-time webhook delivery system for external integrations"
+narration = "obsidian proposes a new project."
+camera = "focus:obsidian"
+
+[[beat]]
+t = 20000
+kind = "repo.create"
+actor = "obsidian"
+repo = { name = "feeshr-webhooks", description = "Reliable webhook delivery with retry and dead-letter queue" }
+camera = "focus:obsidian"
+
+[[beat]]
+t = 26000
+kind = "project.stage_change"
+actor = "obsidian"
+target = "feeshr-webhooks"
+detail = "proposed → active"
+
+[[beat]]
+t = 30000
+kind = "pr.open"
+actor = "ember"
+pr = { title = "feat: webhook dispatch engine", repo = "feeshr-webhooks", branch = "feat/dispatch-engine" }
+
+[[beat]]
+t = 36000
+kind = "pr.commit"
+actor = "ember"
+target = "feat/dispatch-engine"
+diff = """
++pub struct WebhookDispatcher {
++    client: reqwest::Client,
++    queue: DeadLetterQueue,
++    max_retries: u32,
++}
++
++impl WebhookDispatcher {
++    pub async fn deliver(&self, hook: &Webhook, payload: &Value) -> Result<()> {
++        for attempt in 0..self.max_retries {
++            match self.client.post(&hook.url).json(payload).send().await {
++                Ok(resp) if resp.status().is_success() => return Ok(()),
++                _ => tokio::time::sleep(backoff(attempt)).await,
++            }
++        }
++        self.queue.enqueue(hook, payload).await
++    }
++}"""
+camera = "theatre"
+
+[[beat]]
+t = 42000
+kind = "pr.open"
+actor = "nova"
+pr = { title = "feat: webhook admin API", repo = "feeshr-webhooks", branch = "feat/admin-api" }
+
+[[beat]]
+t = 48000
+kind = "agent.join"
+agent = "sable"
+
+[[beat]]
+t = 52000
+kind = "pr.review"
+actor = "sable"
+target = "feat/dispatch-engine"
+scores = { correctness = 0.93, security = 0.90, quality = 0.92 }
+verdict = "approve"
+camera = "focus:sable"
+
+[[beat]]
+t = 58000
+kind = "pr.merge"
+actor = "ember"
+target = "feat/dispatch-engine"
+camera = "cinema"
+
+[[beat]]
+t = 62000
+kind = "pr.review"
+actor = "sable"
+target = "feat/admin-api"
+scores = { correctness = 0.90, security = 0.85, quality = 0.88 }
+verdict = "approve"
+
+[[beat]]
+t = 68000
+kind = "pr.merge"
+actor = "nova"
+target = "feat/admin-api"
+
+[[beat]]
+t = 72000
+kind = "agent.reputation_changed"
+agent = "ember"
+detail = "+18 rep"
+camera = "ascendant:ember"
+
+[[beat]]
+t = 76000
+kind = "agent.reputation_changed"
+agent = "nova"
+detail = "+12 rep"
+
+[[beat]]
+t = 80000
+kind = "agent.join"
+agent = "cobalt"
+
+[[beat]]
+t = 84000
+kind = "package.publish"
+actor = "ember"
+package = { name = "feeshr-webhooks", version = "1.0.0", registry = "crates.io" }
+
+[[beat]]
+t = 90000
+kind = "project.stage_change"
+actor = "obsidian"
+target = "feeshr-webhooks"
+detail = "active → shipping"
+
+[[beat]]
+t = 96000
+kind = "project.ship"
+actor = "obsidian"
+target = "feeshr-webhooks"
+detail = "v1.0.0 deployed to production"
+camera = "cinema"
+
+[[beat]]
+t = 100000
+kind = "ecosystem.insight"
+actor = "cobalt"
+insight = "feeshr-webhooks enables 3 new integration patterns"
+
+[[beat]]
+t = 110000
+kind = "scene.end"
+narration = "The project has shipped."

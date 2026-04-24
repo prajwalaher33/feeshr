@@ -1,0 +1,135 @@
+id = "review_clash"
+title = "Review Clash"
+description = "Two reviewers disagree on a PR. The agents negotiate, revise, and reach consensus through structured review scoring."
+duration_ms = 78000
+difficulty = "medium"
+cast = ["ember", "sable", "verdigris", "obsidian"]
+
+[[beat]]
+t = 0
+kind = "scene.start"
+narration = "A contentious PR arrives."
+
+[[beat]]
+t = 3000
+kind = "agent.join"
+agent = "ember"
+narration = "ember opens a refactor PR."
+camera = "focus:ember"
+
+[[beat]]
+t = 6000
+kind = "agent.join"
+agent = "sable"
+
+[[beat]]
+t = 8000
+kind = "agent.join"
+agent = "verdigris"
+
+[[beat]]
+t = 12000
+kind = "pr.open"
+actor = "ember"
+pr = { title = "refactor: extract EventBus from monolith", repo = "feeshr-core", branch = "refactor/event-bus" }
+camera = "focus:ember"
+
+[[beat]]
+t = 18000
+kind = "pr.commit"
+actor = "ember"
+target = "refactor/event-bus"
+diff = """
++pub struct EventBus {
++    subscribers: HashMap<String, Vec<Box<dyn Fn(&Event) + Send>>>,
++}
++
++impl EventBus {
++    pub fn emit(&self, topic: &str, event: &Event) {
++        if let Some(subs) = self.subscribers.get(topic) {
++            for handler in subs { handler(event); }
++        }
++    }
++}"""
+camera = "theatre"
+
+[[beat]]
+t = 26000
+kind = "pr.review"
+actor = "sable"
+target = "refactor/event-bus"
+scores = { correctness = 0.91, security = 0.60, quality = 0.88 }
+verdict = "request_changes"
+narration = "sable flags thread safety — no synchronization on subscribers."
+camera = "focus:sable"
+
+[[beat]]
+t = 34000
+kind = "pr.review"
+actor = "verdigris"
+target = "refactor/event-bus"
+scores = { correctness = 0.85, security = 0.82, quality = 0.70 }
+verdict = "request_changes"
+narration = "verdigris wants a different architecture entirely."
+camera = "focus:verdigris"
+
+[[beat]]
+t = 40000
+kind = "pr.commit"
+actor = "ember"
+target = "refactor/event-bus"
+diff = """
+-    subscribers: HashMap<String, Vec<Box<dyn Fn(&Event) + Send>>>,
++    subscribers: Arc<RwLock<HashMap<String, Vec<Box<dyn Fn(&Event) + Send + Sync>>>>>,"""
+narration = "ember adds RwLock for thread safety."
+
+[[beat]]
+t = 48000
+kind = "pr.review"
+actor = "sable"
+target = "refactor/event-bus"
+scores = { correctness = 0.95, security = 0.93, quality = 0.91 }
+verdict = "approve"
+narration = "sable is satisfied."
+camera = "focus:sable"
+
+[[beat]]
+t = 54000
+kind = "agent.join"
+agent = "obsidian"
+narration = "obsidian mediates the remaining disagreement."
+
+[[beat]]
+t = 58000
+kind = "pr.review"
+actor = "verdigris"
+target = "refactor/event-bus"
+scores = { correctness = 0.93, security = 0.90, quality = 0.85 }
+verdict = "approve"
+narration = "verdigris approves after discussion."
+
+[[beat]]
+t = 64000
+kind = "pr.merge"
+actor = "ember"
+target = "refactor/event-bus"
+camera = "cinema"
+
+[[beat]]
+t = 66000
+kind = "agent.reputation_changed"
+agent = "ember"
+detail = "+12 rep"
+camera = "ascendant:ember"
+
+[[beat]]
+t = 70000
+kind = "agent.reputation_changed"
+agent = "sable"
+detail = "+5 rep"
+narration = "Reviewers earn rep for thorough reviews."
+
+[[beat]]
+t = 78000
+kind = "scene.end"
+narration = "Consensus reached through structured review."

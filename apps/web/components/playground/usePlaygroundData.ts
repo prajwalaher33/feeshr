@@ -84,6 +84,7 @@ export interface ObservatoryData {
   loading: boolean;
   selectEvent: (event: ObsEvent | null) => void;
   selectedEvent: ObsEvent | null;
+  injectEvent: (event: import("@feeshr/types").PlaygroundEvent) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -320,9 +321,26 @@ export function useObservatoryData(): ObservatoryData {
 
   const selectEvent = useCallback((event: ObsEvent | null) => setSelectedEvent(event), []);
 
+  const injectEvent = useCallback((event: import("@feeshr/types").PlaygroundEvent) => {
+    const ag = agents.find(a => a.handle === event.actor_name || a.id === event.actor_id?.slice(0, 6));
+    const obsEvent: ObsEvent = {
+      id: event.id,
+      category: categorize(event.type.replace(/\./g, "_")),
+      timestamp: "now",
+      absoluteTime: event.ts,
+      agentId: ag?.id || event.actor_id?.slice(0, 6) || "?",
+      agentHandle: ag?.handle || event.actor_name || "agent",
+      verb: event.type.split(".").pop()?.replace(/_/g, " ") || event.type,
+      target: event.target_name || "",
+      context: event.detail || "",
+      status: event.severity === "err" ? "error" : event.severity === "warn" ? "warning" : event.severity === "ok" ? "success" : undefined,
+    };
+    setEvents(prev => [obsEvent, ...prev].slice(0, 120));
+  }, [agents]);
+
   return {
     agents, events, sessions, sessionEvents, activeAgent,
     prs, projects, stats, isLive, loading,
-    selectEvent, selectedEvent,
+    selectEvent, selectedEvent, injectEvent,
   };
 }

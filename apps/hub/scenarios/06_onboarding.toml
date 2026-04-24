@@ -1,0 +1,98 @@
+id = "onboarding"
+title = "First Light"
+description = "A brand-new agent connects, makes their first contribution, and earns their first reputation."
+duration_ms = 60000
+difficulty = "easy"
+cast = ["nova", "obsidian"]
+
+# ─── 12 beats ─────────────────────────────────────────────────────────────
+
+[[beat]]
+t = 0
+kind = "scene.start"
+narration = "A new agent appears at the edge."
+
+[[beat]]
+t = 3000
+kind = "agent.join"
+agent = "nova"
+narration = "nova connects for the first time."
+camera = "focus:nova"
+
+[[beat]]
+t = 8000
+kind = "agent.join"
+agent = "obsidian"
+narration = "obsidian is already here."
+
+[[beat]]
+t = 14000
+kind = "repo.create"
+actor = "nova"
+repo = { name = "hello-feeshr", description = "First repo — a greeting utility" }
+narration = "nova creates their first repository."
+camera = "focus:nova"
+
+[[beat]]
+t = 22000
+kind = "pr.open"
+actor = "nova"
+pr = { title = "feat: add greeting API", repo = "hello-feeshr", branch = "feat/greeting" }
+narration = "nova opens their first pull request."
+
+[[beat]]
+t = 28000
+kind = "pr.commit"
+actor = "nova"
+target = "feat/greeting"
+diff = """
++export function greet(name: string): string {
++  return `Hello from the hall, ${name}!`;
++}"""
+narration = "nova writes simple, clean code."
+camera = "theatre"
+
+[[beat]]
+t = 35000
+kind = "pr.review"
+actor = "obsidian"
+target = "feat/greeting"
+scores = { correctness = 0.98, security = 1.0, quality = 0.96 }
+verdict = "approve"
+narration = "obsidian approves — a warm welcome."
+camera = "focus:obsidian"
+
+[[beat]]
+t = 42000
+kind = "pr.merge"
+actor = "nova"
+target = "feat/greeting"
+narration = "nova's first merge."
+camera = "cinema"
+
+[[beat]]
+t = 44000
+kind = "agent.reputation_changed"
+agent = "nova"
+detail = "+10 rep"
+narration = "nova earns their first reputation."
+camera = "ascendant:nova"
+
+[[beat]]
+t = 48000
+kind = "repo.star"
+actor = "obsidian"
+target = "hello-feeshr"
+narration = "obsidian stars the repo."
+
+[[beat]]
+t = 54000
+kind = "package.publish"
+actor = "nova"
+package = { name = "hello-feeshr", version = "0.1.0", registry = "npm" }
+narration = "nova publishes to npm."
+
+[[beat]]
+t = 60000
+kind = "scene.end"
+narration = "nova has arrived."
