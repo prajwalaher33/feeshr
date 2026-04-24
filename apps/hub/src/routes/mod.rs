@@ -11,8 +11,8 @@ pub mod feed;
 pub mod health;
 pub mod issues;
 pub mod locks;
-pub mod metrics;
 pub mod memory;
+pub mod metrics;
 pub mod pocc;
 pub mod projects;
 pub mod prs;
@@ -24,20 +24,18 @@ pub mod traces;
 pub mod websocket;
 pub mod workflows;
 
+use axum::http::Method;
 use axum::{
     middleware,
     routing::{delete, get, patch, post},
     Router,
 };
-use axum::http::Method;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     middleware::{
-        agent_auth::agent_auth_middleware,
-        metrics::metrics_middleware,
-        rate_limit::rate_limit_middleware,
-        request_id::request_id_middleware,
+        agent_auth::agent_auth_middleware, metrics::metrics_middleware,
+        rate_limit::rate_limit_middleware, request_id::request_id_middleware,
     },
     AppState,
 };
@@ -69,41 +67,74 @@ pub fn build_router(state: AppState) -> Router {
         .route("/projects/:id", get(projects::get_project))
         .route("/projects/:id/discuss", post(projects::add_discussion))
         .route("/projects/:id/join", post(projects::join_project))
-        .route("/projects/:id/status", patch(projects::update_project_status))
+        .route(
+            "/projects/:id/status",
+            patch(projects::update_project_status),
+        )
         // Issues
-        .route("/repos/:id/issues", get(issues::list_issues).post(issues::create_issue))
+        .route(
+            "/repos/:id/issues",
+            get(issues::list_issues).post(issues::create_issue),
+        )
         .route("/issues", get(issues::list_all_issues))
-        .route("/issues/:id", get(issues::get_issue).patch(issues::update_issue))
+        .route(
+            "/issues/:id",
+            get(issues::get_issue).patch(issues::update_issue),
+        )
         // Bounties
-        .route("/bounties", get(bounties::list_bounties).post(bounties::create_bounty))
+        .route(
+            "/bounties",
+            get(bounties::list_bounties).post(bounties::create_bounty),
+        )
         .route("/bounties/:id/claim", post(bounties::claim_bounty))
         .route("/bounties/:id/deliver", post(bounties::deliver_bounty))
         .route("/bounties/:id/accept", post(bounties::accept_bounty))
         // Subtasks
-        .route("/subtasks", post(subtasks::create_subtask).get(subtasks::list_subtasks))
+        .route(
+            "/subtasks",
+            post(subtasks::create_subtask).get(subtasks::list_subtasks),
+        )
         .route("/subtasks/:id/claim", patch(subtasks::claim_subtask))
         .route("/subtasks/:id/complete", patch(subtasks::complete_subtask))
         // Workflows
-        .route("/workflows/templates", get(workflows::list_templates).post(workflows::create_template))
+        .route(
+            "/workflows/templates",
+            get(workflows::list_templates).post(workflows::create_template),
+        )
         .route("/workflows/templates/:id", get(workflows::get_template))
         .route("/workflows/instances", post(workflows::create_instance))
-        .route("/workflows/instances/:id/advance", patch(workflows::advance_instance))
-        .route("/workflows/instances/:id/abandon", patch(workflows::abandon_instance))
+        .route(
+            "/workflows/instances/:id/advance",
+            patch(workflows::advance_instance),
+        )
+        .route(
+            "/workflows/instances/:id/abandon",
+            patch(workflows::abandon_instance),
+        )
         // Work Locks
         .route("/locks", get(locks::get_lock).post(locks::create_lock))
         .route("/locks/:id", delete(locks::release_lock))
         // Project Memory
-        .route("/memory", get(memory::list_memory).post(memory::create_memory))
+        .route(
+            "/memory",
+            get(memory::list_memory).post(memory::create_memory),
+        )
         .route("/memory/search", get(memory::search_memory))
         .route("/memory/:id", delete(memory::deprecate_memory))
         // Technical Decisions
-        .route("/decisions", get(decisions::list_decisions).post(decisions::create_decision))
+        .route(
+            "/decisions",
+            get(decisions::list_decisions).post(decisions::create_decision),
+        )
         .route("/decisions/:id/vote", post(decisions::cast_vote))
         .route("/decisions/:id/resolve", post(decisions::resolve_decision))
         // Pre-Commit Consultation
         .route("/consult", post(consult::consult))
         // Agents (extended)
-        .route("/agents/:id/reputation-history", get(agents::get_reputation_history))
+        .route(
+            "/agents/:id/reputation-history",
+            get(agents::get_reputation_history),
+        )
         // Ecosystem
         .route("/ecosystem/problems", get(ecosystem::list_problems))
         .route("/ecosystem/stats", get(ecosystem::get_stats))
@@ -113,22 +144,37 @@ pub fn build_router(state: AppState) -> Router {
         .route("/traces/me/stats", get(traces::get_my_trace_stats))
         .route("/traces/me/:trace_id", get(traces::get_my_trace))
         // Reasoning Traces (internal)
-        .route("/internal/traces/training-data", get(traces::get_training_data))
+        .route(
+            "/internal/traces/training-data",
+            get(traces::get_training_data),
+        )
         .route("/internal/traces/cost-report", get(traces::get_cost_report))
-        .route("/internal/traces/:id/evaluate", post(traces::evaluate_trace))
+        .route(
+            "/internal/traces/:id/evaluate",
+            post(traces::evaluate_trace),
+        )
         // Benchmarks
         .route("/benchmarks/start", post(benchmarks::start_benchmark))
         .route("/benchmarks/me", get(benchmarks::get_my_benchmarks))
         .route("/benchmarks/stats", get(benchmarks::get_benchmark_stats))
-        .route("/benchmarks/:session_id/submit", post(benchmarks::submit_benchmark))
+        .route(
+            "/benchmarks/:session_id/submit",
+            post(benchmarks::submit_benchmark),
+        )
         // Agent benchmarks & PoCC stats (public)
-        .route("/agents/:id/benchmarks", get(benchmarks::get_agent_benchmarks))
+        .route(
+            "/agents/:id/benchmarks",
+            get(benchmarks::get_agent_benchmarks),
+        )
         .route("/agents/:id/pocc-stats", get(pocc::get_agent_pocc_stats))
         // PoCC chains
         .route("/pocc/chains", post(pocc::create_chain_with_agent))
         .route("/pocc/chains/:chain_id", get(pocc::get_chain))
         .route("/pocc/chains/:chain_id/seal", post(pocc::seal_chain))
-        .route("/pocc/chains/:chain_id/invalidate", post(pocc::invalidate_chain))
+        .route(
+            "/pocc/chains/:chain_id/invalidate",
+            post(pocc::invalidate_chain),
+        )
         .route("/pocc/verify/:chain_id", get(pocc::verify_chain))
         // Scenarios
         .route("/scenarios", get(scenarios::list_scenarios))
@@ -141,7 +187,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/ws", get(websocket::ws_handler))
         // Desktop session streaming
         .route("/agents/:id/desktop/sessions", get(desktop::list_sessions))
-        .route("/agents/:id/desktop/session", get(desktop::get_active_session_events))
+        .route(
+            "/agents/:id/desktop/session",
+            get(desktop::get_active_session_events),
+        )
         .route("/agents/:id/desktop/ws", get(desktop::desktop_ws_handler))
         .route("/desktop/events", post(desktop::publish_event))
         // Middleware layers (applied inside-out)
@@ -151,7 +200,13 @@ pub fn build_router(state: AppState) -> Router {
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE, Method::OPTIONS])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
         .allow_headers(Any);
 
     Router::new()

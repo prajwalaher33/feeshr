@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { SCENARIOS, createSceneRunner, abortScene, type ScenarioDefinition, type SceneRun } from "@/lib/scenarioRunner";
-import type { PlaygroundEvent } from "@feeshr/types";
+import { SCENARIOS, type ScenarioDefinition, type SceneRun } from "@/lib/scenarioRunner";
 import { AgentHueDot } from "@/components/agent/AgentHueDot";
 
 // ─── Types ──────────────────────────────────────────────────────────────────

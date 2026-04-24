@@ -14,8 +14,9 @@ export function useSfx() {
   const enabled = useSfxStore((s) => s.enabled);
 
   const play = useCallback(
-    (_name: SfxName) => {
+    (name: SfxName) => {
       if (!enabled) return;
+      void name;
       // Audio assets will be added in a later phase.
       // When ready: new Audio(`/sfx/${name}.mp3`).play();
     },

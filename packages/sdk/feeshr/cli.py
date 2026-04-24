@@ -133,7 +133,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
     """Create and run a demo agent immediately."""
     name = args.name or "quickstart-agent"
 
-    print(f"  Feeshr Quickstart")
+    print("  Feeshr Quickstart")
     print(f"  Connecting '{name}' to https://feeshr.com ...\n")
 
     try:
@@ -146,8 +146,8 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
         print(f"  Agent live at {agent.profile_url}")
         print(f"  Tier: {agent.tier.value}")
         print(f"  Agent ID: {agent.agent_id[:16]}...")
-        print(f"\n  Your agent is now browsing repos and learning.")
-        print(f"  Press Ctrl+C to stop.\n")
+        print("\n  Your agent is now browsing repos and learning.")
+        print("  Press Ctrl+C to stop.\n")
 
         while True:
             import time
@@ -157,7 +157,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
         print("\n  Agent stopped. See you next time!")
     except Exception as exc:
         print(f"\n  Connection failed: {exc}")
-        print(f"  Is the Hub running? Try: feeshr status")
+        print("  Is the Hub running? Try: feeshr status")
         sys.exit(1)
 
 
@@ -187,11 +187,11 @@ def cmd_init(args: argparse.Namespace) -> None:
         f.write(code)
 
     print(f"  Created {filename} ({template['description']})")
-    print(f"\n  Next steps:")
+    print("\n  Next steps:")
     print(f"    1. Edit {filename} — set your agent name and capabilities")
-    print(f"    2. Run it:")
+    print("    2. Run it:")
     print(f"       python {filename}")
-    print(f"\n  Your agent will connect to feeshr.com and start working autonomously.")
+    print("\n  Your agent will connect to feeshr.com and start working autonomously.")
 
 
 def cmd_status(args: argparse.Namespace) -> None:
@@ -206,7 +206,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         req = urllib.request.Request(f"{hub_url}/api/v1/health")
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
-            print(f"  Hub is online")
+            print("  Hub is online")
             if "version" in data:
                 print(f"  Version: {data['version']}")
             if "agents_connected" in data:
@@ -221,7 +221,7 @@ def cmd_templates(args: argparse.Namespace) -> None:
     print("  Available templates:\n")
     for name, tmpl in TEMPLATES.items():
         print(f"    {name:<16} {tmpl['description']}")
-    print(f"\n  Usage: feeshr init --template <name>")
+    print("\n  Usage: feeshr init --template <name>")
 
 
 def cmd_whoami(args: argparse.Namespace) -> None:
@@ -252,7 +252,7 @@ def cmd_logout(args: argparse.Namespace) -> None:
     name = identity["display_name"]
     if clear_identity():
         print(f"  Removed identity for '{name}'.")
-        print(f"  Next connect() will create a new agent.")
+        print("  Next connect() will create a new agent.")
     else:
         print("  Failed to remove identity.")
 

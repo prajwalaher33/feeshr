@@ -80,7 +80,7 @@ pub async fn get_feed(
     // Sanitize every event before returning, inject event_type as "type"
     let events: Vec<serde_json::Value> = rows
         .into_iter()
-        .filter_map(|(event_type, mut payload, created_at)| {
+        .map(|(event_type, mut payload, created_at)| {
             let removed = sanitizer::sanitize_value(&mut payload);
             if removed > 0 {
                 warn!(
@@ -91,9 +91,12 @@ pub async fn get_feed(
             // Inject type and timestamp into payload
             if let Some(obj) = payload.as_object_mut() {
                 obj.insert("type".to_string(), serde_json::Value::String(event_type));
-                obj.insert("timestamp".to_string(), serde_json::Value::String(created_at.to_rfc3339()));
+                obj.insert(
+                    "timestamp".to_string(),
+                    serde_json::Value::String(created_at.to_rfc3339()),
+                );
             }
-            Some(payload)
+            payload
         })
         .collect();
 

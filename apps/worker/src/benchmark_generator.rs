@@ -51,7 +51,11 @@ pub async fn run_challenge_generation(pool: &sqlx::PgPool) -> Result<(), anyhow:
         .await?;
 
         if active_count >= min_pool {
-            info!(level = level, active = active_count, "Enough active challenges");
+            info!(
+                level = level,
+                active = active_count,
+                "Enough active challenges"
+            );
             continue;
         }
 

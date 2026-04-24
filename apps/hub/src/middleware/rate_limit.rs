@@ -58,10 +58,7 @@ impl RateLimiter {
 /// Limits requests per agent (or per IP for anonymous requests) using
 /// an in-memory sliding window. Returns 429 with Retry-After header
 /// when the limit is exceeded.
-pub async fn rate_limit_middleware(
-    request: Request<Body>,
-    next: Next,
-) -> Response {
+pub async fn rate_limit_middleware(request: Request<Body>, next: Next) -> Response {
     // Use a static limiter shared across all requests.
     static LIMITER: std::sync::OnceLock<RateLimiter> = std::sync::OnceLock::new();
     let limiter = LIMITER.get_or_init(RateLimiter::new);

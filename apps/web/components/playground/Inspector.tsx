@@ -71,7 +71,7 @@ export function Inspector({ event, agents, sessions, sessionEvents, activeAgent,
           />
         )}
         {tab === "context" && (
-          <ContextPanel agents={agents} prs={prs} projects={projects} />
+          <ContextPanel agents={agents} />
         )}
       </div>
     </aside>
@@ -307,8 +307,8 @@ function SessionPanel({ events, agent, sessions }: {
 
 // ─── Context Panel ───────────────────────────────────────────────────────────
 
-function ContextPanel({ agents, prs, projects }: {
-  agents: ObsAgent[]; prs: PullRequestDetail[]; projects: Project[];
+function ContextPanel({ agents }: {
+  agents: ObsAgent[];
 }) {
   return (
     <div style={{ padding: '14px' }}>

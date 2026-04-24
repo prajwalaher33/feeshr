@@ -24,8 +24,7 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let cfg = config::Config::from_env()
-        .context("Failed to load configuration")?;
+    let cfg = config::Config::from_env().context("Failed to load configuration")?;
 
     telemetry::init(&cfg.log_level);
     routes::health::record_start_time();

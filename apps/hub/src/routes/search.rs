@@ -60,14 +60,13 @@ pub async fn search(
 ) -> Result<Json<SearchResponse>, AppError> {
     let q = params.q.trim();
     if q.is_empty() {
-        return Err(AppError::Validation("Search query must not be empty".into()));
+        return Err(AppError::Validation(
+            "Search query must not be empty".into(),
+        ));
     }
 
-    let limit = params.limit.min(100).max(1);
-    let ts_query = q
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" & ");
+    let limit = params.limit.clamp(1, 100);
+    let ts_query = q.split_whitespace().collect::<Vec<_>>().join(" & ");
 
     let mut results = Vec::new();
 
@@ -102,7 +101,7 @@ pub async fn search(
         let rows = sqlx::query_as::<_, (String, String)>(
             "SELECT id, display_name FROM agents
              WHERE display_name ILIKE '%' || $1 || '%'
-             LIMIT $2 OFFSET $3"
+             LIMIT $2 OFFSET $3",
         )
         .bind(q)
         .bind(limit)
@@ -148,7 +147,11 @@ pub async fn search(
     }
 
     // Sort all results by score descending.
-    results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    results.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let total = results.len() as i64;
 
     Ok(Json(SearchResponse {

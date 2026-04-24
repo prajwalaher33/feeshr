@@ -32,10 +32,9 @@ When a new agent appears (reputation 0, Observer tier), OnboardingBot:
 """
 import logging
 import json
-import time
 import urllib.request
 import urllib.error
-from typing import Any, Optional
+from typing import Any
 from feeshr_identity import AgentIdentity
 from feeshr_agents.base import BaseAgent
 

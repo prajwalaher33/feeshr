@@ -15,9 +15,9 @@ use uuid::Uuid;
 use crate::errors::AppError;
 
 /// Time limits per benchmark level (seconds).
-const LEVEL_1_TIME_LIMIT: i32 = 600;   // 10 minutes
-const LEVEL_2_TIME_LIMIT: i32 = 1800;  // 30 minutes
-const LEVEL_3_TIME_LIMIT: i32 = 2700;  // 45 minutes
+const LEVEL_1_TIME_LIMIT: i32 = 600; // 10 minutes
+const LEVEL_2_TIME_LIMIT: i32 = 1800; // 30 minutes
+const LEVEL_3_TIME_LIMIT: i32 = 2700; // 45 minutes
 
 /// Challenges per exam per level.
 const LEVEL_1_CHALLENGE_COUNT: i64 = 5;
@@ -25,9 +25,9 @@ const LEVEL_2_CHALLENGE_COUNT: i64 = 3;
 const LEVEL_3_CHALLENGE_COUNT: i64 = 3;
 
 /// Passing thresholds.
-const LEVEL_1_PASSING_SCORE: i32 = 80;  // 4/5
+const LEVEL_1_PASSING_SCORE: i32 = 80; // 4/5
 const LEVEL_2_PASSING_SCORE: i32 = 100; // 3/3 all must pass
-const LEVEL_3_PASSING_SCORE: i32 = 75;  // 75+ overall
+const LEVEL_3_PASSING_SCORE: i32 = 75; // 75+ overall
 
 /// Cooldown durations after failure.
 const LEVEL_1_COOLDOWN_HOURS: i64 = 1;
@@ -67,9 +67,7 @@ fn level_config(level: i32) -> Result<LevelConfig, AppError> {
             passing_score: LEVEL_3_PASSING_SCORE,
             cooldown_hours: LEVEL_3_COOLDOWN_HOURS,
         }),
-        _ => Err(AppError::Validation(
-            "Level must be 1, 2, or 3".to_string(),
-        )),
+        _ => Err(AppError::Validation("Level must be 1, 2, or 3".to_string())),
     }
 }
 
@@ -112,11 +110,7 @@ pub struct SubmissionResult {
 }
 
 /// Check whether the agent has passed the prerequisite level.
-async fn has_prerequisite(
-    db: &PgPool,
-    agent_id: &str,
-    level: i32,
-) -> Result<bool, AppError> {
+async fn has_prerequisite(db: &PgPool, agent_id: &str, level: i32) -> Result<bool, AppError> {
     if level == 1 {
         return Ok(true);
     }
@@ -136,11 +130,7 @@ async fn has_prerequisite(
 }
 
 /// Check whether the agent is still in cooldown from a failed attempt.
-async fn in_cooldown(
-    db: &PgPool,
-    agent_id: &str,
-    level: i32,
-) -> Result<Option<String>, AppError> {
+async fn in_cooldown(db: &PgPool, agent_id: &str, level: i32) -> Result<Option<String>, AppError> {
     let row = sqlx::query_scalar::<_, chrono::DateTime<Utc>>(
         r#"SELECT earliest_retry_at FROM benchmark_sessions
            WHERE agent_id = $1 AND level = $2
@@ -158,11 +148,7 @@ async fn in_cooldown(
 }
 
 /// Check whether the agent already has an in-progress session for this level.
-async fn has_active_session(
-    db: &PgPool,
-    agent_id: &str,
-    level: i32,
-) -> Result<bool, AppError> {
+async fn has_active_session(db: &PgPool, agent_id: &str, level: i32) -> Result<bool, AppError> {
     let row = sqlx::query_scalar::<_, i64>(
         r#"SELECT COUNT(*) FROM benchmark_sessions
            WHERE agent_id = $1 AND level = $2 AND status = 'in_progress'"#,
@@ -246,8 +232,7 @@ pub async fn start_session(
 
     // Select challenges
     let challenges = select_challenges(db, level, config.challenge_count).await?;
-    let challenge_ids: Vec<Uuid> =
-        challenges.iter().map(|c| c.challenge_id).collect();
+    let challenge_ids: Vec<Uuid> = challenges.iter().map(|c| c.challenge_id).collect();
 
     let session_id = Uuid::new_v4();
     let sandbox_id = format!("sandbox-{session_id}");
@@ -292,16 +277,19 @@ pub async fn submit_and_grade(
     answers: Value,
 ) -> Result<SubmissionResult, AppError> {
     // Fetch session
-    let session = sqlx::query_as::<_, (
-        String,  // agent_id
-        i32,     // level
-        String,  // status
-        chrono::DateTime<Utc>,  // started_at
-        i32,     // time_limit_seconds
-        i32,     // passing_score
-        i32,     // challenges_total
-        Value,   // challenge_ids (as json for array handling)
-    )>(
+    let session = sqlx::query_as::<
+        _,
+        (
+            String,                // agent_id
+            i32,                   // level
+            String,                // status
+            chrono::DateTime<Utc>, // started_at
+            i32,                   // time_limit_seconds
+            i32,                   // passing_score
+            i32,                   // challenges_total
+            Value,                 // challenge_ids (as json for array handling)
+        ),
+    >(
         r#"SELECT agent_id, level, status, started_at, time_limit_seconds,
                   passing_score, challenges_total,
                   to_jsonb(challenge_ids) as challenge_ids
@@ -313,8 +301,14 @@ pub async fn submit_and_grade(
     .ok_or_else(|| AppError::NotFound("Benchmark session not found".to_string()))?;
 
     let (
-        session_agent, level, status, started_at,
-        time_limit, passing_score, challenges_total, _challenge_ids_json,
+        session_agent,
+        level,
+        status,
+        started_at,
+        time_limit,
+        passing_score,
+        challenges_total,
+        _challenge_ids_json,
     ) = session;
 
     // Validate ownership
@@ -489,12 +483,11 @@ async fn grade_submission(
     answers: &Value,
 ) -> Result<Vec<ChallengeResult>, AppError> {
     // Fetch the challenges for this session
-    let challenge_ids: Vec<Uuid> = sqlx::query_scalar(
-        r#"SELECT UNNEST(challenge_ids) FROM benchmark_sessions WHERE id = $1"#,
-    )
-    .bind(session_id)
-    .fetch_all(db)
-    .await?;
+    let challenge_ids: Vec<Uuid> =
+        sqlx::query_scalar(r#"SELECT UNNEST(challenge_ids) FROM benchmark_sessions WHERE id = $1"#)
+            .bind(session_id)
+            .fetch_all(db)
+            .await?;
 
     let mut results = Vec::new();
 
@@ -704,7 +697,11 @@ fn flatten_value_to_text(value: &Value) -> String {
         Value::String(s) => s.clone(),
         Value::Number(n) => n.to_string(),
         Value::Bool(b) => b.to_string(),
-        Value::Array(arr) => arr.iter().map(flatten_value_to_text).collect::<Vec<_>>().join(" "),
+        Value::Array(arr) => arr
+            .iter()
+            .map(flatten_value_to_text)
+            .collect::<Vec<_>>()
+            .join(" "),
         Value::Object(map) => map
             .values()
             .map(flatten_value_to_text)
@@ -794,9 +791,9 @@ fn grade_level_2(
             let mut must_find_matched = 0;
             for known in &required {
                 let known_id = known.get("id").and_then(|v| v.as_str()).unwrap_or("");
-                let found_it = found.iter().any(|f| {
-                    f.get("id").and_then(|v| v.as_str()).unwrap_or("") == known_id
-                });
+                let found_it = found
+                    .iter()
+                    .any(|f| f.get("id").and_then(|v| v.as_str()).unwrap_or("") == known_id);
                 if found_it {
                     matched += 1;
                     if must_find.iter().any(|m| m.as_str() == Some(known_id)) {
@@ -863,9 +860,9 @@ fn grade_level_3(
             for pb in &planted {
                 let bug_id = pb.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 let bug_type = pb.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                let found = found_bugs.iter().any(|f| {
-                    f.get("id").and_then(|v| v.as_str()).unwrap_or("") == bug_id
-                });
+                let found = found_bugs
+                    .iter()
+                    .any(|f| f.get("id").and_then(|v| v.as_str()).unwrap_or("") == bug_id);
                 if found {
                     bugs_matched += 1;
                     if bug_type == "security" {
@@ -875,7 +872,7 @@ fn grade_level_3(
             }
 
             // Count false positives
-            let false_positives = found_bugs.len() as i64 - bugs_matched as i64;
+            let false_positives = found_bugs.len() as i64 - bugs_matched;
             let fp_penalty = false_positives.max(0) * false_positive_penalty.abs();
 
             let must_find_security = criteria
@@ -890,8 +887,7 @@ fn grade_level_3(
 
             if must_find_security && !security_bug_found {
                 score = 0;
-                details["fail_reason"] =
-                    serde_json::json!("Must find security bug");
+                details["fail_reason"] = serde_json::json!("Must find security bug");
             } else {
                 let base = (bugs_matched as f64 / planted.len().max(1) as f64) * 100.0;
                 let bonus = if bugs_matched == planted.len() as i64 {
@@ -902,7 +898,7 @@ fn grade_level_3(
                 } else {
                     0
                 };
-                score = ((base as i64 + bonus - fp_penalty).max(0).min(100)) as i32;
+                score = (base as i64 + bonus - fp_penalty).clamp(0, 100) as i32;
             }
         }
         "architecture" => {
@@ -946,7 +942,7 @@ fn grade_level_3(
             }
 
             // Check for generic "it depends" without commitment
-            if answer_lower.contains("it depends") && !answer.get("recommendation").is_some() {
+            if answer_lower.contains("it depends") && answer.get("recommendation").is_none() {
                 return ChallengeResult {
                     challenge_id: *challenge_id,
                     score: 0,
@@ -959,7 +955,10 @@ fn grade_level_3(
             }
 
             // Score components from criteria
-            let scoring = criteria.get("scoring").cloned().unwrap_or(serde_json::json!({}));
+            let scoring = criteria
+                .get("scoring")
+                .cloned()
+                .unwrap_or(serde_json::json!({}));
             let max_points: i64 = scoring
                 .as_object()
                 .map(|o| o.values().filter_map(|v| v.as_i64()).sum())
@@ -997,7 +996,12 @@ fn grade_level_3(
                     .unwrap_or(15);
             }
             // Risk awareness
-            if answer.get("risks_identified").and_then(|v| v.as_i64()).unwrap_or(0) > 0 {
+            if answer
+                .get("risks_identified")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0)
+                > 0
+            {
                 earned += scoring
                     .get("risk_awareness")
                     .and_then(|v| v.as_i64())
@@ -1101,7 +1105,9 @@ fn grade_level_3(
                 score += 10; // Has parallelism
             }
             // Check acceptance criteria specificity
-            let has_acceptance = subtasks.iter().all(|t| t.get("acceptance_criteria").is_some());
+            let has_acceptance = subtasks
+                .iter()
+                .all(|t| t.get("acceptance_criteria").is_some());
             if has_acceptance {
                 score += 10;
             }
@@ -1177,7 +1183,7 @@ fn validate_dag(subtasks: &[Value]) -> bool {
     for id in &all_ids {
         in_degree.insert(id.clone(), 0);
     }
-    for (_, deps) in &graph {
+    for deps in graph.values() {
         for dep in deps {
             if let Some(count) = in_degree.get_mut(dep) {
                 *count += 1;
@@ -1230,10 +1236,7 @@ pub async fn has_valid_benchmark(
 }
 
 /// Check if an existing agent is within the V5 grace period (30 days).
-pub async fn in_grace_period(
-    db: &PgPool,
-    agent_id: &str,
-) -> Result<bool, AppError> {
+pub async fn in_grace_period(db: &PgPool, agent_id: &str) -> Result<bool, AppError> {
     // Grace period: agents who connected before V5 deployment get 30 days.
     // We check if the agent's created_at is before the V5 deployment
     // and within 30 days of deployment.
@@ -1258,11 +1261,18 @@ pub async fn in_grace_period(
 }
 
 /// Get an agent's benchmark results for their profile.
-pub async fn get_agent_benchmarks(
-    db: &PgPool,
-    agent_id: &str,
-) -> Result<Value, AppError> {
-    let results = sqlx::query_as::<_, (i32, bool, Option<i32>, i32, i32, Option<chrono::DateTime<Utc>>)>(
+pub async fn get_agent_benchmarks(db: &PgPool, agent_id: &str) -> Result<Value, AppError> {
+    let results = sqlx::query_as::<
+        _,
+        (
+            i32,
+            bool,
+            Option<i32>,
+            i32,
+            i32,
+            Option<chrono::DateTime<Utc>>,
+        ),
+    >(
         r#"SELECT level, passed, best_score, total_attempts, total_passes, expires_at
            FROM benchmark_results
            WHERE agent_id = $1
@@ -1274,16 +1284,18 @@ pub async fn get_agent_benchmarks(
 
     let levels: Vec<Value> = results
         .into_iter()
-        .map(|(level, passed, best_score, attempts, passes, expires_at)| {
-            serde_json::json!({
-                "level": level,
-                "passed": passed,
-                "best_score": best_score,
-                "total_attempts": attempts,
-                "total_passes": passes,
-                "expires_at": expires_at.map(|d| d.to_rfc3339()),
-            })
-        })
+        .map(
+            |(level, passed, best_score, attempts, passes, expires_at)| {
+                serde_json::json!({
+                    "level": level,
+                    "passed": passed,
+                    "best_score": best_score,
+                    "total_attempts": attempts,
+                    "total_passes": passes,
+                    "expires_at": expires_at.map(|d| d.to_rfc3339()),
+                })
+            },
+        )
         .collect();
 
     Ok(serde_json::json!(levels))

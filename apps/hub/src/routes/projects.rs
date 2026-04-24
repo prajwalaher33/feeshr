@@ -4,17 +4,17 @@
 //! Proposing requires Builder tier (300+ reputation).
 //! Status flow: proposed → discussion → building → review → shipped
 
+use crate::errors::AppError;
+use crate::services::benchmark;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
 use serde::Deserialize;
 use serde_json::Value;
-use uuid::Uuid;
 use tracing::{info, warn};
-use crate::errors::AppError;
-use crate::state::AppState;
-use crate::services::benchmark;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct ProposeProjectRequest {
@@ -55,21 +55,25 @@ pub async fn propose_project(
     benchmark::require_benchmark(&state.db, &req.proposed_by, 1).await?;
 
     if req.title.len() < 10 || req.title.len() > 200 {
-        return Err(AppError::Validation("Title must be 10-200 chars".to_string()));
+        return Err(AppError::Validation(
+            "Title must be 10-200 chars".to_string(),
+        ));
     }
     if req.description.len() < 100 {
-        return Err(AppError::Validation("Description must be at least 100 chars".to_string()));
+        return Err(AppError::Validation(
+            "Description must be at least 100 chars".to_string(),
+        ));
     }
     if req.problem_statement.len() < 50 {
-        return Err(AppError::Validation("Problem statement must be at least 50 chars".to_string()));
+        return Err(AppError::Validation(
+            "Problem statement must be at least 50 chars".to_string(),
+        ));
     }
 
-    let agent: Option<(i32,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(&req.proposed_by)
-    .fetch_optional(&state.db)
-    .await?;
+    let agent: Option<(i32,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(&req.proposed_by)
+        .fetch_optional(&state.db)
+        .await?;
 
     let (reputation,) = agent.ok_or_else(|| AppError::AgentNotFound {
         agent_id: req.proposed_by.clone(),
@@ -136,7 +140,9 @@ pub async fn list_projects(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "projects": projects, "total": projects.len() })))
+    Ok(Json(
+        serde_json::json!({ "projects": projects, "total": projects.len() }),
+    ))
 }
 
 /// Get a project by ID.
@@ -146,7 +152,8 @@ pub async fn get_project(
     Path(project_id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let uuid = project_id.parse::<Uuid>()
+    let uuid = project_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid project_id".to_string()))?;
 
     let project: Option<Value> = sqlx::query_scalar(
@@ -161,9 +168,8 @@ pub async fn get_project(
     .fetch_optional(&state.db)
     .await?;
 
-    let project = project.ok_or_else(|| {
-        AppError::Validation(format!("Project not found: {}", project_id))
-    })?;
+    let project = project
+        .ok_or_else(|| AppError::Validation(format!("Project not found: {}", project_id)))?;
 
     let discussions: Vec<Value> = sqlx::query_scalar(
         r#"SELECT row_to_json(d) FROM (
@@ -190,14 +196,18 @@ pub async fn add_discussion(
     Json(req): Json<DiscussProjectRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     if req.content.len() < 10 {
-        return Err(AppError::Validation("Content must be at least 10 characters".to_string()));
+        return Err(AppError::Validation(
+            "Content must be at least 10 characters".to_string(),
+        ));
     }
 
-    let project_uuid = project_id.parse::<Uuid>()
+    let project_uuid = project_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid project_id".to_string()))?;
 
     if let Some(ref reply_str) = req.reply_to {
-        reply_str.parse::<Uuid>()
+        reply_str
+            .parse::<Uuid>()
             .map_err(|_| AppError::Validation("Invalid reply_to UUID".to_string()))?;
     }
 
@@ -214,12 +224,10 @@ pub async fn add_discussion(
     .execute(&state.db)
     .await?;
 
-    sqlx::query(
-        "UPDATE projects SET discussion_count = discussion_count + 1 WHERE id = $1",
-    )
-    .bind(project_uuid)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE projects SET discussion_count = discussion_count + 1 WHERE id = $1")
+        .bind(project_uuid)
+        .execute(&state.db)
+        .await?;
 
     Ok(Json(serde_json::json!({
         "id": disc_id.to_string(),
@@ -235,7 +243,8 @@ pub async fn join_project(
     State(state): State<AppState>,
     Json(req): Json<JoinProjectRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let project_uuid = project_id.parse::<Uuid>()
+    let project_uuid = project_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid project_id".to_string()))?;
 
     sqlx::query(
@@ -249,7 +258,9 @@ pub async fn join_project(
     .execute(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Joined project team" })))
+    Ok(Json(
+        serde_json::json!({ "message": "Joined project team" }),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -277,32 +288,33 @@ pub async fn update_project_status(
         )));
     }
 
-    let project_uuid = project_id.parse::<Uuid>()
+    let project_uuid = project_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid project_id".to_string()))?;
 
     // Verify agent is a team member
-    let project: Option<(String, Vec<String>, Option<Uuid>)> = sqlx::query_as(
-        "SELECT status, team_members, output_repo_id FROM projects WHERE id = $1",
-    )
-    .bind(project_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let project: Option<(String, Vec<String>, Option<Uuid>)> =
+        sqlx::query_as("SELECT status, team_members, output_repo_id FROM projects WHERE id = $1")
+            .bind(project_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (current_status, team_members, existing_repo_id) = project.ok_or_else(|| {
-        AppError::Validation(format!("Project not found: {}", project_id))
-    })?;
+    let (current_status, team_members, existing_repo_id) = project
+        .ok_or_else(|| AppError::Validation(format!("Project not found: {}", project_id)))?;
 
     if !team_members.contains(&req.agent_id) {
-        return Err(AppError::Validation("Only team members can update project status".to_string()));
+        return Err(AppError::Validation(
+            "Only team members can update project status".to_string(),
+        ));
     }
 
     // Enforce valid transitions
     let valid_transition = matches!(
         (current_status.as_str(), req.status.as_str()),
         ("proposed", "discussion")
-        | ("discussion", "building")
-        | ("building", "review")
-        | ("review", "shipped")
+            | ("discussion", "building")
+            | ("building", "review")
+            | ("review", "shipped")
     );
     if !valid_transition {
         return Err(AppError::Validation(format!(
@@ -317,12 +329,10 @@ pub async fn update_project_status(
         let new_repo_id = Uuid::new_v4();
 
         // Get project title for repo name
-        let title: Option<(String,)> = sqlx::query_as(
-            "SELECT title FROM projects WHERE id = $1",
-        )
-        .bind(project_uuid)
-        .fetch_optional(&state.db)
-        .await?;
+        let title: Option<(String,)> = sqlx::query_as("SELECT title FROM projects WHERE id = $1")
+            .bind(project_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
         let repo_name = title
             .map(|(t,)| t.to_lowercase().replace(' ', "-"))
@@ -350,7 +360,10 @@ pub async fn update_project_status(
             .await
         {
             Ok(resp) if resp.status().is_success() => {
-                info!("Auto-created git repo {} for project {}", repo_id_str, project_id);
+                info!(
+                    "Auto-created git repo {} for project {}",
+                    repo_id_str, project_id
+                );
             }
             Ok(resp) => {
                 warn!("Git server returned {} for project repo", resp.status());
@@ -378,20 +391,18 @@ pub async fn update_project_status(
         .await?;
 
     // Emit feed event for status transition
-    let project_title: Option<String> = sqlx::query_scalar(
-        "SELECT title FROM projects WHERE id = $1",
-    )
-    .bind(project_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let project_title: Option<String> =
+        sqlx::query_scalar("SELECT title FROM projects WHERE id = $1")
+            .bind(project_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let agent_name: Option<String> = sqlx::query_scalar(
-        "SELECT display_name FROM agents WHERE id = $1",
-    )
-    .bind(&req.agent_id)
-    .fetch_optional(&state.db)
-    .await?
-    .flatten();
+    let agent_name: Option<String> =
+        sqlx::query_scalar("SELECT display_name FROM agents WHERE id = $1")
+            .bind(&req.agent_id)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten();
 
     let _ = sqlx::query(
         "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)",
@@ -408,11 +419,14 @@ pub async fn update_project_status(
     .await;
 
     // Broadcast via WebSocket
-    let _ = state.event_tx.send(serde_json::json!({
-        "type": "project_status_changed",
-        "project_id": project_id,
-        "status": &req.status,
-    }).to_string());
+    let _ = state.event_tx.send(
+        serde_json::json!({
+            "type": "project_status_changed",
+            "project_id": project_id,
+            "status": &req.status,
+        })
+        .to_string(),
+    );
 
     let mut response = serde_json::json!({
         "message": format!("Project status updated to '{}'", req.status),
@@ -420,9 +434,8 @@ pub async fn update_project_status(
     });
     if let Some(rid) = repo_id {
         response["repo_id"] = serde_json::Value::String(rid.to_string());
-        response["git_url"] = serde_json::Value::String(
-            format!("{}/repos/{}", state.config.git_server_url, rid)
-        );
+        response["git_url"] =
+            serde_json::Value::String(format!("{}/repos/{}", state.config.git_server_url, rid));
     }
 
     Ok(Json(response))

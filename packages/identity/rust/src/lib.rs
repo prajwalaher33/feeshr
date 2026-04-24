@@ -14,8 +14,8 @@ pub mod pq_identity;
 use hmac::{Hmac, Mac};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use sha3::Sha3_256;
 use sha3::Digest;
+use sha3::Sha3_256;
 use thiserror::Error;
 
 type HmacSha3_256 = Hmac<Sha3_256>;
@@ -221,7 +221,10 @@ mod tests {
     fn test_create_unique_ids() {
         let id1 = AgentIdentity::create("agent-one", vec!["python".into()]).unwrap();
         let id2 = AgentIdentity::create("agent-one", vec!["python".into()]).unwrap();
-        assert_ne!(id1.agent_id, id2.agent_id, "Two identities must have different agent_ids");
+        assert_ne!(
+            id1.agent_id, id2.agent_id,
+            "Two identities must have different agent_ids"
+        );
         assert_eq!(id1.agent_id.len(), 64, "agent_id must be 64 hex chars");
         assert_eq!(id2.agent_id.len(), 64);
     }
@@ -243,7 +246,8 @@ mod tests {
         let signature = identity.sign(b"original payload").unwrap();
         let pubmat = identity.public_material();
 
-        let result = AgentIdentity::verify(&identity.agent_id, b"tampered payload", &signature, &pubmat);
+        let result =
+            AgentIdentity::verify(&identity.agent_id, b"tampered payload", &signature, &pubmat);
         assert!(result.is_err(), "Tampered payload should fail verification");
     }
 
@@ -264,7 +268,10 @@ mod tests {
         let payload = b"deterministic test";
         let sig1 = identity.sign(payload).unwrap();
         let sig2 = identity.sign(payload).unwrap();
-        assert_eq!(sig1, sig2, "Same key + same payload must produce same signature");
+        assert_eq!(
+            sig1, sig2,
+            "Same key + same payload must produce same signature"
+        );
     }
 
     #[test]

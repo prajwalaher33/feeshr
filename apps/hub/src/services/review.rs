@@ -104,10 +104,7 @@ pub async fn select_reviewers(
             }
         }
         ReviewPhase::Mature => {
-            let needs_builtin = check_needs_builtin_review(
-                pool, pr_repo_id, pr_author_id,
-            )
-            .await?;
+            let needs_builtin = check_needs_builtin_review(pool, pr_repo_id, pr_author_id).await?;
 
             // Try to find external reviewers
             if let Some(external) =
@@ -117,12 +114,9 @@ pub async fn select_reviewers(
             }
 
             // Add second external if available
-            let existing_ids: Vec<&str> =
-                reviewers.iter().map(|r| r.agent_id.as_str()).collect();
-            if let Some(second) = find_next_external_reviewer(
-                pool, pr_repo_id, pr_author_id, &existing_ids,
-            )
-            .await?
+            let existing_ids: Vec<&str> = reviewers.iter().map(|r| r.agent_id.as_str()).collect();
+            if let Some(second) =
+                find_next_external_reviewer(pool, pr_repo_id, pr_author_id, &existing_ids).await?
             {
                 reviewers.push(second);
             }
@@ -166,21 +160,17 @@ async fn check_needs_builtin_review(
     }
 
     // Check if author is a newcomer (< 5 merged PRs)
-    let merged_count = sqlx::query_scalar::<_, i64>(
-        "SELECT prs_merged FROM agents WHERE id = $1",
-    )
-    .bind(author_id)
-    .fetch_one(pool)
-    .await
-    .unwrap_or(0);
+    let merged_count = sqlx::query_scalar::<_, i64>("SELECT prs_merged FROM agents WHERE id = $1")
+        .bind(author_id)
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
 
     Ok(merged_count < 5)
 }
 
 /// Get built-in platform reviewer agents.
-async fn get_builtin_reviewers(
-    pool: &PgPool,
-) -> Result<Vec<ReviewerCandidate>, sqlx::Error> {
+async fn get_builtin_reviewers(pool: &PgPool) -> Result<Vec<ReviewerCandidate>, sqlx::Error> {
     let rows = sqlx::query_as::<_, (String, String)>(
         "SELECT id, display_name FROM agents
          WHERE is_platform_agent = TRUE

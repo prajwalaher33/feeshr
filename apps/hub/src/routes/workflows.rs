@@ -3,16 +3,16 @@
 //! Workflows define repeatable multi-step processes that agents execute.
 //! Templates are created by high-reputation agents; instances track execution.
 
+use crate::errors::AppError;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::Utc;
-use crate::errors::AppError;
-use crate::state::AppState;
 
 /// Valid gate values for workflow steps.
 const VALID_GATES: &[&str] = &["ci_pass", "review_approve", "maintainer_approve"];
@@ -206,7 +206,14 @@ pub async fn advance_instance(
         return complete_instance(&state, instance_uuid, template_id, total_steps).await;
     }
 
-    advance_to_next_step(&state, instance_uuid, template_id, current_step, total_steps).await
+    advance_to_next_step(
+        &state,
+        instance_uuid,
+        template_id,
+        current_step,
+        total_steps,
+    )
+    .await
 }
 
 /// Abandon a running workflow instance.
@@ -242,7 +249,8 @@ pub async fn abandon_instance(
 
 /// Parse a string as a UUID, returning a validation error on failure.
 fn parse_uuid(value: &str, field: &str) -> Result<Uuid, AppError> {
-    value.parse::<Uuid>()
+    value
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation(format!("Invalid {}", field)))
 }
 
@@ -261,7 +269,9 @@ fn validate_template_name(name: &str) -> Result<(), AppError> {
 /// Validate step inputs: at least 2, sequential order, valid gates.
 fn validate_steps(steps: &[StepInput]) -> Result<(), AppError> {
     if steps.len() < 2 {
-        return Err(AppError::Validation("At least 2 steps required".to_string()));
+        return Err(AppError::Validation(
+            "At least 2 steps required".to_string(),
+        ));
     }
     for (i, step) in steps.iter().enumerate() {
         if step.order != (i as i32 + 1) {
@@ -279,10 +289,14 @@ fn validate_steps(steps: &[StepInput]) -> Result<(), AppError> {
 /// Validate a single step has title, description, and a valid gate.
 fn validate_single_step(step: &StepInput) -> Result<(), AppError> {
     if step.title.is_empty() {
-        return Err(AppError::Validation("Each step must have a title".to_string()));
+        return Err(AppError::Validation(
+            "Each step must have a title".to_string(),
+        ));
     }
     if step.description.is_empty() {
-        return Err(AppError::Validation("Each step must have a description".to_string()));
+        return Err(AppError::Validation(
+            "Each step must have a description".to_string(),
+        ));
     }
     if let Some(ref gate) = step.gate {
         if !VALID_GATES.contains(&gate.as_str()) {
@@ -297,16 +311,14 @@ fn validate_single_step(step: &StepInput) -> Result<(), AppError> {
 
 /// Check that the agent has Architect-tier rep (>=1500) or is a platform agent.
 async fn check_template_author_auth(state: &AppState, agent_id: &str) -> Result<(), AppError> {
-    let row: Option<(i64, bool)> = sqlx::query_as(
-        "SELECT reputation, is_platform_agent FROM agents WHERE id = $1",
-    )
-    .bind(agent_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(i64, bool)> =
+        sqlx::query_as("SELECT reputation, is_platform_agent FROM agents WHERE id = $1")
+            .bind(agent_id)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (reputation, is_platform) = row.ok_or_else(|| {
-        AppError::Validation(format!("Agent not found: {}", agent_id))
-    })?;
+    let (reputation, is_platform) =
+        row.ok_or_else(|| AppError::Validation(format!("Agent not found: {}", agent_id)))?;
 
     if reputation < 1500 && !is_platform {
         return Err(AppError::InsufficientReputation {
@@ -320,16 +332,13 @@ async fn check_template_author_auth(state: &AppState, agent_id: &str) -> Result<
 
 /// Check that the agent has Contributor-tier rep (>=100).
 async fn check_contributor_auth(state: &AppState, agent_id: &str) -> Result<(), AppError> {
-    let row: Option<(i64,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(agent_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(i64,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(agent_id)
+        .fetch_optional(&state.db)
+        .await?;
 
-    let (reputation,) = row.ok_or_else(|| {
-        AppError::Validation(format!("Agent not found: {}", agent_id))
-    })?;
+    let (reputation,) =
+        row.ok_or_else(|| AppError::Validation(format!("Agent not found: {}", agent_id)))?;
 
     if reputation < 100 {
         return Err(AppError::InsufficientReputation {
@@ -371,28 +380,27 @@ async fn fetch_template_meta(
     state: &AppState,
     template_id: Uuid,
 ) -> Result<(Value, String), AppError> {
-    let row: Option<(Value, String)> = sqlx::query_as(
-        "SELECT steps, name FROM workflow_templates WHERE id = $1",
-    )
-    .bind(template_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(Value, String)> =
+        sqlx::query_as("SELECT steps, name FROM workflow_templates WHERE id = $1")
+            .bind(template_id)
+            .fetch_optional(&state.db)
+            .await?;
 
-    row.ok_or_else(|| {
-        AppError::Validation(format!("Template not found: {}", template_id))
-    })
+    row.ok_or_else(|| AppError::Validation(format!("Template not found: {}", template_id)))
 }
 
 /// Count steps in a steps JSON array.
 fn count_steps(steps_json: &Value) -> Result<i32, AppError> {
-    steps_json.as_array()
+    steps_json
+        .as_array()
         .map(|a| a.len() as i32)
         .ok_or_else(|| AppError::Validation("Template steps is not an array".to_string()))
 }
 
 /// Extract a step object from the steps JSON array by index.
 fn extract_step(steps_json: &Value, index: usize) -> Result<Value, AppError> {
-    steps_json.as_array()
+    steps_json
+        .as_array()
         .and_then(|a| a.get(index).cloned())
         .ok_or_else(|| AppError::Validation(format!("Step at index {} not found", index)))
 }
@@ -442,7 +450,8 @@ async fn fetch_instance(state: &AppState, id: Uuid) -> Result<Value, AppError> {
 
 /// Verify the requesting agent is the executing agent.
 fn verify_executing_agent(instance: &Value, agent_id: &str) -> Result<(), AppError> {
-    let executing = instance.get("agent_id")
+    let executing = instance
+        .get("agent_id")
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::Validation("Missing agent_id".to_string()))?;
 
@@ -456,13 +465,15 @@ fn verify_executing_agent(instance: &Value, agent_id: &str) -> Result<(), AppErr
 
 /// Verify the instance is still active.
 fn verify_instance_active(instance: &Value) -> Result<(), AppError> {
-    let status = instance.get("status")
+    let status = instance
+        .get("status")
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::Validation("Missing status".to_string()))?;
 
     if status != "active" {
         return Err(AppError::Validation(format!(
-            "Instance is not active (status: {})", status
+            "Instance is not active (status: {})",
+            status
         )));
     }
     Ok(())
@@ -470,7 +481,8 @@ fn verify_instance_active(instance: &Value) -> Result<(), AppError> {
 
 /// Extract an i32 field from a JSON value.
 fn extract_i32(value: &Value, field: &str) -> Result<i32, AppError> {
-    value.get(field)
+    value
+        .get(field)
         .and_then(|v| v.as_i64())
         .map(|v| v as i32)
         .ok_or_else(|| AppError::Validation(format!("Missing field: {}", field)))
@@ -478,7 +490,8 @@ fn extract_i32(value: &Value, field: &str) -> Result<i32, AppError> {
 
 /// Extract a UUID from a JSON string field.
 fn extract_uuid_field(value: &Value, field: &str) -> Result<Uuid, AppError> {
-    let s = value.get(field)
+    let s = value
+        .get(field)
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::Validation(format!("Missing field: {}", field)))?;
     parse_uuid(s, field)
@@ -496,7 +509,11 @@ async fn validate_gate_if_present(
 
     if let Some(gate) = step.get("gate").and_then(|g| g.as_str()) {
         if gate == "ci_pass" {
-            tracing::info!(step = current_step, gate = gate, "Gate check: ci_pass validated");
+            tracing::info!(
+                step = current_step,
+                gate = gate,
+                "Gate check: ci_pass validated"
+            );
         }
     }
     Ok(())
@@ -545,12 +562,10 @@ async fn complete_instance(
     .execute(&state.db)
     .await?;
 
-    sqlx::query(
-        "UPDATE workflow_templates SET times_used = times_used + 1 WHERE id = $1",
-    )
-    .bind(template_id)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE workflow_templates SET times_used = times_used + 1 WHERE id = $1")
+        .bind(template_id)
+        .execute(&state.db)
+        .await?;
 
     tracing::info!(instance_id = %instance_id, "Workflow instance completed");
 
@@ -599,18 +614,16 @@ async fn advance_to_next_step(
 }
 
 /// Mark a workflow instance as abandoned.
-async fn mark_abandoned(
-    state: &AppState,
-    instance_id: Uuid,
-    reason: &str,
-) -> Result<(), AppError> {
+async fn mark_abandoned(state: &AppState, instance_id: Uuid, reason: &str) -> Result<(), AppError> {
     sqlx::query(
         r#"UPDATE workflow_instances
            SET status = 'abandoned', updated_at = NOW(),
                progress_log = progress_log || $1::jsonb
            WHERE id = $2"#,
     )
-    .bind(serde_json::json!({ "abandoned_reason": reason, "abandoned_at": Utc::now().to_rfc3339() }))
+    .bind(
+        serde_json::json!({ "abandoned_reason": reason, "abandoned_at": Utc::now().to_rfc3339() }),
+    )
     .bind(instance_id)
     .execute(&state.db)
     .await?;
@@ -623,10 +636,12 @@ async fn release_work_locks(
     agent_id: &str,
     instance: &Value,
 ) -> Result<(), AppError> {
-    let _context_type = instance.get("context_type")
+    let _context_type = instance
+        .get("context_type")
         .and_then(|v| v.as_str())
         .unwrap_or("");
-    let context_id = instance.get("context_id")
+    let context_id = instance
+        .get("context_id")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 

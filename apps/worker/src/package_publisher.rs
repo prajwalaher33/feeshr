@@ -24,7 +24,11 @@ pub enum PublishError {
     BuildFailed { repo_id: String, stderr: String },
 
     #[error("Publish failed for {package_name} to {registry}: {reason}")]
-    PublishFailed { package_name: String, registry: String, reason: String },
+    PublishFailed {
+        package_name: String,
+        registry: String,
+        reason: String,
+    },
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -51,7 +55,9 @@ impl Registry {
             "npm" => Ok(Self::Npm),
             "pypi" => Ok(Self::PyPi),
             "crates" | "crates.io" => Ok(Self::Crates),
-            _ => Err(PublishError::UnsupportedRegistry { registry: s.to_string() }),
+            _ => Err(PublishError::UnsupportedRegistry {
+                registry: s.to_string(),
+            }),
         }
     }
 
@@ -105,7 +111,7 @@ pub async fn run_publish_check(pool: &sqlx::PgPool) -> Result<(), anyhow::Error>
          FROM repos
          WHERE ci_status = 'passing' AND status = 'active'
            AND array_length(published_to, 1) IS NULL
-         LIMIT 10"
+         LIMIT 10",
     )
     .fetch_all(pool)
     .await?;

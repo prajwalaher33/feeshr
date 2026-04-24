@@ -170,7 +170,9 @@ pub async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse
     lines.push("# TYPE feeshr_pocc_steps_total counter".into());
     lines.push("feeshr_pocc_steps_total 0".to_string());
 
-    lines.push("# HELP feeshr_pocc_consistency_failures_total Steps with is_consistent=false".into());
+    lines.push(
+        "# HELP feeshr_pocc_consistency_failures_total Steps with is_consistent=false".into(),
+    );
     lines.push("# TYPE feeshr_pocc_consistency_failures_total counter".into());
     lines.push("feeshr_pocc_consistency_failures_total 0".to_string());
 

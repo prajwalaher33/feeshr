@@ -7,6 +7,10 @@
 //! - Only maintainer can merge
 //! - Benchmark Level 1 required for submitting PRs and reviews
 
+use crate::errors::AppError;
+use crate::services::benchmark;
+use crate::services::review as review_service;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
@@ -14,10 +18,6 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use crate::state::AppState;
-use crate::errors::AppError;
-use crate::services::benchmark;
-use crate::services::review as review_service;
 
 #[derive(Deserialize)]
 pub struct SubmitPrRequest {
@@ -81,7 +81,8 @@ pub async fn submit_pr(
 
     let pr_id = Uuid::new_v4();
     let target = req.target_branch.unwrap_or_else(|| "main".to_string());
-    let repo_uuid = repo_id.parse::<Uuid>()
+    let repo_uuid = repo_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid repo_id".to_string()))?;
 
     let author_id = &req.author_id;
@@ -107,27 +108,30 @@ pub async fn submit_pr(
     .await?;
 
     // Look up repo name and agent name for the feed event
-    let repo_name: Option<String> = sqlx::query_scalar(
-        "SELECT name FROM repos WHERE id = $1"
-    ).bind(repo_uuid).fetch_optional(&state.db).await?.flatten();
+    let repo_name: Option<String> = sqlx::query_scalar("SELECT name FROM repos WHERE id = $1")
+        .bind(repo_uuid)
+        .fetch_optional(&state.db)
+        .await?
+        .flatten();
 
-    let agent_name: Option<String> = sqlx::query_scalar(
-        "SELECT display_name FROM agents WHERE id = $1"
-    ).bind(author_id).fetch_optional(&state.db).await?.flatten();
+    let agent_name: Option<String> =
+        sqlx::query_scalar("SELECT display_name FROM agents WHERE id = $1")
+            .bind(author_id)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten();
 
     // Emit feed event
-    let _ = sqlx::query(
-        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
-    )
-    .bind("pr_submitted")
-    .bind(serde_json::json!({
-        "agent_id": author_id,
-        "agent_name": agent_name.unwrap_or_else(|| author_id[..12].to_string()),
-        "repo_name": repo_name.unwrap_or_else(|| repo_id.clone()),
-        "title": &req.title,
-    }))
-    .execute(&state.db)
-    .await;
+    let _ = sqlx::query("INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)")
+        .bind("pr_submitted")
+        .bind(serde_json::json!({
+            "agent_id": author_id,
+            "agent_name": agent_name.unwrap_or_else(|| author_id[..12].to_string()),
+            "repo_name": repo_name.unwrap_or_else(|| repo_id.clone()),
+            "title": &req.title,
+        }))
+        .execute(&state.db)
+        .await;
 
     // Auto-assign reviewers using the review selection service
     let mut assigned_reviewers = Vec::new();
@@ -175,7 +179,8 @@ pub async fn list_prs(
     Query(params): Query<PrListQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let repo_uuid = repo_id.parse::<Uuid>()
+    let repo_uuid = repo_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid repo_id".to_string()))?;
     let limit = params.limit.unwrap_or(20).min(100);
     let offset = params.offset.unwrap_or(0);
@@ -198,7 +203,9 @@ pub async fn list_prs(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "pull_requests": prs, "total": prs.len() })))
+    Ok(Json(
+        serde_json::json!({ "pull_requests": prs, "total": prs.len() }),
+    ))
 }
 
 /// List PRs across all repos (global view).
@@ -254,18 +261,19 @@ pub async fn submit_review(
     // Gate: agent must have passed Level 1 benchmark
     benchmark::require_benchmark(&state.db, &req.reviewer_id, 1).await?;
 
-    let pr_uuid = pr_id.parse::<Uuid>()
+    let pr_uuid = pr_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid pr_id".to_string()))?;
 
     // Fetch PR to check for self-review
-    let pr: Option<(String,)> = sqlx::query_as(
-        "SELECT author_id FROM pull_requests WHERE id = $1",
-    )
-    .bind(pr_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let pr: Option<(String,)> = sqlx::query_as("SELECT author_id FROM pull_requests WHERE id = $1")
+        .bind(pr_uuid)
+        .fetch_optional(&state.db)
+        .await?;
 
-    let (author_id,) = pr.ok_or_else(|| AppError::PrNotFound { pr_id: pr_id.clone() })?;
+    let (author_id,) = pr.ok_or_else(|| AppError::PrNotFound {
+        pr_id: pr_id.clone(),
+    })?;
 
     if author_id == req.reviewer_id {
         return Err(AppError::SelfReviewForbidden {
@@ -308,38 +316,41 @@ pub async fn submit_review(
     .await?;
 
     // Increment review_count on PR
-    sqlx::query(
-        "UPDATE pull_requests SET review_count = review_count + 1 WHERE id = $1",
-    )
-    .bind(pr_uuid)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE pull_requests SET review_count = review_count + 1 WHERE id = $1")
+        .bind(pr_uuid)
+        .execute(&state.db)
+        .await?;
 
     // Emit feed event for review
-    let reviewer_name: Option<String> = sqlx::query_scalar(
-        "SELECT display_name FROM agents WHERE id = $1"
-    ).bind(&req.reviewer_id).fetch_optional(&state.db).await?.flatten();
+    let reviewer_name: Option<String> =
+        sqlx::query_scalar("SELECT display_name FROM agents WHERE id = $1")
+            .bind(&req.reviewer_id)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten();
 
     let repo_name_for_review: Option<String> = sqlx::query_scalar(
-        "SELECT r.name FROM repos r JOIN pull_requests p ON p.repo_id = r.id WHERE p.id = $1"
-    ).bind(pr_uuid).fetch_optional(&state.db).await?.flatten();
+        "SELECT r.name FROM repos r JOIN pull_requests p ON p.repo_id = r.id WHERE p.id = $1",
+    )
+    .bind(pr_uuid)
+    .fetch_optional(&state.db)
+    .await?
+    .flatten();
 
     let reviewer_name_str = reviewer_name.unwrap_or_else(|| req.reviewer_id[..12].to_string());
     let repo_name_str = repo_name_for_review.unwrap_or_else(|| "a repo".to_string());
 
-    let _ = sqlx::query(
-        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
-    )
-    .bind("pr_reviewed")
-    .bind(serde_json::json!({
-        "reviewer_id": &req.reviewer_id,
-        "reviewer_name": &reviewer_name_str,
-        "repo_name": &repo_name_str,
-        "verdict": &req.verdict,
-        "excerpt": &req.comment,
-    }))
-    .execute(&state.db)
-    .await;
+    let _ = sqlx::query("INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)")
+        .bind("pr_reviewed")
+        .bind(serde_json::json!({
+            "reviewer_id": &req.reviewer_id,
+            "reviewer_name": &reviewer_name_str,
+            "repo_name": &repo_name_str,
+            "verdict": &req.verdict,
+            "excerpt": &req.comment,
+        }))
+        .execute(&state.db)
+        .await;
 
     // ── Autonomous merge governance ──────────────────────────────────
     // After every approving review, check if the PR meets auto-merge policy:
@@ -372,21 +383,15 @@ pub async fn submit_review(
 /// - PR status is open, reviewing, or approved
 ///
 /// Returns true if the PR was auto-merged.
-async fn try_auto_merge(
-    state: &AppState,
-    pr_uuid: Uuid,
-    pr_id: &str,
-    repo_name: &str,
-) -> bool {
+async fn try_auto_merge(state: &AppState, pr_uuid: Uuid, pr_id: &str, repo_name: &str) -> bool {
     // Check current PR state
-    let pr: Option<(String, String)> = sqlx::query_as(
-        "SELECT author_id, status FROM pull_requests WHERE id = $1",
-    )
-    .bind(pr_uuid)
-    .fetch_optional(&state.db)
-    .await
-    .ok()
-    .flatten();
+    let pr: Option<(String, String)> =
+        sqlx::query_as("SELECT author_id, status FROM pull_requests WHERE id = $1")
+            .bind(pr_uuid)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
 
     let (author_id, status) = match pr {
         Some(p) => p,
@@ -434,25 +439,23 @@ async fn try_auto_merge(
             tracing::info!(pr_id = %pr_id, "PR auto-merged by governance policy");
 
             // Get author name for feed event
-            let author_name: Option<String> = sqlx::query_scalar(
-                "SELECT display_name FROM agents WHERE id = $1",
-            )
-            .bind(&author_id)
-            .fetch_optional(&state.db)
-            .await
-            .ok()
-            .flatten()
-            .flatten();
+            let author_name: Option<String> =
+                sqlx::query_scalar("SELECT display_name FROM agents WHERE id = $1")
+                    .bind(&author_id)
+                    .fetch_optional(&state.db)
+                    .await
+                    .ok()
+                    .flatten()
+                    .flatten();
 
             // Get PR title
-            let pr_title: Option<String> = sqlx::query_scalar(
-                "SELECT title FROM pull_requests WHERE id = $1",
-            )
-            .bind(pr_uuid)
-            .fetch_optional(&state.db)
-            .await
-            .ok()
-            .flatten();
+            let pr_title: Option<String> =
+                sqlx::query_scalar("SELECT title FROM pull_requests WHERE id = $1")
+                    .bind(pr_uuid)
+                    .fetch_optional(&state.db)
+                    .await
+                    .ok()
+                    .flatten();
 
             // Emit feed event
             let _ = sqlx::query(
@@ -482,12 +485,10 @@ async fn try_auto_merge(
             );
 
             // Increment prs_merged on the author agent
-            let _ = sqlx::query(
-                "UPDATE agents SET prs_merged = prs_merged + 1 WHERE id = $1",
-            )
-            .bind(&author_id)
-            .execute(&state.db)
-            .await;
+            let _ = sqlx::query("UPDATE agents SET prs_merged = prs_merged + 1 WHERE id = $1")
+                .bind(&author_id)
+                .execute(&state.db)
+                .await;
 
             true
         }
@@ -504,7 +505,8 @@ pub async fn merge_pr(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let pr_uuid = pr_id.parse::<Uuid>()
+    let pr_uuid = pr_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid pr_id".to_string()))?;
     let merger_id = body["merger_id"]
         .as_str()
@@ -512,12 +514,11 @@ pub async fn merge_pr(
         .to_string();
 
     // Check PR exists and is in mergeable state
-    let pr: Option<(String, String, i32)> = sqlx::query_as(
-        "SELECT author_id, status, review_count FROM pull_requests WHERE id = $1",
-    )
-    .bind(pr_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let pr: Option<(String, String, i32)> =
+        sqlx::query_as("SELECT author_id, status, review_count FROM pull_requests WHERE id = $1")
+            .bind(pr_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
     let (author_id, status, _review_count) = pr.ok_or_else(|| AppError::PrNotFound {
         pr_id: pr_id.clone(),
@@ -525,7 +526,8 @@ pub async fn merge_pr(
 
     if status != "open" && status != "reviewing" && status != "approved" {
         return Err(AppError::Validation(format!(
-            "PR cannot be merged in '{}' status", status
+            "PR cannot be merged in '{}' status",
+            status
         )));
     }
 
@@ -555,12 +557,10 @@ pub async fn merge_pr(
     .await?;
 
     // Increment prs_merged on the author agent
-    let _ = sqlx::query(
-        "UPDATE agents SET prs_merged = prs_merged + 1 WHERE id = $1",
-    )
-    .bind(&author_id)
-    .execute(&state.db)
-    .await;
+    let _ = sqlx::query("UPDATE agents SET prs_merged = prs_merged + 1 WHERE id = $1")
+        .bind(&author_id)
+        .execute(&state.db)
+        .await;
 
     Ok(Json(serde_json::json!({
         "message": "PR merged successfully",

@@ -11,8 +11,8 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::Value;
-use uuid::Uuid;
 use tracing::info;
+use uuid::Uuid;
 
 use crate::errors::AppError;
 use crate::state::AppState;
@@ -79,12 +79,10 @@ pub async fn create_issue(
     }
 
     // Gate: agent must exist and have >= 100 reputation (Contributor tier)
-    let agent: Option<(i32,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(&req.author_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let agent: Option<(i32,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(&req.author_id)
+        .fetch_optional(&state.db)
+        .await?;
 
     let (reputation,) = agent.ok_or_else(|| AppError::AgentNotFound {
         agent_id: req.author_id.clone(),
@@ -99,12 +97,10 @@ pub async fn create_issue(
     }
 
     // Verify repo exists
-    let repo_exists: Option<(String,)> = sqlx::query_as(
-        "SELECT name FROM repos WHERE id = $1",
-    )
-    .bind(repo_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let repo_exists: Option<(String,)> = sqlx::query_as("SELECT name FROM repos WHERE id = $1")
+        .bind(repo_uuid)
+        .fetch_optional(&state.db)
+        .await?;
 
     let (repo_name,) = repo_exists.ok_or_else(|| AppError::RepoNotFound {
         repo_id: repo_id.clone(),
@@ -132,13 +128,12 @@ pub async fn create_issue(
         .await?;
 
     // Emit feed event
-    let agent_name: Option<String> = sqlx::query_scalar(
-        "SELECT display_name FROM agents WHERE id = $1",
-    )
-    .bind(&req.author_id)
-    .fetch_optional(&state.db)
-    .await?
-    .flatten();
+    let agent_name: Option<String> =
+        sqlx::query_scalar("SELECT display_name FROM agents WHERE id = $1")
+            .bind(&req.author_id)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten();
 
     let _ = sqlx::query(
         "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)",
@@ -155,12 +150,15 @@ pub async fn create_issue(
     .await;
 
     // Broadcast via WebSocket
-    let _ = state.event_tx.send(serde_json::json!({
-        "type": "issue_created",
-        "issue_id": issue_id.to_string(),
-        "repo_id": repo_id,
-        "title": &req.title,
-    }).to_string());
+    let _ = state.event_tx.send(
+        serde_json::json!({
+            "type": "issue_created",
+            "issue_id": issue_id.to_string(),
+            "repo_id": repo_id,
+            "title": &req.title,
+        })
+        .to_string(),
+    );
 
     info!(issue_id = %issue_id, repo = %repo_name, "Issue created");
 
@@ -276,15 +274,14 @@ pub async fn update_issue(
         .map_err(|_| AppError::Validation("Invalid issue_id".to_string()))?;
 
     // Verify issue exists and get current state
-    let existing: Option<(String, Uuid)> = sqlx::query_as(
-        "SELECT status, repo_id FROM repo_issues WHERE id = $1",
-    )
-    .bind(uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let existing: Option<(String, Uuid)> =
+        sqlx::query_as("SELECT status, repo_id FROM repo_issues WHERE id = $1")
+            .bind(uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (current_status, repo_id) = existing
-        .ok_or_else(|| AppError::NotFound(format!("Issue not found: {}", issue_id)))?;
+    let (current_status, repo_id) =
+        existing.ok_or_else(|| AppError::NotFound(format!("Issue not found: {}", issue_id)))?;
 
     // Validate status transition if provided
     if let Some(ref new_status) = req.status {
@@ -312,13 +309,11 @@ pub async fn update_issue(
             )));
         }
 
-        sqlx::query(
-            "UPDATE repo_issues SET status = $1, updated_at = NOW() WHERE id = $2",
-        )
-        .bind(new_status)
-        .bind(uuid)
-        .execute(&state.db)
-        .await?;
+        sqlx::query("UPDATE repo_issues SET status = $1, updated_at = NOW() WHERE id = $2")
+            .bind(new_status)
+            .bind(uuid)
+            .execute(&state.db)
+            .await?;
 
         // Update open_issue_count on the repo
         if new_status == "resolved" || new_status == "wont_fix" {
@@ -330,12 +325,10 @@ pub async fn update_issue(
             .await?;
         } else if current_status == "resolved" || current_status == "wont_fix" {
             // Reopening
-            sqlx::query(
-                "UPDATE repos SET open_issue_count = open_issue_count + 1 WHERE id = $1",
-            )
-            .bind(repo_id)
-            .execute(&state.db)
-            .await?;
+            sqlx::query("UPDATE repos SET open_issue_count = open_issue_count + 1 WHERE id = $1")
+                .bind(repo_id)
+                .execute(&state.db)
+                .await?;
         }
     }
 
@@ -345,13 +338,11 @@ pub async fn update_issue(
             .parse::<Uuid>()
             .map_err(|_| AppError::Validation("Invalid resolved_by_pr UUID".to_string()))?;
 
-        sqlx::query(
-            "UPDATE repo_issues SET resolved_by_pr = $1, updated_at = NOW() WHERE id = $2",
-        )
-        .bind(pr_uuid)
-        .bind(uuid)
-        .execute(&state.db)
-        .await?;
+        sqlx::query("UPDATE repo_issues SET resolved_by_pr = $1, updated_at = NOW() WHERE id = $2")
+            .bind(pr_uuid)
+            .bind(uuid)
+            .execute(&state.db)
+            .await?;
     }
 
     let final_status = req.status.as_deref().unwrap_or(&current_status);

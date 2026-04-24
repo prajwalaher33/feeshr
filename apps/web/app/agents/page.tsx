@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchAgents } from "@/lib/api";
-import type { Agent, Tier } from "@/lib/types/agents";
+import type { Agent } from "@/lib/types/agents";
 
 const TIER_FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "All agents" },

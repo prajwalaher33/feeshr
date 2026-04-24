@@ -118,10 +118,14 @@ fn compute_json_similarity(a: &serde_json::Value, b: &serde_json::Value) -> f64 
     }
 
     // Extract unique tokens (split on non-alphanumeric)
-    let a_tokens: std::collections::HashSet<&str> =
-        a_str.split(|c: char| !c.is_alphanumeric()).filter(|s| s.len() > 2).collect();
-    let b_tokens: std::collections::HashSet<&str> =
-        b_str.split(|c: char| !c.is_alphanumeric()).filter(|s| s.len() > 2).collect();
+    let a_tokens: std::collections::HashSet<&str> = a_str
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|s| s.len() > 2)
+        .collect();
+    let b_tokens: std::collections::HashSet<&str> = b_str
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|s| s.len() > 2)
+        .collect();
 
     if a_tokens.is_empty() && b_tokens.is_empty() {
         return 1.0;
@@ -143,10 +147,8 @@ fn compute_text_similarity(a: &str, b: &str) -> f64 {
         return 1.0;
     }
 
-    let a_tokens: std::collections::HashSet<&str> =
-        a.split_whitespace().collect();
-    let b_tokens: std::collections::HashSet<&str> =
-        b.split_whitespace().collect();
+    let a_tokens: std::collections::HashSet<&str> = a.split_whitespace().collect();
+    let b_tokens: std::collections::HashSet<&str> = b.split_whitespace().collect();
 
     if a_tokens.is_empty() && b_tokens.is_empty() {
         return 1.0;
@@ -238,7 +240,14 @@ mod tests {
         let a = uuid::Uuid::new_v4();
         let b = uuid::Uuid::new_v4();
         assert_eq!(
-            determine_better_trace(a, "positive", "short", b, "positive", "much longer reasoning"),
+            determine_better_trace(
+                a,
+                "positive",
+                "short",
+                b,
+                "positive",
+                "much longer reasoning"
+            ),
             Some(a)
         );
     }

@@ -24,13 +24,19 @@ pub async fn run_decision_resolution(pool: &sqlx::PgPool) -> Result<(), anyhow::
     }
 
     if !expired.is_empty() {
-        tracing::info!(decisions_processed = expired.len(), "Decision resolution complete");
+        tracing::info!(
+            decisions_processed = expired.len(),
+            "Decision resolution complete"
+        );
     }
     Ok(())
 }
 
 /// Extend a decision's deadline by 24 hours (one retry only).
-async fn extend_deadline(pool: &sqlx::PgPool, decision_id: uuid::Uuid) -> Result<(), anyhow::Error> {
+async fn extend_deadline(
+    pool: &sqlx::PgPool,
+    decision_id: uuid::Uuid,
+) -> Result<(), anyhow::Error> {
     // Only extend once: check if we already extended
     let updated = sqlx::query(
         r#"UPDATE technical_decisions
@@ -50,7 +56,10 @@ async fn extend_deadline(pool: &sqlx::PgPool, decision_id: uuid::Uuid) -> Result
 }
 
 /// Resolve a decision that has votes.
-async fn resolve_with_votes(pool: &sqlx::PgPool, decision_id: uuid::Uuid) -> Result<(), anyhow::Error> {
+async fn resolve_with_votes(
+    pool: &sqlx::PgPool,
+    decision_id: uuid::Uuid,
+) -> Result<(), anyhow::Error> {
     // Get all votes grouped by option
     let votes = sqlx::query_as::<_, (String, f64, String)>(
         r#"SELECT option_id, vote_weight, reasoning
@@ -64,11 +73,13 @@ async fn resolve_with_votes(pool: &sqlx::PgPool, decision_id: uuid::Uuid) -> Res
 
     // Tally weighted votes
     let mut option_sums: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
-    let mut option_reasons: std::collections::HashMap<String, Vec<(String, f64)>> = std::collections::HashMap::new();
+    let mut option_reasons: std::collections::HashMap<String, Vec<(String, f64)>> =
+        std::collections::HashMap::new();
 
     for (option_id, weight, reasoning) in &votes {
         *option_sums.entry(option_id.clone()).or_default() += weight;
-        option_reasons.entry(option_id.clone())
+        option_reasons
+            .entry(option_id.clone())
             .or_default()
             .push((reasoning.clone(), *weight));
     }
@@ -77,16 +88,23 @@ async fn resolve_with_votes(pool: &sqlx::PgPool, decision_id: uuid::Uuid) -> Res
     let mut ranked: Vec<_> = option_sums.iter().collect();
     ranked.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    let winner = ranked.first().map(|(k, _)| k.to_string()).unwrap_or_default();
+    let winner = ranked
+        .first()
+        .map(|(k, _)| k.to_string())
+        .unwrap_or_default();
     let winner_sum = ranked.first().map(|(_, v)| **v).unwrap_or(0.0);
-    let runner_up_info = ranked.get(1)
+    let runner_up_info = ranked
+        .get(1)
         .map(|(k, v)| format!("Runner-up: '{}' with {:.1} weighted votes.", k, v))
         .unwrap_or_default();
 
     // Get top reasoning
-    let top_args = option_reasons.get(&winner)
+    let top_args = option_reasons
+        .get(&winner)
         .map(|reasons| {
-            reasons.iter().take(2)
+            reasons
+                .iter()
+                .take(2)
                 .map(|(r, _)| {
                     let truncated = if r.len() > 100 { &r[..100] } else { r };
                     format!("\"{}\"", truncated)
@@ -98,7 +116,11 @@ async fn resolve_with_votes(pool: &sqlx::PgPool, decision_id: uuid::Uuid) -> Res
 
     let rationale = format!(
         "Option '{}' was chosen with {} votes (weighted sum: {:.1}). Key arguments: {}. {}",
-        winner, votes.len(), winner_sum, top_args, runner_up_info
+        winner,
+        votes.len(),
+        winner_sum,
+        top_args,
+        runner_up_info
     );
 
     // Update decision

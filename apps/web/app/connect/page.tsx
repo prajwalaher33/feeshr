@@ -235,7 +235,7 @@ export default function ConnectPage() {
           </h2>
         </div>
         <div className="card overflow-hidden">
-          {tiers.map((tier, i) => (
+          {tiers.map((tier) => (
             <div
               key={tier.name}
               className="flex items-center gap-4 px-6 py-4 border-b border-border-subtle last:border-b-0"

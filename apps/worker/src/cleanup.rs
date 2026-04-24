@@ -36,7 +36,7 @@ async fn orphan_inactive_repos(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error
            AND maintainer_id IN (
                SELECT id FROM agents
                WHERE last_active_at < NOW() - INTERVAL '21 days'
-           )"
+           )",
     )
     .execute(pool)
     .await?;
@@ -48,7 +48,7 @@ async fn apply_inactivity_decay(pool: &sqlx::PgPool) -> Result<u64, anyhow::Erro
     let inactive_agents = sqlx::query_as::<_, (String, i64)>(
         "SELECT id, reputation FROM agents
          WHERE last_active_at < NOW() - INTERVAL '14 days'
-           AND reputation > 0"
+           AND reputation > 0",
     )
     .fetch_all(pool)
     .await?;
@@ -58,7 +58,7 @@ async fn apply_inactivity_decay(pool: &sqlx::PgPool) -> Result<u64, anyhow::Erro
         let new_score = (*reputation - 2).max(0);
         sqlx::query(
             "INSERT INTO reputation_events (agent_id, delta, reason, evidence_ref, new_score)
-             VALUES ($1, -2, 'inactivity_decay', 'system:cleanup', $2)"
+             VALUES ($1, -2, 'inactivity_decay', 'system:cleanup', $2)",
         )
         .bind(agent_id)
         .bind(new_score)
@@ -79,7 +79,7 @@ async fn apply_inactivity_decay(pool: &sqlx::PgPool) -> Result<u64, anyhow::Erro
 async fn expire_bounties(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error> {
     let result = sqlx::query(
         "UPDATE bounties SET status = 'expired'
-         WHERE status = 'open' AND deadline < NOW()"
+         WHERE status = 'open' AND deadline < NOW()",
     )
     .execute(pool)
     .await?;
@@ -88,11 +88,10 @@ async fn expire_bounties(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error> {
 
 /// Prune action_log entries older than 90 days.
 async fn prune_action_log(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error> {
-    let result = sqlx::query(
-        "DELETE FROM action_log WHERE created_at < NOW() - INTERVAL '90 days'"
-    )
-    .execute(pool)
-    .await?;
+    let result =
+        sqlx::query("DELETE FROM action_log WHERE created_at < NOW() - INTERVAL '90 days'")
+            .execute(pool)
+            .await?;
     Ok(result.rows_affected())
 }
 
@@ -102,7 +101,7 @@ async fn prune_action_log(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error> {
 /// Tracks agents with frequent lock expirations for quality monitoring.
 pub async fn expire_work_locks(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error> {
     let result = sqlx::query(
-        "UPDATE work_locks SET status = 'expired' WHERE status = 'active' AND expires_at < NOW()"
+        "UPDATE work_locks SET status = 'expired' WHERE status = 'active' AND expires_at < NOW()",
     )
     .execute(pool)
     .await?;
@@ -136,10 +135,8 @@ pub async fn expire_work_locks(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error
 
 /// Prune expired consultation cache entries.
 async fn prune_consultation_cache(pool: &sqlx::PgPool) -> Result<u64, anyhow::Error> {
-    let result = sqlx::query(
-        "DELETE FROM precommit_consultations WHERE expires_at < NOW()"
-    )
-    .execute(pool)
-    .await?;
+    let result = sqlx::query("DELETE FROM precommit_consultations WHERE expires_at < NOW()")
+        .execute(pool)
+        .await?;
     Ok(result.rows_affected())
 }

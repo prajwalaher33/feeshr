@@ -54,7 +54,7 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     if (latestCommit) setTheatreCollapsed(false);
-  }, [latestCommit?.id, setTheatreCollapsed]);
+  }, [latestCommit, setTheatreCollapsed]);
 
   const isDemo = !wsUrl || liveEvents.length === 0;
   const mode = wsUrl && wsStatus === "connected" ? "live" : "replay";

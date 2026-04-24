@@ -41,7 +41,10 @@ pub async fn agent_auth_middleware(
     next: Next,
 ) -> Result<Response, AppError> {
     // Read-only requests don't need authentication.
-    if matches!(request.method(), &Method::GET | &Method::HEAD | &Method::OPTIONS) {
+    if matches!(
+        request.method(),
+        &Method::GET | &Method::HEAD | &Method::OPTIONS
+    ) {
         return Ok(next.run(request).await);
     }
 
@@ -129,25 +132,31 @@ pub async fn verify_agent_signature(
     match algo {
         "sphincs-sha3-256f" | "sphincs-sha3-256s" => {
             // Post-quantum verification path
-            let row: Option<(Option<Vec<u8>>,)> = sqlx::query_as(
-                "SELECT pq_public_key FROM agents WHERE id = $1",
-            )
-            .bind(agent_id)
-            .fetch_optional(db)
-            .await
-            .map_err(AppError::Database)?;
+            let row: Option<(Option<Vec<u8>>,)> =
+                sqlx::query_as("SELECT pq_public_key FROM agents WHERE id = $1")
+                    .bind(agent_id)
+                    .fetch_optional(db)
+                    .await
+                    .map_err(AppError::Database)?;
 
-            let (pq_pk_opt,) = row
-                .ok_or_else(|| AppError::AgentNotFound { agent_id: agent_id.to_string() })?;
+            let (pq_pk_opt,) = row.ok_or_else(|| AppError::AgentNotFound {
+                agent_id: agent_id.to_string(),
+            })?;
 
-            let pk = pq_pk_opt
-                .ok_or_else(|| AppError::NoPqKey { agent_id: agent_id.to_string() })?;
+            let pk = pq_pk_opt.ok_or_else(|| AppError::NoPqKey {
+                agent_id: agent_id.to_string(),
+            })?;
 
-            let valid = PqAgentIdentity::verify(payload, signature, &pk)
-                .map_err(|_| AppError::InvalidSignature { agent_id: agent_id.to_string() })?;
+            let valid = PqAgentIdentity::verify(payload, signature, &pk).map_err(|_| {
+                AppError::InvalidSignature {
+                    agent_id: agent_id.to_string(),
+                }
+            })?;
 
             if !valid {
-                return Err(AppError::InvalidSignature { agent_id: agent_id.to_string() });
+                return Err(AppError::InvalidSignature {
+                    agent_id: agent_id.to_string(),
+                });
             }
 
             Ok(VerificationResult {
@@ -168,22 +177,26 @@ pub async fn verify_agent_signature(
             }
 
             // Legacy HMAC verification: fetch agent's public material and verify
-            let row: Option<(String,)> = sqlx::query_as(
-                "SELECT public_material FROM agents WHERE id = $1",
-            )
-            .bind(agent_id)
-            .fetch_optional(db)
-            .await
-            .map_err(AppError::Database)?;
+            let row: Option<(String,)> =
+                sqlx::query_as("SELECT public_material FROM agents WHERE id = $1")
+                    .bind(agent_id)
+                    .fetch_optional(db)
+                    .await
+                    .map_err(AppError::Database)?;
 
-            let (public_material_hex,) = row
-                .ok_or_else(|| AppError::AgentNotFound { agent_id: agent_id.to_string() })?;
+            let (public_material_hex,) = row.ok_or_else(|| AppError::AgentNotFound {
+                agent_id: agent_id.to_string(),
+            })?;
 
-            let public_material = hex::decode(&public_material_hex)
-                .map_err(|_| AppError::InvalidSignature { agent_id: agent_id.to_string() })?;
+            let public_material =
+                hex::decode(&public_material_hex).map_err(|_| AppError::InvalidSignature {
+                    agent_id: agent_id.to_string(),
+                })?;
 
             feeshr_identity::AgentIdentity::verify(agent_id, payload, signature, &public_material)
-                .map_err(|_| AppError::InvalidSignature { agent_id: agent_id.to_string() })?;
+                .map_err(|_| AppError::InvalidSignature {
+                    agent_id: agent_id.to_string(),
+                })?;
 
             Ok(VerificationResult {
                 agent_id: agent_id.to_string(),
@@ -192,6 +205,8 @@ pub async fn verify_agent_signature(
             })
         }
 
-        _ => Err(AppError::UnsupportedAlgorithm { algorithm: algo.to_string() }),
+        _ => Err(AppError::UnsupportedAlgorithm {
+            algorithm: algo.to_string(),
+        }),
     }
 }

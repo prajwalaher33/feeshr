@@ -54,25 +54,25 @@ async fn main() -> Result<(), anyhow::Error> {
     info!("Connected to database");
 
     // Interval timers for each task.
-    let mut reputation_interval = time::interval(Duration::from_secs(300));     // 5 min
-    let mut quality_interval = time::interval(Duration::from_secs(3600));       // 1 hour
-    let mut pattern_interval = time::interval(Duration::from_secs(86400));      // 24 hours
-    let mut ecosystem_interval = time::interval(Duration::from_secs(21600));    // 6 hours
-    let mut cleanup_interval = time::interval(Duration::from_secs(86400));      // 24 hours
-    let mut publish_interval = time::interval(Duration::from_secs(300));        // 5 min
-    let mut lock_expiry_interval = time::interval(Duration::from_secs(300));   // 5 min
-    let mut decision_interval = time::interval(Duration::from_secs(300));      // 5 min
-    let mut trust_interval = time::interval(Duration::from_secs(86400));       // 24 hours
-    let mut collusion_interval = time::interval(Duration::from_secs(86400));   // 24 hours
-    let mut cat_rep_interval = time::interval(Duration::from_secs(300));       // 5 min
-    let mut decay_interval = time::interval(Duration::from_secs(86400));       // 24 hours
-    let mut trace_eval_interval = time::interval(Duration::from_secs(3600));  // 1 hour
+    let mut reputation_interval = time::interval(Duration::from_secs(300)); // 5 min
+    let mut quality_interval = time::interval(Duration::from_secs(3600)); // 1 hour
+    let mut pattern_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut ecosystem_interval = time::interval(Duration::from_secs(21600)); // 6 hours
+    let mut cleanup_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut publish_interval = time::interval(Duration::from_secs(300)); // 5 min
+    let mut lock_expiry_interval = time::interval(Duration::from_secs(300)); // 5 min
+    let mut decision_interval = time::interval(Duration::from_secs(300)); // 5 min
+    let mut trust_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut collusion_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut cat_rep_interval = time::interval(Duration::from_secs(300)); // 5 min
+    let mut decay_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut trace_eval_interval = time::interval(Duration::from_secs(3600)); // 1 hour
     let mut trace_cost_interval = time::interval(Duration::from_secs(86400)); // 24 hours
     let mut trace_sim_interval = time::interval(Duration::from_secs(604800)); // 7 days
-    let mut bench_gen_interval = time::interval(Duration::from_secs(86400));  // 24 hours (checks monthly)
+    let mut bench_gen_interval = time::interval(Duration::from_secs(86400)); // 24 hours (checks monthly)
     let mut bench_expiry_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut bench_timeout_interval = time::interval(Duration::from_secs(60));   // 1 min
-    let mut quantum_interval = time::interval(Duration::from_secs(86400));     // 24 hours
+    let mut bench_timeout_interval = time::interval(Duration::from_secs(60)); // 1 min
+    let mut quantum_interval = time::interval(Duration::from_secs(86400)); // 24 hours
 
     // Health check counter — incremented on each tick so health server can report liveness.
     let tick_count = Arc::new(AtomicU64::new(0));

@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'packages', 'identity', 'python'))
 
-from feeshr_agents.tools.pitfall_db import PitfallDB, Pitfall
+from feeshr_agents.tools.pitfall_db import PitfallDB
 from feeshr_agents.tools.api_ground_truth import ApiGroundTruth
 
 

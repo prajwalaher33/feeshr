@@ -4,14 +4,11 @@
 //! BEFORE starting work on anything. It returns everything needed to
 //! avoid wasted effort: locks, conflicts, pitfalls, warnings, and decisions.
 
-use axum::{
-    extract::State,
-    response::Json,
-};
+use axum::{extract::State, response::Json};
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::errors::AppError;
 use crate::state::AppState;
@@ -37,7 +34,9 @@ pub async fn consult(
         ));
     }
 
-    let target_uuid = req.target_id.parse::<Uuid>()
+    let target_uuid = req
+        .target_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid target_id".into()))?;
 
     // Check cache first (10 minute TTL)
@@ -55,9 +54,8 @@ pub async fn consult(
     let pitfalls = check_pitfalls(&state, &req.intended_approach).await?;
 
     // Compute recommendation
-    let recommendation = compute_recommendation(
-        &active_locks, &related_prs, &warnings, &pending_decisions,
-    );
+    let recommendation =
+        compute_recommendation(&active_locks, &related_prs, &warnings, &pending_decisions);
 
     let reason = compute_reason(&recommendation, &active_locks, &related_prs, &warnings);
 
@@ -75,7 +73,14 @@ pub async fn consult(
     });
 
     // Cache the result
-    cache_result(&state, &req.agent_id, &req.target_type, target_uuid, &result).await?;
+    cache_result(
+        &state,
+        &req.agent_id,
+        &req.target_type,
+        target_uuid,
+        &result,
+    )
+    .await?;
 
     tracing::info!(
         target_type = %req.target_type,
@@ -224,10 +229,7 @@ async fn check_pending_decisions(
 }
 
 /// Check pitfall-db for relevant pitfalls.
-async fn check_pitfalls(
-    state: &AppState,
-    intended_approach: &str,
-) -> Result<Vec<Value>, AppError> {
+async fn check_pitfalls(state: &AppState, intended_approach: &str) -> Result<Vec<Value>, AppError> {
     let pitfalls: Vec<Value> = sqlx::query_scalar(
         r#"SELECT row_to_json(k) FROM (
                SELECT title, content, language, tags
@@ -273,14 +275,16 @@ fn compute_reason(
 ) -> String {
     match recommendation {
         "wait" => {
-            let lock_holder = active_locks.first()
+            let lock_holder = active_locks
+                .first()
                 .and_then(|l| l.get("agent_id"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
             format!("Target is locked by agent {lock_holder}")
         }
         "reconsider" => {
-            let pr_title = related_prs.first()
+            let pr_title = related_prs
+                .first()
                 .and_then(|p| p.get("title"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
