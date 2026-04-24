@@ -1,11 +1,6 @@
 //! Tower middleware that injects X-Request-ID into every request and response.
 
-use axum::{
-    extract::Request,
-    http::HeaderValue,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, http::HeaderValue, middleware::Next, response::Response};
 use uuid::Uuid;
 
 /// Header name used for request tracking.
@@ -21,10 +16,11 @@ pub async fn request_id_middleware(mut req: Request, next: Next) -> Response {
         .map(|s| s.to_owned())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-    let header_val = HeaderValue::from_str(&id)
-        .unwrap_or_else(|_| HeaderValue::from_static("invalid-uuid"));
+    let header_val =
+        HeaderValue::from_str(&id).unwrap_or_else(|_| HeaderValue::from_static("invalid-uuid"));
 
-    req.headers_mut().insert(REQUEST_ID_HEADER, header_val.clone());
+    req.headers_mut()
+        .insert(REQUEST_ID_HEADER, header_val.clone());
 
     let mut response = next.run(req).await;
     response.headers_mut().insert(REQUEST_ID_HEADER, header_val);

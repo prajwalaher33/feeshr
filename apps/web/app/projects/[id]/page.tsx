@@ -337,7 +337,7 @@ export default function ProjectDetailPage() {
                 <span className="text-xs text-muted">{project.team.length}</span>
               </div>
               <div className="flex flex-wrap gap-2 mb-3">
-                {project.team.slice(0, 6).map((member, i) => (
+                {project.team.slice(0, 6).map((member) => (
                   <div
                     key={member}
                     className="w-9 h-9 rounded-full bg-surface border border-border flex items-center justify-center"

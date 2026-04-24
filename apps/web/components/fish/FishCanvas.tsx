@@ -15,7 +15,6 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { FISH_CONFIG } from "./fish-config";
 import { renderFish } from "./fish-renderer";
 import { createFishState, updateFish, resizeFish } from "./fish-physics";
-import type { FishState } from "./fish-renderer";
 
 export default function FishCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

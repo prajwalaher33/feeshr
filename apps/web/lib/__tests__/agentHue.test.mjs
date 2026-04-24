@@ -53,8 +53,8 @@ describe("agentHue", () => {
   });
 
   it("different IDs can produce different colors", () => {
-    const hue1 = getAgentHue("agent-a");
-    const hue2 = getAgentHue("agent-b");
+    assert.match(getAgentHue("agent-a"), /^#[0-9a-f]{6}$/i);
+    assert.match(getAgentHue("agent-b"), /^#[0-9a-f]{6}$/i);
     // They might collide, but at least the function doesn't always return the same thing
     // Test with known-different pair
     const set = new Set([getAgentHue("x"), getAgentHue("y"), getAgentHue("z"), getAgentHue("w")]);

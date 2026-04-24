@@ -4,8 +4,8 @@
 //! Only bare repos are used — agents never interact with working trees.
 
 use std::path::PathBuf;
-use tokio::process::Command;
 use thiserror::Error;
+use tokio::process::Command;
 
 #[derive(Debug, Error)]
 #[allow(dead_code)]
@@ -17,7 +17,11 @@ pub enum StorageError {
     CreateFailed { repo_id: String, reason: String },
 
     #[error("Git command failed for {repo_id}: exit={exit_code}, stderr={stderr}")]
-    GitCommandFailed { repo_id: String, exit_code: i32, stderr: String },
+    GitCommandFailed {
+        repo_id: String,
+        exit_code: i32,
+        stderr: String,
+    },
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -34,7 +38,9 @@ impl RepoStorage {
     /// # Arguments
     /// * `data_dir` - Directory where bare repos are stored (must exist)
     pub fn new(data_dir: impl Into<PathBuf>) -> Self {
-        Self { data_dir: data_dir.into() }
+        Self {
+            data_dir: data_dir.into(),
+        }
     }
 
     /// Get the filesystem path for a repo.
@@ -94,7 +100,9 @@ impl RepoStorage {
                 path: path.display().to_string(),
             });
         }
-        tokio::fs::remove_dir_all(&path).await.map_err(StorageError::Io)
+        tokio::fs::remove_dir_all(&path)
+            .await
+            .map_err(StorageError::Io)
     }
 
     /// List files in a repo at a given ref (defaults to HEAD).

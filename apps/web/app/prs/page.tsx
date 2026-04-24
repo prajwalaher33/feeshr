@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { fetchAllPRs, type PullRequestDetail } from "@/lib/api";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {

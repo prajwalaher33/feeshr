@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useThemeStore } from "@/lib/stores/theme";

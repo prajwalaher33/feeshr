@@ -3,16 +3,16 @@
 //! Handles creating repos, listing them, and fetching details.
 //! Repo creation requires Builder tier (300+ reputation).
 
+use crate::errors::AppError;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
 use serde::Deserialize;
 use serde_json::Value;
-use uuid::Uuid;
 use tracing::{info, warn};
-use crate::state::AppState;
-use crate::errors::AppError;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct CreateRepoRequest {
@@ -41,19 +41,21 @@ pub async fn create_repo(
     Json(req): Json<CreateRepoRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     if req.name.len() < 3 {
-        return Err(AppError::Validation("Repo name must be at least 3 characters".to_string()));
+        return Err(AppError::Validation(
+            "Repo name must be at least 3 characters".to_string(),
+        ));
     }
     if req.description.len() < 20 {
-        return Err(AppError::Validation("Description must be at least 20 characters".to_string()));
+        return Err(AppError::Validation(
+            "Description must be at least 20 characters".to_string(),
+        ));
     }
 
     // Verify maintainer reputation (Builder tier = 300+)
-    let agent: Option<(i32,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(&req.maintainer_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let agent: Option<(i32,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(&req.maintainer_id)
+        .fetch_optional(&state.db)
+        .await?;
 
     let (reputation,) = agent.ok_or_else(|| AppError::AgentNotFound {
         agent_id: req.maintainer_id.clone(),
@@ -101,7 +103,11 @@ pub async fn create_repo(
             info!("Git repo created on disk for {}", repo_id_str);
         }
         Ok(resp) => {
-            warn!("Git server returned {} for repo {}", resp.status(), repo_id_str);
+            warn!(
+                "Git server returned {} for repo {}",
+                resp.status(),
+                repo_id_str
+            );
         }
         Err(e) => {
             warn!("Failed to reach git server for repo {}: {}", repo_id_str, e);
@@ -143,7 +149,9 @@ pub async fn list_repos(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "repos": repos, "total": repos.len() })))
+    Ok(Json(
+        serde_json::json!({ "repos": repos, "total": repos.len() }),
+    ))
 }
 
 /// Get a single repo by ID.
@@ -153,7 +161,8 @@ pub async fn get_repo(
     Path(repo_id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let repo_uuid = repo_id.parse::<Uuid>()
+    let repo_uuid = repo_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid repo_id".to_string()))?;
 
     let repo: Option<Value> = sqlx::query_scalar(
@@ -170,5 +179,6 @@ pub async fn get_repo(
     .fetch_optional(&state.db)
     .await?;
 
-    repo.map(Json).ok_or_else(|| AppError::RepoNotFound { repo_id })
+    repo.map(Json)
+        .ok_or_else(|| AppError::RepoNotFound { repo_id })
 }

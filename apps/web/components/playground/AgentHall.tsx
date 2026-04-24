@@ -13,6 +13,7 @@ export interface HallAgent {
   name: string;
   reputation: number;
   lastActiveAt: number;
+  status?: "active" | "idle";
 }
 
 export interface HallEdge {
@@ -33,16 +34,16 @@ export interface AgentHallProps {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const MIN_NODE_RADIUS = 10;
-const MAX_NODE_RADIUS = 32;
+const MIN_NODE_RADIUS = 13;
+const MAX_NODE_RADIUS = 38;
 const MAX_REPUTATION = 500;
 const PARTICLE_MAX = 400;
-const PARTICLE_SPEED = 3;
-const PARTICLE_LIFE = 60;
-const FPS_DEGRADE_THRESHOLD = 50;
+const PARTICLE_SPEED = 2.2;
+const PARTICLE_LIFE = 72;
+const FPS_DEGRADE_THRESHOLD = 42;
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 4;
-const ZOOM_STEP = 0.1;
+const ZOOM_STEP = 0.12;
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 
@@ -254,15 +255,15 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
       state.nodeContainer = nodeContainer as unknown as PixiContainer;
 
       const sim = d3.forceSimulation<SimNode>(state.nodes)
-        .force("charge", d3.forceManyBody().strength(-150))
-        .force("center", d3.forceCenter(0, 0).strength(0.04))
-        .force("collision", d3.forceCollide<SimNode>().radius((n: SimNode) => nodeRadius(n.reputation) + 8))
+        .force("charge", d3.forceManyBody().strength(-220))
+        .force("center", d3.forceCenter(0, 0).strength(0.055))
+        .force("collision", d3.forceCollide<SimNode>().radius((n: SimNode) => nodeRadius(n.reputation) + 18))
         .force("link", d3.forceLink<SimNode, SimLink>(state.links)
           .id((d: SimNode) => d.id)
-          .distance(120)
-          .strength((l: SimLink) => Math.min(l.weight / 10, 0.5))
+          .distance(150)
+          .strength((l: SimLink) => Math.min(0.12 + l.weight / 14, 0.56))
         )
-        .alphaDecay(0.015)
+        .alphaDecay(0.02)
         .on("tick", () => {});
 
       if (state.reducedMotion) { sim.tick(300); sim.stop(); }
@@ -277,9 +278,9 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
         // Smooth camera interpolation
         const cam = state.camera;
         const tc = state.targetCamera;
-        cam.x += (tc.x - cam.x) * 0.12;
-        cam.y += (tc.y - cam.y) * 0.12;
-        cam.zoom += (tc.zoom - cam.zoom) * 0.12;
+        cam.x += (tc.x - cam.x) * 0.09;
+        cam.y += (tc.y - cam.y) * 0.09;
+        cam.zoom += (tc.zoom - cam.zoom) * 0.09;
 
         worldContainer.position.set(
           state.size.width / 2 + cam.x * cam.zoom,
@@ -350,7 +351,7 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
     state.sim.nodes(newNodes);
     const linkForce = state.sim.force("link");
     if (linkForce) linkForce.links(newLinks);
-    state.sim.alpha(0.3).restart();
+    state.sim.alpha(0.24).restart();
   }, [agents, edges]);
 
   // Spawn particles
@@ -473,10 +474,12 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
           }
           break;
         case "=": case "+":
-          if (e.metaKey || e.ctrlKey) { e.preventDefault(); state.targetCamera.zoom = Math.min(ZOOM_MAX, state.targetCamera.zoom + ZOOM_STEP * 3); }
+          e.preventDefault();
+          state.targetCamera.zoom = Math.min(ZOOM_MAX, state.targetCamera.zoom + ZOOM_STEP * 3);
           break;
         case "-":
-          if (e.metaKey || e.ctrlKey) { e.preventDefault(); state.targetCamera.zoom = Math.max(ZOOM_MIN, state.targetCamera.zoom - ZOOM_STEP * 3); }
+          e.preventDefault();
+          state.targetCamera.zoom = Math.max(ZOOM_MIN, state.targetCamera.zoom - ZOOM_STEP * 3);
           break;
       }
     };
@@ -485,53 +488,61 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
   }, [pinnedId]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.06),transparent_45%)]">
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
-        className="w-full h-full cursor-grab"
+        className="h-full w-full cursor-grab active:cursor-grabbing"
         role="application"
         aria-label={`Agent Hall: ${agents.length} agents. Arrow keys to pan, +/- to zoom, F to frame, click to inspect.`}
         tabIndex={0}
       />
 
+      <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/40 backdrop-blur-xl">
+        observation only
+      </div>
+
       {/* Hover card */}
       {hoveredAgent && (
         <div
-          className="fixed z-10 px-3 py-2 rounded-lg border border-white/[0.08] pointer-events-none"
-          style={{ left: hoverPos.x + 14, top: hoverPos.y - 10, background: "#111418" }}
+          className="pointer-events-none fixed z-10 rounded-2xl border border-white/10 bg-[#11141b]/90 px-3.5 py-3 shadow-2xl backdrop-blur-xl"
+          style={{ left: hoverPos.x + 14, top: hoverPos.y - 10 }}
         >
           <div className="flex items-center gap-2 mb-1">
             <AgentHueDot agentId={hoveredAgent.id} size={8} glow />
-            <span className="text-sm font-semibold text-[#f0f2f8]">{hoveredAgent.name}</span>
+            <span className="text-sm font-semibold tracking-[-0.02em] text-white">{hoveredAgent.name}</span>
           </div>
-          <span className="text-[11px] font-mono text-[#5a6478]">
+          <span className="font-mono text-[11px] text-white/45">
             rep {hoveredAgent.reputation}
           </span>
         </div>
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-3 left-4 flex flex-col gap-1.5 px-3 py-2 rounded-lg bg-[#0c1017]/80 border border-white/[0.04] backdrop-blur-sm">
-        <span className="text-[9px] font-medium uppercase tracking-wider text-[#3d4556]">Legend</span>
+      <div className="absolute bottom-4 left-4 flex flex-col gap-2 rounded-2xl border border-white/10 bg-black/25 px-3.5 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Legend</span>
         <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full bg-[#3d4556]" />
-          <span className="text-[10px] text-[#5a6478]">Node size = reputation</span>
+          <span className="inline-block h-3 w-3 rounded-full bg-white/45 shadow-[0_0_0_5px_rgba(255,255,255,0.06)]" />
+          <span className="text-[10px] text-white/45">Node size = reputation</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-block w-4 h-[2px] bg-[#5a6478]" />
-          <span className="text-[10px] text-[#5a6478]">Edge weight = interactions</span>
+          <span className="inline-block h-[2px] w-5 rounded-full bg-white/45" />
+          <span className="text-[10px] text-white/45">Edge weight = interactions</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10px] text-white/35">↑↓←→ / +/-</span>
+          <span className="text-[10px] text-white/35">pan and zoom</span>
         </div>
       </div>
 
       {/* Mode + FPS (minimal) */}
-      <div className="absolute top-3 right-4 flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0c1017]/60 backdrop-blur-sm">
+      <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 backdrop-blur-xl">
         <span className={`w-1.5 h-1.5 rounded-full ${mode === "live" ? "bg-[#3BD01F]" : mode === "scenario" ? "bg-[#5B8DEF]" : "bg-[#E8B339]"}`} />
-        <span className="text-[9px] uppercase font-mono text-[#3d4556]">{mode}</span>
-        <span className="text-[9px] font-mono text-[#2A3138]">{fpsDisplay}fps</span>
+        <span className="font-mono text-[9px] uppercase text-white/45">{mode}</span>
+        <span className="font-mono text-[9px] text-white/25">{fpsDisplay}fps</span>
       </div>
     </div>
   );
@@ -553,8 +564,8 @@ function renderEdges(state: HallState) {
     if (!src || !tgt) continue;
 
     const color = hexToNum(getAgentHue(link.initiatorId));
-    const alpha = 0.12 + Math.min(link.weight / 10, 0.35);
-    const width = 0.8 + Math.min(link.weight / 5, 2.5);
+    const alpha = 0.10 + Math.min(link.weight / 10, 0.38);
+    const width = 1 + Math.min(link.weight / 4, 3.2);
 
     gfx.lineStyle(width, color, alpha);
     gfx.moveTo(src.x, src.y);
@@ -621,9 +632,9 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
       s.addChild(bg);
       (s as unknown as PixiNodeSprite)._bg = bg;
 
-      // Initials label (centered in circle)
+      // Initials form the avatar. They keep identities legible in video.
       const label = new PIXI.Text(getInitials(node.name), {
-        fontFamily: "JetBrains Mono, monospace",
+        fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Text, ui-sans-serif, sans-serif",
         fontSize: 11,
         fill: hexToNum(rawColor.ink0),
         align: "center",
@@ -635,7 +646,7 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
 
       // Name label below node
       const nameLabel = new PIXI.Text(node.name, {
-        fontFamily: "Inter, system-ui, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Text, ui-sans-serif, sans-serif",
         fontSize: 10,
         fill: hexToNum(rawColor.ink2),
         align: "center",
@@ -659,20 +670,26 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
     const bg = sprite._bg;
     bg.clear();
 
-    // Outer glow for hovered
+    // Soft aura keeps selected/hovered nodes readable on recorded video.
     if (isHovered) {
-      bg.beginFill(hueColor, 0.08);
-      bg.drawCircle(0, 0, r + 6);
+      bg.beginFill(hueColor, 0.12);
+      bg.drawCircle(0, 0, r + 10);
       bg.endFill();
     }
 
-    // Node fill
-    bg.beginFill(hexToNum(rawColor.bg2));
+    bg.beginFill(hueColor, isHovered ? 0.18 : 0.10);
+    bg.drawCircle(0, 0, r + 4);
+    bg.endFill();
+
+    bg.beginFill(hexToNum(rawColor.bg2), 0.95);
     bg.drawCircle(0, 0, r);
     bg.endFill();
 
-    // Node ring
-    bg.lineStyle(sw, hueColor, isHovered ? 1 : 0.7);
+    bg.beginFill(hueColor, 0.18);
+    bg.drawCircle(0, 0, Math.max(7, r * 0.54));
+    bg.endFill();
+
+    bg.lineStyle(sw, hueColor, isHovered ? 1 : 0.72);
     bg.drawCircle(0, 0, r);
 
     sprite._label.style.fontSize = Math.max(9, r * 0.55);

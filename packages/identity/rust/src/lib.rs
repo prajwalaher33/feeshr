@@ -14,8 +14,8 @@ pub mod pq_identity;
 use hmac::{Hmac, Mac};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use sha3::Sha3_256;
 use sha3::Digest;
+use sha3::Sha3_256;
 use thiserror::Error;
 
 type HmacSha3_256 = Hmac<Sha3_256>;
@@ -219,18 +219,21 @@ mod tests {
 
     #[test]
     fn test_create_unique_ids() {
-        let id1 = AgentIdentity::create("agent-one", vec!["python".into()]).unwrap();
-        let id2 = AgentIdentity::create("agent-one", vec!["python".into()]).unwrap();
-        assert_ne!(id1.agent_id, id2.agent_id, "Two identities must have different agent_ids");
+        let id1 = AgentIdentity::create("agent-one", vec!["python".into()]).expect("identity");
+        let id2 = AgentIdentity::create("agent-one", vec!["python".into()]).expect("identity");
+        assert_ne!(
+            id1.agent_id, id2.agent_id,
+            "Two identities must have different agent_ids"
+        );
         assert_eq!(id1.agent_id.len(), 64, "agent_id must be 64 hex chars");
         assert_eq!(id2.agent_id.len(), 64);
     }
 
     #[test]
     fn test_sign_verify_roundtrip() {
-        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).unwrap();
+        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).expect("identity");
         let payload = b"hello feeshr";
-        let signature = identity.sign(payload).unwrap();
+        let signature = identity.sign(payload).expect("signature");
         let pubmat = identity.public_material();
 
         let result = AgentIdentity::verify(&identity.agent_id, payload, &signature, &pubmat);
@@ -239,17 +242,18 @@ mod tests {
 
     #[test]
     fn test_verify_wrong_payload() {
-        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).unwrap();
-        let signature = identity.sign(b"original payload").unwrap();
+        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).expect("identity");
+        let signature = identity.sign(b"original payload").expect("signature");
         let pubmat = identity.public_material();
 
-        let result = AgentIdentity::verify(&identity.agent_id, b"tampered payload", &signature, &pubmat);
+        let result =
+            AgentIdentity::verify(&identity.agent_id, b"tampered payload", &signature, &pubmat);
         assert!(result.is_err(), "Tampered payload should fail verification");
     }
 
     #[test]
     fn test_verify_wrong_signature() {
-        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).unwrap();
+        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).expect("identity");
         let payload = b"test payload";
         let pubmat = identity.public_material();
 
@@ -260,11 +264,15 @@ mod tests {
 
     #[test]
     fn test_sign_is_deterministic() {
-        let identity = AgentIdentity::create("test-agent", vec!["python".into()]).unwrap();
+        let identity =
+            AgentIdentity::create("test-agent", vec!["python".into()]).expect("identity");
         let payload = b"deterministic test";
-        let sig1 = identity.sign(payload).unwrap();
-        let sig2 = identity.sign(payload).unwrap();
-        assert_eq!(sig1, sig2, "Same key + same payload must produce same signature");
+        let sig1 = identity.sign(payload).expect("first signature");
+        let sig2 = identity.sign(payload).expect("second signature");
+        assert_eq!(
+            sig1, sig2,
+            "Same key + same payload must produce same signature"
+        );
     }
 
     #[test]
@@ -288,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_public_material_consistent() {
-        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).unwrap();
+        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).expect("identity");
         let pm1 = identity.public_material();
         let pm2 = identity.public_material();
         assert_eq!(pm1, pm2, "Public material must be deterministic");
@@ -296,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_agent_id_matches_public_material() {
-        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).unwrap();
+        let identity = AgentIdentity::create("test-agent", vec!["rust".into()]).expect("identity");
         let pm = identity.public_material();
         let expected_id = hex::encode(pm);
         // agent_id is SHA3-256 of (secret + name), which is the same as public_material
@@ -305,8 +313,8 @@ mod tests {
 
     #[test]
     fn test_different_agents_different_keys() {
-        let id1 = AgentIdentity::create("agent-a", vec!["python".into()]).unwrap();
-        let id2 = AgentIdentity::create("agent-b", vec!["rust".into()]).unwrap();
+        let id1 = AgentIdentity::create("agent-a", vec!["python".into()]).expect("first identity");
+        let id2 = AgentIdentity::create("agent-b", vec!["rust".into()]).expect("second identity");
         assert_ne!(id1.secret_key, id2.secret_key);
         assert_ne!(id1.agent_id, id2.agent_id);
     }

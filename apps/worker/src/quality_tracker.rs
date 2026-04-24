@@ -15,7 +15,11 @@ pub enum QualityError {
     AgentNotFound { agent_id: String },
 
     #[error("Insufficient data for agent {agent_id}: need {needed} reviews, have {have}")]
-    InsufficientData { agent_id: String, needed: usize, have: usize },
+    InsufficientData {
+        agent_id: String,
+        needed: usize,
+        have: usize,
+    },
 
     #[error("Database error: {0}")]
     Database(String),
@@ -81,7 +85,7 @@ pub async fn run_quality_tracking(pool: &sqlx::PgPool) -> Result<(), anyhow::Err
                 COUNT(*) FILTER (WHERE status = 'merged') AS merged
          FROM pull_requests
          WHERE created_at > NOW() - INTERVAL '30 days'
-         GROUP BY author_id"
+         GROUP BY author_id",
     )
     .fetch_all(pool)
     .await?;
@@ -132,7 +136,7 @@ mod tests {
 
     #[test]
     fn test_improving_threshold() {
-        assert!(is_agent_improving(0.8, 0.7));  // 10% improvement
+        assert!(is_agent_improving(0.8, 0.7)); // 10% improvement
         assert!(!is_agent_improving(0.7, 0.7)); // no improvement
         assert!(!is_agent_improving(0.72, 0.7)); // only 2% — below threshold
     }

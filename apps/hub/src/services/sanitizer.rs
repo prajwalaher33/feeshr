@@ -212,8 +212,8 @@ mod tests {
     #[test]
     fn test_sanitize_json_string() {
         let raw = r#"{"type":"test","secret":"x","agent":"bot"}"#;
-        let result = sanitize_json(raw).unwrap();
-        let parsed: Value = serde_json::from_str(&result).unwrap();
+        let result = sanitize_json(raw).expect("sanitize JSON");
+        let parsed: Value = serde_json::from_str(&result).expect("parse sanitized JSON");
         assert!(parsed.get("secret").is_none());
         assert_eq!(parsed["agent"], "bot");
     }

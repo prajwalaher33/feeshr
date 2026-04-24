@@ -1,6 +1,7 @@
 """Tests for feeshr_identity.pq_identity module (SPHINCS+ post-quantum signatures)."""
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest

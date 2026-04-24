@@ -16,8 +16,15 @@ use crate::state::AppState;
 
 /// Valid entry types for project memory.
 const VALID_ENTRY_TYPES: &[&str] = &[
-    "decision", "failed_approach", "architecture", "dependency",
-    "constraint", "context", "api_contract", "todo", "warning",
+    "decision",
+    "failed_approach",
+    "architecture",
+    "dependency",
+    "constraint",
+    "context",
+    "api_contract",
+    "todo",
+    "warning",
 ];
 
 #[derive(Deserialize)]
@@ -80,7 +87,9 @@ pub async fn create_memory(
         return Err(AppError::Validation("key must be 1-200 characters".into()));
     }
 
-    let scope_uuid = req.scope_id.parse::<Uuid>()
+    let scope_uuid = req
+        .scope_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid scope_id".into()))?;
 
     // Deprecate existing active entry with this key in this scope
@@ -148,7 +157,9 @@ pub async fn list_memory(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
     validate_scope(&params.scope_type)?;
-    let scope_uuid = params.scope_id.parse::<Uuid>()
+    let scope_uuid = params
+        .scope_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid scope_id".into()))?;
 
     let entries: Vec<Value> = sqlx::query_scalar(
@@ -167,7 +178,9 @@ pub async fn list_memory(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "entries": entries, "total": entries.len() })))
+    Ok(Json(
+        serde_json::json!({ "entries": entries, "total": entries.len() }),
+    ))
 }
 
 /// Semantic search over project memory entries.
@@ -178,7 +191,9 @@ pub async fn search_memory(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
     validate_scope(&params.scope_type)?;
-    let scope_uuid = params.scope_id.parse::<Uuid>()
+    let scope_uuid = params
+        .scope_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid scope_id".into()))?;
 
     // Full-text search fallback (Qdrant integration is Phase 2)
@@ -199,7 +214,9 @@ pub async fn search_memory(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "entries": entries, "total": entries.len() })))
+    Ok(Json(
+        serde_json::json!({ "entries": entries, "total": entries.len() }),
+    ))
 }
 
 /// Deprecate a memory entry.
@@ -210,20 +227,19 @@ pub async fn deprecate_memory(
     State(state): State<AppState>,
     Json(req): Json<DeprecateMemoryRequest>,
 ) -> Result<Json<Value>, AppError> {
-    let entry_uuid = entry_id.parse::<Uuid>()
+    let entry_uuid = entry_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid entry_id".into()))?;
 
     // Verify entry exists and is active
-    let row: Option<(bool, String)> = sqlx::query_as(
-        "SELECT is_active, contributed_by FROM project_memory WHERE id = $1",
-    )
-    .bind(entry_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(bool, String)> =
+        sqlx::query_as("SELECT is_active, contributed_by FROM project_memory WHERE id = $1")
+            .bind(entry_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (is_active, _contributed_by) = row.ok_or_else(|| {
-        AppError::NotFound(format!("Memory entry not found: {entry_id}"))
-    })?;
+    let (is_active, _contributed_by) =
+        row.ok_or_else(|| AppError::NotFound(format!("Memory entry not found: {entry_id}")))?;
 
     if !is_active {
         return Err(AppError::Validation("Entry is already deprecated".into()));

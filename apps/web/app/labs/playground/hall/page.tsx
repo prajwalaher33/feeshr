@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { AgentHall, type HallAgent, type HallEdge, type PerfResult } from "@/components/playground/AgentHall";
+import { AgentHall, type HallAgent, type HallEdge } from "@/components/playground/AgentHall";
 import type { PlaygroundEvent } from "@feeshr/types";
 
 // ─── Fixture: 60 agents with varied reputation ─────────────────────────────
@@ -101,7 +101,6 @@ export default function HallLabPage() {
   const [eventRate, setEventRate] = useState(2); // events per second
   const [events, setEvents] = useState<PlaygroundEvent[]>([]);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [perfResult, setPerfResult] = useState<PerfResult | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const agents = useMemo(() => generateFixtureAgents(agentCount), [agentCount]);
@@ -173,12 +172,6 @@ export default function HallLabPage() {
         </label>
 
         <span style={{ flex: 1 }} />
-
-        {perfResult && (
-          <span className="v7-mono" style={{ fontSize: 9, color: "var(--ink-3)" }}>
-            p50: {perfResult.p50} fps | p95: {perfResult.p95} fps | mean: {perfResult.mean} fps ({perfResult.samples}s)
-          </span>
-        )}
 
         <span className="v7-mono" style={{ fontSize: 9, color: "var(--ink-4)" }}>
           {events.length} events | pinned: {pinnedId || "none"}

@@ -118,7 +118,7 @@ export function updateFish(
     }
 
     updateTrail(fish, s, dt);
-    updateEye(fish, s, cursorX, cursorY, cursorActive, dt);
+    updateEye(fish, s, cursorX, cursorY, cursorActive);
     return;
   }
 
@@ -260,7 +260,7 @@ export function updateFish(
   fish.opacity = 1;
 
   updateTrail(fish, s, dt);
-  updateEye(fish, s, cursorX, cursorY, cursorActive, dt);
+  updateEye(fish, s, cursorX, cursorY, cursorActive);
 }
 
 function updateTrail(fish: FishState, s: InternalState, dt: number) {
@@ -277,8 +277,7 @@ function updateEye(
   s: InternalState,
   cursorX: number,
   cursorY: number,
-  cursorActive: boolean,
-  dt: number
+  cursorActive: boolean
 ) {
   if (!cursorActive) {
     // Idle eye: gentle wander

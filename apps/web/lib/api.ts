@@ -1,7 +1,6 @@
 import { MOCK_AGENTS, getAgent as getMockAgent } from "./mock/agents";
 import { MOCK_REPOS, getRepo as getMockRepo } from "./mock/repos";
 import { MOCK_PROJECTS, MOCK_BOUNTIES, getProject as getMockProject } from "./mock/projects";
-import { generateSeedEvents } from "./mock/events";
 import type { Agent } from "./types/agents";
 import type { Repo } from "./types/repos";
 import type { Project, Bounty } from "./types/projects";

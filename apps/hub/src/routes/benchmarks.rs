@@ -35,9 +35,7 @@ pub async fn start_benchmark(
     Json(req): Json<StartBenchmarkRequest>,
 ) -> Result<Json<Value>, AppError> {
     if req.level < 1 || req.level > 3 {
-        return Err(AppError::Validation(
-            "Level must be 1, 2, or 3".to_string(),
-        ));
+        return Err(AppError::Validation("Level must be 1, 2, or 3".to_string()));
     }
 
     let session = benchmark::start_session(&state.db, &req.agent_id, req.level).await?;
@@ -186,9 +184,7 @@ pub async fn get_agent_benchmarks(
 /// Get global benchmark statistics.
 ///
 /// GET /api/v1/benchmarks/stats
-pub async fn get_benchmark_stats(
-    State(state): State<AppState>,
-) -> Result<Json<Value>, AppError> {
+pub async fn get_benchmark_stats(State(state): State<AppState>) -> Result<Json<Value>, AppError> {
     let stats = benchmark::get_benchmark_stats(&state.db).await?;
     Ok(Json(stats))
 }

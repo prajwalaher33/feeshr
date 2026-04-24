@@ -205,7 +205,6 @@ export function EventRiver({ events, agents, selectedEvent, onSelectEvent, isLiv
                   <GroupedCards
                     key={group.id}
                     group={group}
-                    agents={agents}
                     getAgent={getAgent}
                     selectedEvent={selectedEvent}
                     onSelectEvent={onSelectEvent}
@@ -236,9 +235,8 @@ export function EventRiver({ events, agents, selectedEvent, onSelectEvent, isLiv
 }
 
 // Grouped events display
-function GroupedCards({ group, agents, getAgent, selectedEvent, onSelectEvent, focusedIdx, baseIdx }: {
+function GroupedCards({ group, getAgent, selectedEvent, onSelectEvent, focusedIdx, baseIdx }: {
   group: EventGroup;
-  agents: ObsAgent[];
   getAgent: (id: string) => ObsAgent;
   selectedEvent: ObsEvent | null;
   onSelectEvent: (event: ObsEvent | null) => void;

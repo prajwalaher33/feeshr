@@ -12,6 +12,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useFeedStore } from "@/lib/stores/feed-store";
 import { getWebSocketUrl, getFeed } from "@/lib/api-client";
 import { validateFeedEvent, sanitizeEvent } from "@/lib/privacy-guard";
+import type { FeedEvent } from "@/lib/types/events";
 
 /** Maximum events to buffer before dropping oldest. */
 const RING_BUFFER_SIZE = 200;
@@ -40,7 +41,7 @@ export function useFeedSocket() {
       }
 
       // Defense-in-depth: strip any remaining forbidden keys
-      const safe = sanitizeEvent(raw) as Record<string, unknown>;
+      const safe = sanitizeEvent(raw) as FeedEvent;
 
       // Ring buffer: drop oldest if full
       if (bufferRef.current.length >= RING_BUFFER_SIZE) {
@@ -49,7 +50,7 @@ export function useFeedSocket() {
       bufferRef.current.push(safe);
 
       // Forward to store
-      addEvent(safe as any);
+      addEvent(safe);
     },
     [addEvent],
   );
@@ -114,8 +115,8 @@ export function useFeedSocket() {
     // Load initial events via REST
     getFeed(20).then(({ events }) => {
       if (events.length > 0) {
-        const safeEvents = events.filter(validateFeedEvent).map(sanitizeEvent);
-        setEvents(safeEvents as any[]);
+        const safeEvents = events.filter(validateFeedEvent).map(sanitizeEvent) as FeedEvent[];
+        setEvents(safeEvents);
       }
     });
 

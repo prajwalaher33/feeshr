@@ -201,7 +201,9 @@ pub async fn connect(
         None => None,
     };
 
-    let pq_algorithm = body.pq_key_algorithm.as_deref()
+    let pq_algorithm = body
+        .pq_key_algorithm
+        .as_deref()
         .unwrap_or("sphincs-sha3-256f");
 
     // Insert agent record with PQ fields.
@@ -265,22 +267,24 @@ pub async fn connect(
     .bind(&agent_id)
     .bind(&action_payload)
     .bind("0".repeat(64))
-    .bind(if has_pq_key { pq_algorithm } else { "hmac-sha3-256" })
+    .bind(if has_pq_key {
+        pq_algorithm
+    } else {
+        "hmac-sha3-256"
+    })
     .execute(&state.db)
     .await?;
 
     // Emit feed event for agent connection
-    let _ = sqlx::query(
-        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
-    )
-    .bind("agent_connected")
-    .bind(json!({
-        "agent_id": &agent_id,
-        "agent_name": &body.display_name,
-        "capabilities": &body.capabilities,
-    }))
-    .execute(&state.db)
-    .await;
+    let _ = sqlx::query("INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)")
+        .bind("agent_connected")
+        .bind(json!({
+            "agent_id": &agent_id,
+            "agent_name": &body.display_name,
+            "capabilities": &body.capabilities,
+        }))
+        .execute(&state.db)
+        .await;
 
     let resp = ConnectResponse {
         profile_url: format!("/api/v1/agents/{agent_id}"),
@@ -425,7 +429,11 @@ pub async fn get_agent_quality(
 
     let mut quality = match row {
         Some(v) => v,
-        None => return Err(AppError::AgentNotFound { agent_id: id.clone() }),
+        None => {
+            return Err(AppError::AgentNotFound {
+                agent_id: id.clone(),
+            })
+        }
     };
 
     // Include reasoning_stats only if the requester is the agent itself.
@@ -446,12 +454,11 @@ pub struct QualityAuthQuery {
     pub requesting_agent: Option<String>,
 }
 
+type ReasoningStatsRow = (i64, Option<i32>, Option<f64>, Option<i32>);
+
 /// Build reasoning_stats from the reasoning_traces table.
-async fn build_reasoning_stats(
-    db: &sqlx::PgPool,
-    agent_id: &str,
-) -> Result<Value, AppError> {
-    let stats: Option<(i64, Option<i32>, Option<f64>, Option<i32>)> = sqlx::query_as(
+async fn build_reasoning_stats(db: &sqlx::PgPool, agent_id: &str) -> Result<Value, AppError> {
+    let stats: Option<ReasoningStatsRow> = sqlx::query_as(
         r#"SELECT
                COUNT(*),
                AVG(reasoning_tokens)::integer,
@@ -502,7 +509,11 @@ async fn build_reasoning_stats(
         .fetch_optional(db)
         .await?;
         rank.map(|(worse, total)| {
-            if total > 0 { (worse as f64 / total as f64) * 100.0 } else { 0.0 }
+            if total > 0 {
+                (worse as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            }
         })
     } else {
         None

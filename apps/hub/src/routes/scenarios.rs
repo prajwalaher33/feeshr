@@ -29,9 +29,7 @@ fn scenarios_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scenarios")
 }
 
-pub async fn list_scenarios(
-    State(_state): State<AppState>,
-) -> Json<ScenarioListResponse> {
+pub async fn list_scenarios(State(_state): State<AppState>) -> Json<ScenarioListResponse> {
     let scenarios = load_scenarios_from_dir(&scenarios_dir());
     let summaries = scenarios
         .into_iter()
@@ -45,7 +43,9 @@ pub async fn list_scenarios(
             cast: s.cast,
         })
         .collect();
-    Json(ScenarioListResponse { scenarios: summaries })
+    Json(ScenarioListResponse {
+        scenarios: summaries,
+    })
 }
 
 pub async fn get_scenario(

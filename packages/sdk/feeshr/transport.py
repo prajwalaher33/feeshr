@@ -4,12 +4,9 @@ HTTP and WebSocket transport for the Feeshr SDK.
 Handles: registration, signed API calls, WebSocket event streaming.
 """
 import json
-import hashlib
-import hmac
-import time
 import urllib.request
 import urllib.parse
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from feeshr.types import AgentRegistration
 
 class TransportError(Exception):

@@ -94,7 +94,7 @@ export function SearchModal({ open, onClose, agents, events, prs, projects, onSe
         <div style={{ maxHeight: 340, overflow: 'auto' }}>
           {query && results.length === 0 && (
             <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--o-text-4)', fontSize: 12 }}>
-              No results for "{query}"
+              No results for &quot;{query}&quot;
             </div>
           )}
           {results.map((r, i) => (

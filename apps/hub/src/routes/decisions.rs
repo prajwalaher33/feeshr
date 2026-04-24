@@ -7,10 +7,10 @@ use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::errors::AppError;
 use crate::state::AppState;
@@ -49,7 +49,9 @@ pub async fn create_decision(
 ) -> Result<Json<Value>, AppError> {
     validate_decision_input(&req)?;
 
-    let scope_uuid = req.scope_id.parse::<Uuid>()
+    let scope_uuid = req
+        .scope_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid scope_id".into()))?;
 
     // Check Builder tier (rep >= 300)
@@ -92,13 +94,19 @@ pub async fn create_decision(
 /// Validate decision creation input.
 fn validate_decision_input(req: &CreateDecisionRequest) -> Result<(), AppError> {
     if !["project", "repo"].contains(&req.scope_type.as_str()) {
-        return Err(AppError::Validation("scope_type must be 'project' or 'repo'".into()));
+        return Err(AppError::Validation(
+            "scope_type must be 'project' or 'repo'".into(),
+        ));
     }
     if req.title.len() < 10 || req.title.len() > 200 {
-        return Err(AppError::Validation("Title must be 10-200 characters".into()));
+        return Err(AppError::Validation(
+            "Title must be 10-200 characters".into(),
+        ));
     }
     if req.context.len() < 50 {
-        return Err(AppError::Validation("Context must be at least 50 characters".into()));
+        return Err(AppError::Validation(
+            "Context must be at least 50 characters".into(),
+        ));
     }
     if req.options.len() < 2 || req.options.len() > 5 {
         return Err(AppError::Validation("Must have 2-5 options".into()));
@@ -108,15 +116,13 @@ fn validate_decision_input(req: &CreateDecisionRequest) -> Result<(), AppError> 
 
 /// Check agent has Builder tier (reputation >= 300).
 async fn check_builder_auth(state: &AppState, agent_id: &str) -> Result<(), AppError> {
-    let row: Option<(i64,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(agent_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(i64,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(agent_id)
+        .fetch_optional(&state.db)
+        .await?;
 
-    let (reputation,) = row.ok_or_else(|| {
-        AppError::AgentNotFound { agent_id: agent_id.into() }
+    let (reputation,) = row.ok_or_else(|| AppError::AgentNotFound {
+        agent_id: agent_id.into(),
     })?;
 
     if reputation < 300 {
@@ -136,7 +142,9 @@ pub async fn list_decisions(
     Query(params): Query<ListDecisionsQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
-    let scope_uuid = params.scope_id.as_deref()
+    let scope_uuid = params
+        .scope_id
+        .as_deref()
         .map(|s| s.parse::<Uuid>())
         .transpose()
         .map_err(|_| AppError::Validation("Invalid scope_id".into()))?;
@@ -159,7 +167,9 @@ pub async fn list_decisions(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "decisions": decisions, "total": decisions.len() })))
+    Ok(Json(
+        serde_json::json!({ "decisions": decisions, "total": decisions.len() }),
+    ))
 }
 
 /// Cast a weighted vote on a decision.
@@ -170,27 +180,30 @@ pub async fn cast_vote(
     State(state): State<AppState>,
     Json(req): Json<CastVoteRequest>,
 ) -> Result<Json<Value>, AppError> {
-    let decision_uuid = decision_id.parse::<Uuid>()
+    let decision_uuid = decision_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid decision_id".into()))?;
 
     if req.reasoning.len() < 20 {
-        return Err(AppError::Validation("Reasoning must be at least 20 characters".into()));
+        return Err(AppError::Validation(
+            "Reasoning must be at least 20 characters".into(),
+        ));
     }
 
     // Verify decision is open/voting
-    let row: Option<(String,)> = sqlx::query_as(
-        "SELECT status FROM technical_decisions WHERE id = $1",
-    )
-    .bind(decision_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT status FROM technical_decisions WHERE id = $1")
+            .bind(decision_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (status,) = row.ok_or_else(|| {
-        AppError::NotFound(format!("Decision not found: {decision_id}"))
-    })?;
+    let (status,) =
+        row.ok_or_else(|| AppError::NotFound(format!("Decision not found: {decision_id}")))?;
 
     if status != "open" && status != "voting" {
-        return Err(AppError::Validation(format!("Decision is not open for voting (status: {status})")));
+        return Err(AppError::Validation(format!(
+            "Decision is not open for voting (status: {status})"
+        )));
     }
 
     // Compute vote weight from agent's reputation
@@ -212,7 +225,9 @@ pub async fn cast_vote(
     .map_err(|e| {
         if let Some(db_err) = e.as_database_error() {
             if db_err.is_unique_violation() {
-                return AppError::Conflict { message: "Agent has already voted on this decision".into() };
+                return AppError::Conflict {
+                    message: "Agent has already voted on this decision".into(),
+                };
             }
         }
         AppError::Database(e)
@@ -240,15 +255,13 @@ pub async fn cast_vote(
 
 /// Compute vote weight from agent's reputation (reputation / 100, min 1.0).
 async fn compute_vote_weight(state: &AppState, agent_id: &str) -> Result<f64, AppError> {
-    let row: Option<(i64,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(agent_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(i64,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(agent_id)
+        .fetch_optional(&state.db)
+        .await?;
 
-    let (reputation,) = row.ok_or_else(|| {
-        AppError::AgentNotFound { agent_id: agent_id.into() }
+    let (reputation,) = row.ok_or_else(|| AppError::AgentNotFound {
+        agent_id: agent_id.into(),
     })?;
 
     Ok((reputation as f64 / 100.0).max(1.0))
@@ -261,7 +274,8 @@ pub async fn resolve_decision(
     Path(decision_id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
-    let decision_uuid = decision_id.parse::<Uuid>()
+    let decision_uuid = decision_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid decision_id".into()))?;
 
     // Get votes grouped by option
@@ -307,12 +321,11 @@ pub async fn resolve_decision(
     .await?;
 
     // Auto-create project memory entry
-    let decision_row: Option<(String, Uuid, String)> = sqlx::query_as(
-        "SELECT scope_type, scope_id, title FROM technical_decisions WHERE id = $1",
-    )
-    .bind(decision_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let decision_row: Option<(String, Uuid, String)> =
+        sqlx::query_as("SELECT scope_type, scope_id, title FROM technical_decisions WHERE id = $1")
+            .bind(decision_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
     if let Some((scope_type, scope_id, title)) = decision_row {
         let mem_id = Uuid::new_v4();
@@ -356,7 +369,8 @@ fn tally_votes(votes: &[(String, f64, String)]) -> (String, String) {
 
     for (option_id, weight, reasoning) in votes {
         *sums.entry(option_id.as_str()).or_default() += weight;
-        top_reasoning.entry(option_id.as_str())
+        top_reasoning
+            .entry(option_id.as_str())
             .or_default()
             .push((reasoning.as_str(), *weight));
     }
@@ -364,14 +378,21 @@ fn tally_votes(votes: &[(String, f64, String)]) -> (String, String) {
     let mut ranked: Vec<_> = sums.iter().collect();
     ranked.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    let winner = ranked.first().map(|(k, _)| k.to_string()).unwrap_or_default();
+    let winner = ranked
+        .first()
+        .map(|(k, _)| k.to_string())
+        .unwrap_or_default();
     let winner_sum = ranked.first().map(|(_, v)| **v).unwrap_or(0.0);
 
-    let runner_up = ranked.get(1).map(|(k, v)| format!("Runner-up: '{}' ({:.1})", k, v));
+    let runner_up = ranked
+        .get(1)
+        .map(|(k, v)| format!("Runner-up: '{}' ({:.1})", k, v));
 
-    let top_args: String = top_reasoning.get(winner.as_str())
+    let top_args: String = top_reasoning
+        .get(winner.as_str())
         .map(|reasons| {
-            reasons.iter()
+            reasons
+                .iter()
                 .take(2)
                 .map(|(r, _)| format!("\"{}\"", truncate(r, 100)))
                 .collect::<Vec<_>>()

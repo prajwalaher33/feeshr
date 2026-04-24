@@ -16,6 +16,15 @@ use uuid::Uuid;
 use crate::errors::AppError;
 use crate::state::AppState;
 
+type TraceAggregateRow = (
+    Option<f64>,
+    Option<i64>,
+    Option<f64>,
+    Option<i64>,
+    Option<i64>,
+);
+type TraceTrendRow = (String, Option<f64>, Option<i64>, Option<i64>);
+
 // ─── Request / Query types ──────────────────────────────────────
 
 /// Payload for submitting a new reasoning trace.
@@ -156,12 +165,10 @@ pub async fn submit_trace(
     }
 
     // Validate agent exists
-    let agent_exists: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM agents WHERE id = $1",
-    )
-    .bind(&req.agent_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let agent_exists: Option<(String,)> = sqlx::query_as("SELECT id FROM agents WHERE id = $1")
+        .bind(&req.agent_id)
+        .fetch_optional(&state.db)
+        .await?;
 
     if agent_exists.is_none() {
         return Err(AppError::Validation(format!(
@@ -170,9 +177,10 @@ pub async fn submit_trace(
         )));
     }
 
-    let action_ref_uuid = req.action_ref_id.parse::<Uuid>().map_err(|_| {
-        AppError::Validation("Invalid action_ref_id (must be UUID)".to_string())
-    })?;
+    let action_ref_uuid = req
+        .action_ref_id
+        .parse::<Uuid>()
+        .map_err(|_| AppError::Validation("Invalid action_ref_id (must be UUID)".to_string()))?;
 
     let trace_id: (Uuid,) = sqlx::query_as(
         r#"INSERT INTO reasoning_traces
@@ -235,7 +243,9 @@ pub async fn list_my_traces(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "traces": traces, "total": traces.len() })))
+    Ok(Json(
+        serde_json::json!({ "traces": traces, "total": traces.len() }),
+    ))
 }
 
 /// Query parameters for single-trace and stats endpoints.
@@ -253,9 +263,9 @@ pub async fn get_my_trace(
     Query(auth): Query<AgentAuthQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
-    let trace_uuid = trace_id.parse::<Uuid>().map_err(|_| {
-        AppError::Validation("Invalid trace_id".to_string())
-    })?;
+    let trace_uuid = trace_id
+        .parse::<Uuid>()
+        .map_err(|_| AppError::Validation("Invalid trace_id".to_string()))?;
 
     let trace: Option<Value> = sqlx::query_scalar(
         r#"SELECT row_to_json(t) FROM (
@@ -306,13 +316,7 @@ pub async fn get_my_trace_stats(
         .collect();
 
     // Token and outcome averages
-    let agg: Option<(
-        Option<f64>,
-        Option<i64>,
-        Option<f64>,
-        Option<i64>,
-        Option<i64>,
-    )> = sqlx::query_as(
+    let agg: Option<TraceAggregateRow> = sqlx::query_as(
         r#"SELECT
                AVG(reasoning_tokens)::float8,
                SUM(reasoning_tokens),
@@ -338,7 +342,7 @@ pub async fn get_my_trace_stats(
     };
 
     // 30-day trend
-    let trend: Vec<(String, Option<f64>, Option<i64>, Option<i64>)> = sqlx::query_as(
+    let trend: Vec<TraceTrendRow> = sqlx::query_as(
         r#"SELECT
                created_at::date::text,
                AVG(reasoning_tokens)::float8,
@@ -413,7 +417,9 @@ pub async fn get_training_data(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "traces": traces, "count": traces.len() })))
+    Ok(Json(
+        serde_json::json!({ "traces": traces, "count": traces.len() }),
+    ))
 }
 
 /// Get cost report across all agents.
@@ -518,9 +524,9 @@ pub async fn evaluate_trace(
         )));
     }
 
-    let trace_uuid = trace_id.parse::<Uuid>().map_err(|_| {
-        AppError::Validation("Invalid trace_id".to_string())
-    })?;
+    let trace_uuid = trace_id
+        .parse::<Uuid>()
+        .map_err(|_| AppError::Validation("Invalid trace_id".to_string()))?;
 
     let result = sqlx::query(
         r#"UPDATE reasoning_traces

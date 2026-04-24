@@ -3,17 +3,17 @@
 //! Bounties let agents request specific work from other agents.
 //! The reputation reward is awarded on delivery acceptance.
 
+use crate::errors::AppError;
+use crate::services::benchmark;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::Utc;
-use crate::errors::AppError;
-use crate::state::AppState;
-use crate::services::benchmark;
 
 #[derive(Deserialize)]
 pub struct PostBountyRequest {
@@ -59,16 +59,24 @@ pub async fn create_bounty(
     benchmark::require_benchmark(&state.db, &req.posted_by, 1).await?;
 
     if req.title.len() < 10 {
-        return Err(AppError::Validation("Title must be at least 10 characters".to_string()));
+        return Err(AppError::Validation(
+            "Title must be at least 10 characters".to_string(),
+        ));
     }
     if req.description.len() < 20 {
-        return Err(AppError::Validation("Description must be at least 20 characters".to_string()));
+        return Err(AppError::Validation(
+            "Description must be at least 20 characters".to_string(),
+        ));
     }
     if req.acceptance_criteria.len() < 20 {
-        return Err(AppError::Validation("Acceptance criteria must be at least 20 characters".to_string()));
+        return Err(AppError::Validation(
+            "Acceptance criteria must be at least 20 characters".to_string(),
+        ));
     }
     if req.reputation_reward < 1 {
-        return Err(AppError::Validation("Reputation reward must be positive".to_string()));
+        return Err(AppError::Validation(
+            "Reputation reward must be positive".to_string(),
+        ));
     }
 
     let bounty_id = Uuid::new_v4();
@@ -89,22 +97,23 @@ pub async fn create_bounty(
     .await?;
 
     // Emit feed event
-    let agent_name: Option<String> = sqlx::query_scalar(
-        "SELECT display_name FROM agents WHERE id = $1"
-    ).bind(&req.posted_by).fetch_optional(&state.db).await?.flatten();
+    let agent_name: Option<String> =
+        sqlx::query_scalar("SELECT display_name FROM agents WHERE id = $1")
+            .bind(&req.posted_by)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten();
 
-    let _ = sqlx::query(
-        "INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)"
-    )
-    .bind("bounty_posted")
-    .bind(serde_json::json!({
-        "agent_id": &req.posted_by,
-        "agent_name": agent_name.unwrap_or_else(|| req.posted_by[..12].to_string()),
-        "title": &req.title,
-        "reward": req.reputation_reward,
-    }))
-    .execute(&state.db)
-    .await;
+    let _ = sqlx::query("INSERT INTO feed_events (event_type, payload) VALUES ($1, $2)")
+        .bind("bounty_posted")
+        .bind(serde_json::json!({
+            "agent_id": &req.posted_by,
+            "agent_name": agent_name.unwrap_or_else(|| req.posted_by[..12].to_string()),
+            "title": &req.title,
+            "reward": req.reputation_reward,
+        }))
+        .execute(&state.db)
+        .await;
 
     Ok(Json(serde_json::json!({
         "id": bounty_id.to_string(),
@@ -140,7 +149,9 @@ pub async fn list_bounties(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "bounties": bounties, "total": bounties.len() })))
+    Ok(Json(
+        serde_json::json!({ "bounties": bounties, "total": bounties.len() }),
+    ))
 }
 
 /// Claim an open bounty.
@@ -154,25 +165,29 @@ pub async fn claim_bounty(
     // Gate: agent must have passed Level 1 benchmark
     benchmark::require_benchmark(&state.db, &req.agent_id, 1).await?;
 
-    let bounty_uuid = bounty_id.parse::<Uuid>()
+    let bounty_uuid = bounty_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid bounty_id".to_string()))?;
 
-    let bounty: Option<(String, String)> = sqlx::query_as(
-        "SELECT status, posted_by FROM bounties WHERE id = $1",
-    )
-    .bind(bounty_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let bounty: Option<(String, String)> =
+        sqlx::query_as("SELECT status, posted_by FROM bounties WHERE id = $1")
+            .bind(bounty_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (status, posted_by) = bounty.ok_or_else(|| {
-        AppError::Validation(format!("Bounty not found: {}", bounty_id))
-    })?;
+    let (status, posted_by) =
+        bounty.ok_or_else(|| AppError::Validation(format!("Bounty not found: {}", bounty_id)))?;
 
     if status != "open" {
-        return Err(AppError::Validation(format!("Bounty is not open (status: {})", status)));
+        return Err(AppError::Validation(format!(
+            "Bounty is not open (status: {})",
+            status
+        )));
     }
     if posted_by == req.agent_id {
-        return Err(AppError::Validation("Cannot claim your own bounty".to_string()));
+        return Err(AppError::Validation(
+            "Cannot claim your own bounty".to_string(),
+        ));
     }
 
     sqlx::query(
@@ -183,7 +198,9 @@ pub async fn claim_bounty(
     .execute(&state.db)
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Bounty claimed successfully" })))
+    Ok(Json(
+        serde_json::json!({ "message": "Bounty claimed successfully" }),
+    ))
 }
 
 /// Deliver a bounty solution.
@@ -194,36 +211,39 @@ pub async fn deliver_bounty(
     State(state): State<AppState>,
     Json(req): Json<DeliverBountyRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let bounty_uuid = bounty_id.parse::<Uuid>()
+    let bounty_uuid = bounty_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid bounty_id".to_string()))?;
 
-    let bounty: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT status, claimed_by FROM bounties WHERE id = $1",
-    )
-    .bind(bounty_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let bounty: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT status, claimed_by FROM bounties WHERE id = $1")
+            .bind(bounty_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (status, claimed_by) = bounty.ok_or_else(|| {
-        AppError::Validation(format!("Bounty not found: {}", bounty_id))
-    })?;
+    let (status, claimed_by) =
+        bounty.ok_or_else(|| AppError::Validation(format!("Bounty not found: {}", bounty_id)))?;
 
     if status != "claimed" {
-        return Err(AppError::Validation("Can only deliver a claimed bounty".to_string()));
+        return Err(AppError::Validation(
+            "Can only deliver a claimed bounty".to_string(),
+        ));
     }
     if claimed_by.as_deref() != Some(&req.agent_id) {
-        return Err(AppError::Validation("Only the claimant can deliver".to_string()));
+        return Err(AppError::Validation(
+            "Only the claimant can deliver".to_string(),
+        ));
     }
 
-    sqlx::query(
-        "UPDATE bounties SET status = 'delivered', delivery_ref = $1 WHERE id = $2",
-    )
-    .bind(&req.delivery_ref)
-    .bind(bounty_uuid)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE bounties SET status = 'delivered', delivery_ref = $1 WHERE id = $2")
+        .bind(&req.delivery_ref)
+        .bind(bounty_uuid)
+        .execute(&state.db)
+        .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Bounty delivered. Awaiting acceptance." })))
+    Ok(Json(
+        serde_json::json!({ "message": "Bounty delivered. Awaiting acceptance." }),
+    ))
 }
 
 /// Accept a bounty delivery and award reputation.
@@ -234,7 +254,8 @@ pub async fn accept_bounty(
     State(state): State<AppState>,
     Json(req): Json<AcceptBountyRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let bounty_uuid = bounty_id.parse::<Uuid>()
+    let bounty_uuid = bounty_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid bounty_id".to_string()))?;
 
     let bounty: Option<(String, String, Option<String>, i32)> = sqlx::query_as(
@@ -244,19 +265,22 @@ pub async fn accept_bounty(
     .fetch_optional(&state.db)
     .await?;
 
-    let (status, posted_by, claimed_by, reputation_reward) = bounty.ok_or_else(|| {
-        AppError::Validation(format!("Bounty not found: {}", bounty_id))
-    })?;
+    let (status, posted_by, claimed_by, reputation_reward) =
+        bounty.ok_or_else(|| AppError::Validation(format!("Bounty not found: {}", bounty_id)))?;
 
     if status != "delivered" {
-        return Err(AppError::Validation("Can only accept a delivered bounty".to_string()));
+        return Err(AppError::Validation(
+            "Can only accept a delivered bounty".to_string(),
+        ));
     }
     if posted_by != req.agent_id {
-        return Err(AppError::Validation("Only the poster can accept delivery".to_string()));
+        return Err(AppError::Validation(
+            "Only the poster can accept delivery".to_string(),
+        ));
     }
 
-    let claimant_id = claimed_by
-        .ok_or_else(|| AppError::Validation("No claimant on bounty".to_string()))?;
+    let claimant_id =
+        claimed_by.ok_or_else(|| AppError::Validation("No claimant on bounty".to_string()))?;
 
     sqlx::query("UPDATE bounties SET status = 'accepted' WHERE id = $1")
         .bind(bounty_uuid)
@@ -264,12 +288,10 @@ pub async fn accept_bounty(
         .await?;
 
     // Fetch current claimant reputation and compute new score.
-    let current_rep: Option<(i32,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(&claimant_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let current_rep: Option<(i32,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(&claimant_id)
+        .fetch_optional(&state.db)
+        .await?;
 
     let current = current_rep.map(|(r,)| r).unwrap_or(0);
     let new_score = current as i64 + reputation_reward as i64;

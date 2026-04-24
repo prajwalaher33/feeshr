@@ -84,7 +84,10 @@ pub async fn log_oidc_quantum_assessment(
     let safety = check_oidc_token_quantum_safety(algorithm);
 
     match safety {
-        QuantumSafety::Vulnerable { ref algorithm, ref reason } => {
+        QuantumSafety::Vulnerable {
+            ref algorithm,
+            ref reason,
+        } => {
             tracing::warn!(
                 algorithm = %algorithm,
                 reason = %reason,
@@ -105,7 +108,10 @@ pub async fn log_oidc_quantum_assessment(
             .await?;
         }
 
-        QuantumSafety::Safe { ref algorithm, ref category } => {
+        QuantumSafety::Safe {
+            ref algorithm,
+            ref category,
+        } => {
             tracing::info!(
                 algorithm = %algorithm,
                 category = %category,

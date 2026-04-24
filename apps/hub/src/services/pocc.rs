@@ -128,13 +128,12 @@ pub async fn seal_chain(
     req: &SealChainRequest,
 ) -> Result<Value, AppError> {
     // Verify chain ownership and status
-    let (chain_agent, status): (String, String) = sqlx::query_as(
-        r#"SELECT agent_id, status FROM pocc_chains WHERE id = $1"#,
-    )
-    .bind(chain_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
+    let (chain_agent, status): (String, String) =
+        sqlx::query_as(r#"SELECT agent_id, status FROM pocc_chains WHERE id = $1"#)
+            .bind(chain_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
 
     if chain_agent != agent_id {
         return Err(AppError::Forbidden("Not your PoCC chain".to_string()));
@@ -286,13 +285,12 @@ pub async fn invalidate_chain(
     agent_id: &str,
     reason: &str,
 ) -> Result<(), AppError> {
-    let (chain_agent, status): (String, String) = sqlx::query_as(
-        r#"SELECT agent_id, status FROM pocc_chains WHERE id = $1"#,
-    )
-    .bind(chain_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
+    let (chain_agent, status): (String, String) =
+        sqlx::query_as(r#"SELECT agent_id, status FROM pocc_chains WHERE id = $1"#)
+            .bind(chain_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
 
     if chain_agent != agent_id && agent_id != "system" {
         return Err(AppError::Forbidden("Not your PoCC chain".to_string()));
@@ -317,16 +315,27 @@ pub async fn invalidate_chain(
 }
 
 /// Get a full PoCC chain with all steps.
-pub async fn get_chain(
-    db: &PgPool,
-    chain_id: Uuid,
-) -> Result<Value, AppError> {
-    let chain = sqlx::query_as::<_, (
-        Uuid, String, String, String, Uuid, String,
-        Option<String>, Option<String>, i32,
-        Option<chrono::DateTime<Utc>>, Option<String>, Option<Value>,
-        Option<String>, chrono::DateTime<Utc>, Option<chrono::DateTime<Utc>>,
-    )>(
+pub async fn get_chain(db: &PgPool, chain_id: Uuid) -> Result<Value, AppError> {
+    let chain = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            String,
+            String,
+            String,
+            Uuid,
+            String,
+            Option<String>,
+            Option<String>,
+            i32,
+            Option<chrono::DateTime<Utc>>,
+            Option<String>,
+            Option<Value>,
+            Option<String>,
+            chrono::DateTime<Utc>,
+            Option<chrono::DateTime<Utc>>,
+        ),
+    >(
         r#"SELECT id, agent_id, work_type, work_ref_type, work_ref_id,
                   status, root_hash, final_hash, step_count,
                   verified_at, verified_by, verification_result,
@@ -338,11 +347,23 @@ pub async fn get_chain(
     .await?
     .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
 
-    let steps = sqlx::query_as::<_, (
-        i32, String, Value, String, Option<String>,
-        chrono::DateTime<Utc>, Option<Value>, Option<chrono::DateTime<Utc>>,
-        Option<Value>, Option<bool>, Option<chrono::DateTime<Utc>>, String,
-    )>(
+    let steps = sqlx::query_as::<
+        _,
+        (
+            i32,
+            String,
+            Value,
+            String,
+            Option<String>,
+            chrono::DateTime<Utc>,
+            Option<Value>,
+            Option<chrono::DateTime<Utc>>,
+            Option<Value>,
+            Option<bool>,
+            Option<chrono::DateTime<Utc>>,
+            String,
+        ),
+    >(
         r#"SELECT step_index, commitment_hash, intent, context_hash,
                   previous_step_hash, committed_at, execution_witness,
                   executed_at, consistency_check, is_consistent,
@@ -357,33 +378,55 @@ pub async fn get_chain(
 
     let steps_json: Vec<Value> = steps
         .into_iter()
-        .map(|(
-            idx, commitment, intent, ctx_hash, prev_hash,
-            committed, witness, executed,
-            consistency, consistent, verified, step_hash,
-        )| {
-            serde_json::json!({
-                "step_index": idx,
-                "commitment_hash": commitment,
-                "intent": intent,
-                "context_hash": ctx_hash,
-                "previous_step_hash": prev_hash,
-                "committed_at": committed.to_rfc3339(),
-                "execution_witness": witness,
-                "executed_at": executed.map(|d| d.to_rfc3339()),
-                "consistency_check": consistency,
-                "is_consistent": consistent,
-                "verified_at": verified.map(|d| d.to_rfc3339()),
-                "step_hash": step_hash,
-            })
-        })
+        .map(
+            |(
+                idx,
+                commitment,
+                intent,
+                ctx_hash,
+                prev_hash,
+                committed,
+                witness,
+                executed,
+                consistency,
+                consistent,
+                verified,
+                step_hash,
+            )| {
+                serde_json::json!({
+                    "step_index": idx,
+                    "commitment_hash": commitment,
+                    "intent": intent,
+                    "context_hash": ctx_hash,
+                    "previous_step_hash": prev_hash,
+                    "committed_at": committed.to_rfc3339(),
+                    "execution_witness": witness,
+                    "executed_at": executed.map(|d| d.to_rfc3339()),
+                    "consistency_check": consistency,
+                    "is_consistent": consistent,
+                    "verified_at": verified.map(|d| d.to_rfc3339()),
+                    "step_hash": step_hash,
+                })
+            },
+        )
         .collect();
 
     let (
-        id, agent_id, work_type, work_ref_type, work_ref_id,
-        status, root_hash, final_hash, step_count,
-        verified_at, verified_by, verification_result,
-        chain_signature, created_at, sealed_at,
+        id,
+        agent_id,
+        work_type,
+        work_ref_type,
+        work_ref_id,
+        status,
+        root_hash,
+        final_hash,
+        step_count,
+        verified_at,
+        verified_by,
+        verification_result,
+        chain_signature,
+        created_at,
+        sealed_at,
     ) = chain;
 
     Ok(serde_json::json!({
@@ -407,18 +450,13 @@ pub async fn get_chain(
 }
 
 /// Re-verify a PoCC chain from scratch.
-pub async fn verify_chain(
-    db: &PgPool,
-    chain_id: Uuid,
-) -> Result<VerificationResult, AppError> {
+pub async fn verify_chain(db: &PgPool, chain_id: Uuid) -> Result<VerificationResult, AppError> {
     let (status, root_hash, final_hash): (String, Option<String>, Option<String>) =
-        sqlx::query_as(
-            r#"SELECT status, root_hash, final_hash FROM pocc_chains WHERE id = $1"#,
-        )
-        .bind(chain_id)
-        .fetch_optional(db)
-        .await?
-        .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
+        sqlx::query_as(r#"SELECT status, root_hash, final_hash FROM pocc_chains WHERE id = $1"#)
+            .bind(chain_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("PoCC chain not found".to_string()))?;
 
     if status == "building" {
         return Err(AppError::Validation(
@@ -426,10 +464,19 @@ pub async fn verify_chain(
         ));
     }
 
-    let steps = sqlx::query_as::<_, (
-        i32, String, Value, String, Option<String>,
-        Option<Value>, Option<bool>, String,
-    )>(
+    let steps = sqlx::query_as::<
+        _,
+        (
+            i32,
+            String,
+            Value,
+            String,
+            Option<String>,
+            Option<Value>,
+            Option<bool>,
+            String,
+        ),
+    >(
         r#"SELECT step_index, commitment_hash, intent, context_hash,
                   previous_step_hash, execution_witness,
                   is_consistent, step_hash
@@ -447,8 +494,14 @@ pub async fn verify_chain(
 
     for (i, step) in steps.iter().enumerate() {
         let (
-            idx, commitment_hash, intent, context_hash,
-            previous_step_hash, witness, is_consistent, step_hash,
+            idx,
+            commitment_hash,
+            intent,
+            context_hash,
+            previous_step_hash,
+            witness,
+            is_consistent,
+            step_hash,
         ) = step;
 
         let mut step_ok = true;
@@ -564,16 +617,11 @@ pub async fn verify_chain(
 }
 
 /// Get PoCC stats for an agent.
-pub async fn get_agent_pocc_stats(
-    db: &PgPool,
-    agent_id: &str,
-) -> Result<Value, AppError> {
-    let total: i64 = sqlx::query_scalar(
-        r#"SELECT COUNT(*) FROM pocc_chains WHERE agent_id = $1"#,
-    )
-    .bind(agent_id)
-    .fetch_one(db)
-    .await?;
+pub async fn get_agent_pocc_stats(db: &PgPool, agent_id: &str) -> Result<Value, AppError> {
+    let total: i64 = sqlx::query_scalar(r#"SELECT COUNT(*) FROM pocc_chains WHERE agent_id = $1"#)
+        .bind(agent_id)
+        .fetch_one(db)
+        .await?;
 
     let verified: i64 = sqlx::query_scalar(
         r#"SELECT COUNT(*) FROM pocc_chains

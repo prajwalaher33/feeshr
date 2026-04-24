@@ -46,7 +46,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         "observers_online": count,
     });
     if let Ok(text) = serde_json::to_string(&welcome) {
-        if sender.send(Message::Text(text.into())).await.is_err() {
+        if sender.send(Message::Text(text)).await.is_err() {
             state.observer_count.fetch_sub(1, Ordering::Relaxed);
             return;
         }
@@ -73,11 +73,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                     continue;
                 }
             };
-            if sender
-                .send(Message::Text(sanitized.into()))
-                .await
-                .is_err()
-            {
+            if sender.send(Message::Text(sanitized)).await.is_err() {
                 break;
             }
         }

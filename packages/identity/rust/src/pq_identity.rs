@@ -16,10 +16,8 @@
 //! field in the action determines which verification path to use.
 
 use pqcrypto_sphincsplus::sphincsshake256fsimple::*;
-use pqcrypto_traits::sign::{
-    PublicKey as _, SecretKey as _, DetachedSignature as _,
-};
-use sha3::{Sha3_256, Digest};
+use pqcrypto_traits::sign::{DetachedSignature as _, PublicKey as _, SecretKey as _};
+use sha3::{Digest, Sha3_256};
 
 /// Post-quantum keypair for a Feeshr agent.
 pub struct PqAgentIdentity {
@@ -94,8 +92,8 @@ impl PqAgentIdentity {
         signature_hex: &str,
         public_key_bytes: &[u8],
     ) -> Result<bool, PqIdentityError> {
-        let sig_bytes = hex::decode(signature_hex)
-            .map_err(|_| PqIdentityError::InvalidSignatureFormat)?;
+        let sig_bytes =
+            hex::decode(signature_hex).map_err(|_| PqIdentityError::InvalidSignatureFormat)?;
 
         let sig = DetachedSignature::from_bytes(&sig_bytes)
             .map_err(|_| PqIdentityError::InvalidSignatureFormat)?;
@@ -131,7 +129,10 @@ mod tests {
     fn test_pq_create_unique_ids() {
         let id1 = PqAgentIdentity::create().expect("keypair 1");
         let id2 = PqAgentIdentity::create().expect("keypair 2");
-        assert_ne!(id1.agent_id, id2.agent_id, "Two identities must have different agent_ids");
+        assert_ne!(
+            id1.agent_id, id2.agent_id,
+            "Two identities must have different agent_ids"
+        );
         assert_eq!(id1.agent_id.len(), 64, "agent_id must be 64 hex chars");
         assert_eq!(id1.algorithm, "sphincs-sha3-256f");
     }
@@ -141,8 +142,8 @@ mod tests {
         let identity = PqAgentIdentity::create().expect("keypair");
         let payload = b"hello feeshr quantum";
         let signature = identity.sign(payload).expect("sign");
-        let valid = PqAgentIdentity::verify(payload, &signature, &identity.public_key)
-            .expect("verify");
+        let valid =
+            PqAgentIdentity::verify(payload, &signature, &identity.public_key).expect("verify");
         assert!(valid, "Valid signature should verify successfully");
     }
 
@@ -163,9 +164,8 @@ mod tests {
         let fake_sig = "ab".repeat(identity.sign(payload).expect("sign").len() / 2);
         let result = PqAgentIdentity::verify(payload, &fake_sig, &identity.public_key);
         // Either returns Ok(false) or Err — both are acceptable
-        match result {
-            Ok(valid) => assert!(!valid, "Wrong signature should not verify"),
-            Err(_) => {} // Invalid format is also acceptable
+        if let Ok(valid) = result {
+            assert!(!valid, "Wrong signature should not verify");
         }
     }
 
@@ -175,8 +175,8 @@ mod tests {
         let identity2 = PqAgentIdentity::create().expect("keypair 2");
         let payload = b"test payload";
         let signature = identity1.sign(payload).expect("sign");
-        let valid = PqAgentIdentity::verify(payload, &signature, &identity2.public_key)
-            .expect("verify");
+        let valid =
+            PqAgentIdentity::verify(payload, &signature, &identity2.public_key).expect("verify");
         assert!(!valid, "Wrong public key should fail verification");
     }
 
@@ -186,6 +186,9 @@ mod tests {
         let mut hasher = Sha3_256::new();
         hasher.update(&identity.public_key);
         let expected_id = hex::encode(hasher.finalize());
-        assert_eq!(identity.agent_id, expected_id, "agent_id must be SHA3-256 of public key");
+        assert_eq!(
+            identity.agent_id, expected_id,
+            "agent_id must be SHA3-256 of public key"
+        );
     }
 }
