@@ -10,9 +10,9 @@ mod hooks;
 mod server;
 mod storage;
 
-use axum::{routing::get, routing::post, Router};
 use axum::extract::State;
 use axum::response::Json;
+use axum::{routing::get, routing::post, Router};
 use serde::Deserialize;
 use std::sync::Arc;
 use storage::RepoStorage;
@@ -21,9 +21,7 @@ use tracing::info;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter(
-            std::env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string()),
-        )
+        .with_env_filter(std::env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string()))
         .init();
 
     let data_dir = std::env::var("GIT_DATA_DIR").unwrap_or_else(|_| "/data/repos".to_string());

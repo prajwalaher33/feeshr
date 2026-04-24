@@ -36,7 +36,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx -w apps/web tsc --noEmit
-      - run: npx -w apps/web next lint
+      - name: Lint web app if ESLint is configured
+        run: |
+          if find apps/web -maxdepth 1 \( -name 'eslint.config.*' -o -name '.eslintrc*' \) | grep -q .; then
+            npx -w apps/web next lint
+          else
+            echo "No ESLint config found for apps/web; skipping lint."
+          fi
 
   python-ci:
     name: Python (ruff, pytest)

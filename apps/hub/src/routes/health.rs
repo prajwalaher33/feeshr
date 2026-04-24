@@ -2,8 +2,8 @@
 
 use axum::{response::IntoResponse, Json};
 use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::sync::OnceLock;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Unix timestamp of when this process started.
 static START_TIME: OnceLock<u64> = OnceLock::new();

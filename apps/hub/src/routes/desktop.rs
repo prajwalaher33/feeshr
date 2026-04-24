@@ -76,6 +76,15 @@ pub struct PublishDesktopEvent {
 // Handlers
 // ---------------------------------------------------------------------------
 
+type SessionSummaryRow = (
+    String,
+    String,
+    String,
+    chrono::DateTime<chrono::Utc>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    i64,
+);
+
 /// GET /api/v1/agents/:id/desktop/sessions — list desktop sessions for an agent.
 pub async fn list_sessions(
     State(state): State<AppState>,
@@ -84,9 +93,8 @@ pub async fn list_sessions(
 ) -> Result<Json<Vec<SessionSummary>>, AppError> {
     let limit = params.limit.unwrap_or(10).min(50);
 
-    let rows: Vec<(String, String, String, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, i64)> =
-        if let Some(ref status) = params.status {
-            sqlx::query_as(
+    let rows: Vec<SessionSummaryRow> = if let Some(ref status) = params.status {
+        sqlx::query_as(
                 "SELECT s.id::text, s.agent_id::text, s.status, s.started_at, s.ended_at, \
                      COALESCE((SELECT count(*) FROM desktop_events e WHERE e.session_id = s.id), 0) \
                  FROM desktop_sessions s \
@@ -98,8 +106,8 @@ pub async fn list_sessions(
             .bind(limit)
             .fetch_all(&state.db)
             .await?
-        } else {
-            sqlx::query_as(
+    } else {
+        sqlx::query_as(
                 "SELECT s.id::text, s.agent_id::text, s.status, s.started_at, s.ended_at, \
                      COALESCE((SELECT count(*) FROM desktop_events e WHERE e.session_id = s.id), 0) \
                  FROM desktop_sessions s \
@@ -110,18 +118,20 @@ pub async fn list_sessions(
             .bind(limit)
             .fetch_all(&state.db)
             .await?
-        };
+    };
 
     let sessions: Vec<SessionSummary> = rows
         .into_iter()
-        .map(|(id, agent_id, status, started_at, ended_at, event_count)| SessionSummary {
-            id,
-            agent_id,
-            status,
-            started_at: started_at.to_rfc3339(),
-            ended_at: ended_at.map(|t| t.to_rfc3339()),
-            event_count,
-        })
+        .map(
+            |(id, agent_id, status, started_at, ended_at, event_count)| SessionSummary {
+                id,
+                agent_id,
+                status,
+                started_at: started_at.to_rfc3339(),
+                ended_at: ended_at.map(|t| t.to_rfc3339()),
+                event_count,
+            },
+        )
         .collect();
 
     Ok(Json(sessions))
@@ -135,12 +145,18 @@ pub async fn get_active_session_events(
 ) -> Result<Json<Vec<DesktopEventResponse>>, AppError> {
     let limit = params.limit.unwrap_or(50).min(200);
 
-    let rows: Vec<(String, String, String, String, serde_json::Value, chrono::DateTime<chrono::Utc>)> =
-        if let Some(ref since) = params.since {
-            let since_dt = chrono::DateTime::parse_from_rfc3339(since)
-                .map(|dt| dt.with_timezone(&chrono::Utc))
-                .map_err(|_| AppError::Validation("Invalid 'since' timestamp".into()))?;
-            sqlx::query_as(
+    let rows: Vec<(
+        String,
+        String,
+        String,
+        String,
+        serde_json::Value,
+        chrono::DateTime<chrono::Utc>,
+    )> = if let Some(ref since) = params.since {
+        let since_dt = chrono::DateTime::parse_from_rfc3339(since)
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .map_err(|_| AppError::Validation("Invalid 'since' timestamp".into()))?;
+        sqlx::query_as(
                 "SELECT e.id::text, e.session_id::text, e.agent_id::text, e.event_type, e.payload, e.created_at \
                  FROM desktop_events e \
                  JOIN desktop_sessions s ON s.id = e.session_id \
@@ -152,8 +168,8 @@ pub async fn get_active_session_events(
             .bind(limit)
             .fetch_all(&state.db)
             .await?
-        } else {
-            sqlx::query_as(
+    } else {
+        sqlx::query_as(
                 "SELECT e.id::text, e.session_id::text, e.agent_id::text, e.event_type, e.payload, e.created_at \
                  FROM desktop_events e \
                  JOIN desktop_sessions s ON s.id = e.session_id \
@@ -164,21 +180,23 @@ pub async fn get_active_session_events(
             .bind(limit)
             .fetch_all(&state.db)
             .await?
-        };
+    };
 
     let events: Vec<DesktopEventResponse> = rows
         .into_iter()
-        .map(|(id, session_id, agent_id, event_type, mut payload, created_at)| {
-            sanitizer::sanitize_value(&mut payload);
-            DesktopEventResponse {
-                id,
-                session_id,
-                agent_id,
-                event_type,
-                payload,
-                created_at: created_at.to_rfc3339(),
-            }
-        })
+        .map(
+            |(id, session_id, agent_id, event_type, mut payload, created_at)| {
+                sanitizer::sanitize_value(&mut payload);
+                DesktopEventResponse {
+                    id,
+                    session_id,
+                    agent_id,
+                    event_type,
+                    payload,
+                    created_at: created_at.to_rfc3339(),
+                }
+            },
+        )
         .collect();
 
     Ok(Json(events))
@@ -195,7 +213,8 @@ pub async fn publish_event(
 ) -> Result<Json<serde_json::Value>, AppError> {
     // Link session to work item if provided (typically on session_start)
     if body.event_type == "session_start" {
-        if let (Some(ref item_id), Some(ref item_type)) = (&body.work_item_id, &body.work_item_type) {
+        if let (Some(ref item_id), Some(ref item_type)) = (&body.work_item_id, &body.work_item_type)
+        {
             let valid_types = ["issue", "subtask", "bounty", "project"];
             if valid_types.contains(&item_type.as_str()) {
                 let _ = sqlx::query(
@@ -274,7 +293,7 @@ async fn handle_desktop_socket(socket: WebSocket, state: AppState, agent_id: Str
         "message": "Connected to agent desktop stream.",
     });
     if let Ok(text) = serde_json::to_string(&welcome) {
-        if sender.send(Message::Text(text.into())).await.is_err() {
+        if sender.send(Message::Text(text)).await.is_err() {
             return;
         }
     }
@@ -314,11 +333,7 @@ async fn handle_desktop_socket(socket: WebSocket, state: AppState, agent_id: Str
                     continue;
                 }
             };
-            if sender
-                .send(Message::Text(sanitized.into()))
-                .await
-                .is_err()
-            {
+            if sender.send(Message::Text(sanitized)).await.is_err() {
                 break;
             }
         }

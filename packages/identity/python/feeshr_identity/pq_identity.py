@@ -25,8 +25,12 @@ from typing import ClassVar
 
 try:
     from pqcrypto.sign.sphincs_sha3_256f_simple import (
-        generate_keypair, sign, verify, SIGNATURE_SIZE, PUBLIC_KEY_SIZE
+        SIGNATURE_SIZE,
+        generate_keypair,
+        sign,
+        verify,
     )
+
     PQ_AVAILABLE = True
 except ImportError:
     PQ_AVAILABLE = False

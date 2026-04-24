@@ -3,16 +3,16 @@
 //! Locks prevent conflicting concurrent work on issues, bounties, and subtasks.
 //! Only agents at Contributor tier or above (reputation >= 100) may acquire locks.
 
+use crate::errors::AppError;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::Utc;
-use crate::errors::AppError;
-use crate::state::AppState;
 
 /// Allowed target types for locks.
 const VALID_TARGET_TYPES: &[&str] = &["issue", "bounty", "subtask"];
@@ -71,20 +71,19 @@ pub async fn create_lock(
     }
 
     // Parse target_id as UUID.
-    let target_uuid = req.target_id.parse::<Uuid>()
+    let target_uuid = req
+        .target_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid target_id".to_string()))?;
 
     // Verify agent reputation meets Contributor threshold.
-    let agent: Option<(i64,)> = sqlx::query_as(
-        "SELECT reputation FROM agents WHERE id = $1",
-    )
-    .bind(&req.agent_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let agent: Option<(i64,)> = sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+        .bind(&req.agent_id)
+        .fetch_optional(&state.db)
+        .await?;
 
-    let (reputation,) = agent.ok_or_else(|| {
-        AppError::Validation(format!("Agent not found: {}", req.agent_id))
-    })?;
+    let (reputation,) =
+        agent.ok_or_else(|| AppError::Validation(format!("Agent not found: {}", req.agent_id)))?;
 
     if reputation < MIN_REPUTATION {
         return Err(AppError::InsufficientReputation {
@@ -125,7 +124,7 @@ pub async fn create_lock(
     }
 
     // Compute expiry: min(estimated_hours, 48) from now.
-    let capped_hours = req.estimated_hours.min(MAX_LOCK_HOURS).max(1);
+    let capped_hours = req.estimated_hours.clamp(1, MAX_LOCK_HOURS);
     let expires_at = Utc::now() + chrono::Duration::hours(capped_hours);
     let lock_id = Uuid::new_v4();
 
@@ -174,20 +173,19 @@ pub async fn release_lock(
     State(state): State<AppState>,
     Json(req): Json<ReleaseLockRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let lock_uuid = lock_id.parse::<Uuid>()
+    let lock_uuid = lock_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid lock_id".to_string()))?;
 
     // Fetch current lock state.
-    let lock: Option<(String, String)> = sqlx::query_as(
-        "SELECT agent_id, status FROM work_locks WHERE id = $1",
-    )
-    .bind(lock_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let lock: Option<(String, String)> =
+        sqlx::query_as("SELECT agent_id, status FROM work_locks WHERE id = $1")
+            .bind(lock_uuid)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (holder_id, status) = lock.ok_or_else(|| {
-        AppError::Validation(format!("Lock not found: {}", lock_id))
-    })?;
+    let (holder_id, status) =
+        lock.ok_or_else(|| AppError::Validation(format!("Lock not found: {}", lock_id)))?;
 
     if holder_id != req.agent_id {
         return Err(AppError::Validation(
@@ -197,7 +195,8 @@ pub async fn release_lock(
 
     if status != "active" {
         return Err(AppError::Validation(format!(
-            "Lock is not active (status: {})", status
+            "Lock is not active (status: {})",
+            status
         )));
     }
 
@@ -212,9 +211,8 @@ pub async fn release_lock(
     .fetch_optional(&state.db)
     .await?;
 
-    let lock_data = released.ok_or_else(|| {
-        AppError::Validation(format!("Failed to release lock: {}", lock_id))
-    })?;
+    let lock_data = released
+        .ok_or_else(|| AppError::Validation(format!("Failed to release lock: {}", lock_id)))?;
 
     tracing::info!(lock_id = %lock_id, agent_id = %req.agent_id, "Lock released");
 
@@ -230,7 +228,9 @@ pub async fn get_lock(
     Query(params): Query<GetLockQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let target_uuid = params.target_id.parse::<Uuid>()
+    let target_uuid = params
+        .target_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid target_id".to_string()))?;
 
     if !VALID_TARGET_TYPES.contains(&params.target_type.as_str()) {

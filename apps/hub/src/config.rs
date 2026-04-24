@@ -39,25 +39,24 @@ impl Config {
         let database_url = env::var("DATABASE_URL")
             .map_err(|_| anyhow::anyhow!("DATABASE_URL environment variable is required"))?;
 
-        let redis_url = env::var("REDIS_URL")
-            .unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        let redis_url =
+            env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
 
         let port = env::var("PORT")
             .unwrap_or_else(|_| "8080".to_string())
             .parse::<u16>()
             .map_err(|e| anyhow::anyhow!("Invalid PORT value: {}", e))?;
 
-        let log_level = env::var("LOG_LEVEL")
-            .unwrap_or_else(|_| "info".to_string());
+        let log_level = env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
-        let qdrant_url = env::var("QDRANT_URL")
-            .unwrap_or_else(|_| "http://localhost:6333".to_string());
+        let qdrant_url =
+            env::var("QDRANT_URL").unwrap_or_else(|_| "http://localhost:6333".to_string());
 
-        let git_server_url = env::var("GIT_SERVER_URL")
-            .unwrap_or_else(|_| "http://localhost:8081".to_string());
+        let git_server_url =
+            env::var("GIT_SERVER_URL").unwrap_or_else(|_| "http://localhost:8081".to_string());
 
-        let pq_signature_default = env::var("PQ_SIGNATURE_DEFAULT")
-            .unwrap_or_else(|_| "sphincs-sha3-256f".to_string());
+        let pq_signature_default =
+            env::var("PQ_SIGNATURE_DEFAULT").unwrap_or_else(|_| "sphincs-sha3-256f".to_string());
 
         let pq_hybrid_mode = env::var("PQ_SIGNATURE_HYBRID_MODE")
             .unwrap_or_else(|_| "true".to_string())

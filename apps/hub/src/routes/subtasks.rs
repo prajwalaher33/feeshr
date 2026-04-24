@@ -3,16 +3,16 @@
 //! Subtasks are units of work attached to a parent (bounty, issue, project).
 //! They support dependency graphs and skill-based agent assignment.
 
+use crate::errors::AppError;
+use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::Utc;
-use crate::errors::AppError;
-use crate::state::AppState;
 
 /// Valid parent types for a subtask.
 const VALID_PARENT_TYPES: &[&str] = &["bounty", "issue", "project"];
@@ -78,20 +78,15 @@ fn parse_dependency_ids(raw: &[String]) -> Result<Vec<Uuid>, AppError> {
 }
 
 /// Check that all dependency IDs exist and return whether any are non-complete.
-async fn resolve_dependencies(
-    db: &sqlx::PgPool,
-    dep_ids: &[Uuid],
-) -> Result<bool, AppError> {
+async fn resolve_dependencies(db: &sqlx::PgPool, dep_ids: &[Uuid]) -> Result<bool, AppError> {
     if dep_ids.is_empty() {
         return Ok(false);
     }
 
-    let rows: Vec<(String,)> = sqlx::query_as(
-        "SELECT status FROM subtasks WHERE id = ANY($1)",
-    )
-    .bind(dep_ids)
-    .fetch_all(db)
-    .await?;
+    let rows: Vec<(String,)> = sqlx::query_as("SELECT status FROM subtasks WHERE id = ANY($1)")
+        .bind(dep_ids)
+        .fetch_all(db)
+        .await?;
 
     if rows.len() != dep_ids.len() {
         return Err(AppError::Validation(
@@ -135,13 +130,11 @@ async fn insert_subtask(
 
     // Update depends_on array on the subtask
     if !dep_ids.is_empty() {
-        sqlx::query(
-            "UPDATE subtasks SET depends_on = $1 WHERE id = $2",
-        )
-        .bind(dep_ids)
-        .bind(id)
-        .execute(db)
-        .await?;
+        sqlx::query("UPDATE subtasks SET depends_on = $1 WHERE id = $2")
+            .bind(dep_ids)
+            .bind(id)
+            .execute(db)
+            .await?;
     }
 
     let row: Value = sqlx::query_scalar(
@@ -165,7 +158,9 @@ pub async fn create_subtask(
 ) -> Result<Json<serde_json::Value>, AppError> {
     validate_create_request(&req)?;
 
-    let parent_uuid = req.parent_id.parse::<Uuid>()
+    let parent_uuid = req
+        .parent_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid parent_id".to_string()))?;
 
     // Verify the parent entity exists in the correct table.
@@ -175,12 +170,11 @@ pub async fn create_subtask(
         "project" => "projects",
         _ => return Err(AppError::Validation("Invalid parent_type".to_string())),
     };
-    let parent_exists: Option<(uuid::Uuid,)> = sqlx::query_as(
-        &format!("SELECT id FROM {} WHERE id = $1", parent_table),
-    )
-    .bind(parent_uuid)
-    .fetch_optional(&state.db)
-    .await?;
+    let parent_exists: Option<(uuid::Uuid,)> =
+        sqlx::query_as(&format!("SELECT id FROM {} WHERE id = $1", parent_table))
+            .bind(parent_uuid)
+            .fetch_optional(&state.db)
+            .await?;
     if parent_exists.is_none() {
         return Err(AppError::NotFound(format!(
             "{} with id {} not found",
@@ -193,10 +187,8 @@ pub async fn create_subtask(
     let status = if has_blocked { "blocked" } else { "open" };
 
     let subtask_id = Uuid::new_v4();
-    let subtask = insert_subtask(
-        &state.db, subtask_id, &req, parent_uuid, status, &dep_ids,
-    )
-    .await?;
+    let subtask =
+        insert_subtask(&state.db, subtask_id, &req, parent_uuid, status, &dep_ids).await?;
 
     tracing::info!(
         subtask_id = %subtask_id,
@@ -215,7 +207,9 @@ pub async fn list_subtasks(
     Query(params): Query<ListSubtasksQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let parent_uuid = params.parent_id.parse::<Uuid>()
+    let parent_uuid = params
+        .parent_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid parent_id".to_string()))?;
 
     let subtasks: Vec<Value> = sqlx::query_scalar(
@@ -272,10 +266,7 @@ async fn validate_agent_skills(
 }
 
 /// Check the agent does not already have 3+ active subtasks.
-async fn validate_agent_capacity(
-    db: &sqlx::PgPool,
-    agent_id: &str,
-) -> Result<(), AppError> {
+async fn validate_agent_capacity(db: &sqlx::PgPool, agent_id: &str) -> Result<(), AppError> {
     let count: (i64,) = sqlx::query_as(
         r#"SELECT COUNT(*) FROM subtasks
            WHERE assigned_to = $1 AND status IN ('claimed', 'in_progress')"#,
@@ -300,24 +291,22 @@ pub async fn claim_subtask(
     State(state): State<AppState>,
     Json(req): Json<ClaimSubtaskRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let id = subtask_id.parse::<Uuid>()
+    let id = subtask_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid subtask_id".to_string()))?;
 
-    let current: Option<(String,)> = sqlx::query_as(
-        "SELECT status FROM subtasks WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?;
+    let current: Option<(String,)> = sqlx::query_as("SELECT status FROM subtasks WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
 
-    let (status,) = current.ok_or_else(|| {
-        AppError::Validation(format!("Subtask not found: {subtask_id}"))
-    })?;
+    let (status,) =
+        current.ok_or_else(|| AppError::Validation(format!("Subtask not found: {subtask_id}")))?;
 
     if status != "open" {
-        return Err(AppError::Validation(
-            format!("Subtask is not open (status: {status})"),
-        ));
+        return Err(AppError::Validation(format!(
+            "Subtask is not open (status: {status})"
+        )));
     }
 
     validate_agent_skills(&state.db, &req.agent_id, id).await?;
@@ -387,30 +376,26 @@ pub async fn complete_subtask(
     State(state): State<AppState>,
     Json(req): Json<CompleteSubtaskRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let id = subtask_id.parse::<Uuid>()
+    let id = subtask_id
+        .parse::<Uuid>()
         .map_err(|_| AppError::Validation("Invalid subtask_id".to_string()))?;
 
     if req.output_ref.is_empty() {
         return Err(AppError::Validation("output_ref is required".to_string()));
     }
 
-    let current: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT status, assigned_to FROM subtasks WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?;
+    let current: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT status, assigned_to FROM subtasks WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let (status, assigned_to) = current.ok_or_else(|| {
-        AppError::Validation(format!("Subtask not found: {subtask_id}"))
-    })?;
+    let (status, assigned_to) =
+        current.ok_or_else(|| AppError::Validation(format!("Subtask not found: {subtask_id}")))?;
 
     validate_completion(&status, assigned_to.as_deref(), &req.agent_id)?;
 
-    let (updated, unblocked) = apply_completion(
-        &state.db, id, &req.output_ref,
-    )
-    .await?;
+    let (updated, unblocked) = apply_completion(&state.db, id, &req.output_ref).await?;
 
     tracing::info!(
         subtask_id = %id,
@@ -432,9 +417,9 @@ fn validate_completion(
     agent_id: &str,
 ) -> Result<(), AppError> {
     if status != "claimed" && status != "in_progress" {
-        return Err(AppError::Validation(
-            format!("Subtask cannot be completed (status: {status})"),
-        ));
+        return Err(AppError::Validation(format!(
+            "Subtask cannot be completed (status: {status})"
+        )));
     }
     if assigned_to != Some(agent_id) {
         return Err(AppError::Validation(
@@ -486,19 +471,15 @@ async fn apply_completion(
     .fetch_all(db)
     .await?;
 
-    let unblocked_ids: Vec<String> = unblocked
-        .iter()
-        .map(|(uid,)| uid.to_string())
-        .collect();
+    let unblocked_ids: Vec<String> = unblocked.iter().map(|(uid,)| uid.to_string()).collect();
 
     if !unblocked_ids.is_empty() {
+        let unblocked_uuids = unblocked.iter().map(|(uid,)| *uid).collect::<Vec<Uuid>>();
         sqlx::query(
             r#"UPDATE subtasks SET status = 'open'
                WHERE id = ANY($1) AND status = 'blocked'"#,
         )
-        .bind(
-            &unblocked.iter().map(|(uid,)| *uid).collect::<Vec<Uuid>>(),
-        )
+        .bind(unblocked_uuids)
         .execute(db)
         .await?;
     }

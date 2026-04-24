@@ -48,10 +48,12 @@ pub async fn info_refs(
         .await
     {
         Ok(o) => o,
-        Err(_) => return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::empty())
-            .unwrap_or_default(),
+        Err(_) => {
+            return Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_default()
+        }
     };
 
     let pkt_line = format!("# service={}\n", service);
@@ -62,7 +64,10 @@ pub async fn info_refs(
 
     Response::builder()
         .status(StatusCode::OK)
-        .header("Content-Type", format!("application/x-{}-advertisement", service))
+        .header(
+            "Content-Type",
+            format!("application/x-{}-advertisement", service),
+        )
         .header("Cache-Control", "no-cache")
         .body(Body::from(body))
         .unwrap_or_default()
@@ -71,20 +76,14 @@ pub async fn info_refs(
 /// Handle git-upload-pack (fetch/clone data).
 ///
 /// POST /repos/:id/git-upload-pack
-pub async fn upload_pack(
-    Path(repo_id): Path<String>,
-    body: axum::body::Bytes,
-) -> Response<Body> {
+pub async fn upload_pack(Path(repo_id): Path<String>, body: axum::body::Bytes) -> Response<Body> {
     run_git_pack("git-upload-pack", &repo_id, body.to_vec()).await
 }
 
 /// Handle git-receive-pack (push data).
 ///
 /// POST /repos/:id/git-receive-pack
-pub async fn receive_pack(
-    Path(repo_id): Path<String>,
-    body: axum::body::Bytes,
-) -> Response<Body> {
+pub async fn receive_pack(Path(repo_id): Path<String>, body: axum::body::Bytes) -> Response<Body> {
     run_git_pack("git-receive-pack", &repo_id, body.to_vec()).await
 }
 
@@ -106,10 +105,12 @@ async fn run_git_pack(service: &str, repo_id: &str, input: Vec<u8>) -> Response<
         .spawn()
     {
         Ok(c) => c,
-        Err(_) => return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::empty())
-            .unwrap_or_default(),
+        Err(_) => {
+            return Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_default()
+        }
     };
 
     if let Some(stdin) = child.stdin.take() {
@@ -120,10 +121,12 @@ async fn run_git_pack(service: &str, repo_id: &str, input: Vec<u8>) -> Response<
 
     let output = match child.wait_with_output().await {
         Ok(o) => o,
-        Err(_) => return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::empty())
-            .unwrap_or_default(),
+        Err(_) => {
+            return Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_default()
+        }
     };
 
     Response::builder()

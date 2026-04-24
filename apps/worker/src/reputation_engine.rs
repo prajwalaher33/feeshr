@@ -151,19 +151,6 @@ pub async fn compute_benchmark_gated_tier(
         return Ok(reputation_tier);
     }
 
-    // Check benchmark passes (non-expired)
-    let has_level_1: bool = sqlx::query_scalar(
-        r#"SELECT EXISTS(
-            SELECT 1 FROM benchmark_results
-            WHERE agent_id = $1 AND level = 1 AND passed = TRUE
-              AND (expires_at IS NULL OR expires_at > NOW())
-           )"#,
-    )
-    .bind(agent_id)
-    .fetch_one(pool)
-    .await
-    .unwrap_or(false);
-
     let has_level_2: bool = sqlx::query_scalar(
         r#"SELECT EXISTS(
             SELECT 1 FROM benchmark_results
@@ -190,28 +177,41 @@ pub async fn compute_benchmark_gated_tier(
 
     // Gate tier by benchmarks
     let effective_tier = match reputation_tier {
-        Tier::Observer => {
-            // Level 1 benchmark required to be recognized on platform
-            if has_level_1 { Tier::Observer } else { Tier::Observer }
-        }
+        Tier::Observer => Tier::Observer,
         Tier::Contributor => {
-            if has_level_2 { Tier::Contributor } else { Tier::Observer }
+            if has_level_2 {
+                Tier::Contributor
+            } else {
+                Tier::Observer
+            }
         }
         Tier::Builder => {
-            if has_level_3 { Tier::Builder }
-            else if has_level_2 { Tier::Contributor }
-            else { Tier::Observer }
+            if has_level_3 {
+                Tier::Builder
+            } else if has_level_2 {
+                Tier::Contributor
+            } else {
+                Tier::Observer
+            }
         }
         Tier::Specialist => {
             // No new benchmark required beyond Level 3
-            if has_level_3 { Tier::Specialist }
-            else if has_level_2 { Tier::Contributor }
-            else { Tier::Observer }
+            if has_level_3 {
+                Tier::Specialist
+            } else if has_level_2 {
+                Tier::Contributor
+            } else {
+                Tier::Observer
+            }
         }
         Tier::Architect => {
-            if has_level_3 { Tier::Architect }
-            else if has_level_2 { Tier::Contributor }
-            else { Tier::Observer }
+            if has_level_3 {
+                Tier::Architect
+            } else if has_level_2 {
+                Tier::Contributor
+            } else {
+                Tier::Observer
+            }
         }
     };
 
@@ -227,7 +227,7 @@ pub async fn run_reputation_recompute(pool: &sqlx::PgPool) -> Result<(), anyhow:
     let rows = sqlx::query_as::<_, (String, i64)>(
         "SELECT agent_id, COALESCE(SUM(delta), 0) AS total
          FROM reputation_events
-         GROUP BY agent_id"
+         GROUP BY agent_id",
     )
     .fetch_all(pool)
     .await?;
@@ -241,7 +241,7 @@ pub async fn run_reputation_recompute(pool: &sqlx::PgPool) -> Result<(), anyhow:
 
         sqlx::query(
             "UPDATE agents SET reputation = $1, tier = $2, last_active_at = NOW()
-             WHERE id = $3"
+             WHERE id = $3",
         )
         .bind(score)
         .bind(&tier_str)
@@ -294,7 +294,10 @@ pub async fn run_categorical_recompute(pool: &sqlx::PgPool) -> Result<(), anyhow
     .execute(pool)
     .await?;
 
-    tracing::info!(categories_updated = rows.len(), "Categorical reputation recomputation complete");
+    tracing::info!(
+        categories_updated = rows.len(),
+        "Categorical reputation recomputation complete"
+    );
     Ok(())
 }
 
@@ -359,12 +362,11 @@ pub async fn run_smart_decay(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
         let inactive_days = (now - last).num_days();
 
         // Get agent tier for decay config
-        let agent_rep: Option<(i64,)> = sqlx::query_as(
-            "SELECT reputation FROM agents WHERE id = $1",
-        )
-        .bind(agent_id)
-        .fetch_optional(pool)
-        .await?;
+        let agent_rep: Option<(i64,)> =
+            sqlx::query_as("SELECT reputation FROM agents WHERE id = $1")
+                .bind(agent_id)
+                .fetch_optional(pool)
+                .await?;
 
         let reputation = agent_rep.map(|(r,)| r).unwrap_or(0);
         let tier = compute_tier(reputation);
@@ -456,8 +458,8 @@ mod tests {
 
     #[test]
     fn test_reputation_deltas_are_nonzero() {
-        assert!(REP_PR_MERGED > 0);
-        assert!(REP_BUG_IN_MERGED_PR < 0);
-        assert!(REP_DISPUTE_LOST < 0);
+        assert!(std::hint::black_box(REP_PR_MERGED) > 0);
+        assert!(std::hint::black_box(REP_BUG_IN_MERGED_PR) < 0);
+        assert!(std::hint::black_box(REP_DISPUTE_LOST) < 0);
     }
 }

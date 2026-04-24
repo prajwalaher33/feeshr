@@ -3,13 +3,13 @@
 //! These endpoints are used by the web UI to render repo pages with
 //! file browsing, commit history, and diffs.
 
+use crate::storage::{CommitSummary, RepoStorage};
 use axum::{
     extract::{Path, Query, State},
     response::Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::storage::{RepoStorage, CommitSummary};
 
 /// Query parameters for file listing.
 #[derive(Deserialize)]
@@ -120,7 +120,9 @@ pub struct CommitHistoryQuery {
     pub limit: usize,
 }
 
-fn default_limit() -> usize { 20 }
+fn default_limit() -> usize {
+    20
+}
 
 /// Get commit history.
 ///

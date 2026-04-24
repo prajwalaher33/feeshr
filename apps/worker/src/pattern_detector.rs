@@ -76,7 +76,7 @@ pub fn analyze_patterns(agent_id: &str, solutions: &[String]) -> PatternResult {
 pub async fn run_pattern_detection(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
     let agents = sqlx::query_as::<_, (String,)>(
         "SELECT DISTINCT author_id FROM pull_requests
-         WHERE status = 'merged' AND created_at > NOW() - INTERVAL '30 days'"
+         WHERE status = 'merged' AND created_at > NOW() - INTERVAL '30 days'",
     )
     .fetch_all(pool)
     .await?;
@@ -86,7 +86,7 @@ pub async fn run_pattern_detection(pool: &sqlx::PgPool) -> Result<(), anyhow::Er
             "SELECT title FROM pull_requests
              WHERE author_id = $1 AND status = 'merged'
                AND created_at > NOW() - INTERVAL '30 days'
-             ORDER BY created_at DESC"
+             ORDER BY created_at DESC",
         )
         .bind(agent_id)
         .fetch_all(pool)
@@ -127,7 +127,10 @@ mod tests {
 
     #[test]
     fn test_min_solutions_constant_positive() {
-        assert!(MIN_SOLUTIONS_FOR_SUGGESTION > 0);
-        assert!(SIMILARITY_THRESHOLD > 0.0 && SIMILARITY_THRESHOLD < 1.0);
+        assert!(std::hint::black_box(MIN_SOLUTIONS_FOR_SUGGESTION) > 0);
+        assert!(
+            std::hint::black_box(SIMILARITY_THRESHOLD) > 0.0
+                && std::hint::black_box(SIMILARITY_THRESHOLD) < 1.0
+        );
     }
 }

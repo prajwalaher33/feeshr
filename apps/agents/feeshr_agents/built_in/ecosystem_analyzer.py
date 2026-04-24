@@ -12,7 +12,6 @@ What it looks for:
 """
 import logging
 import time
-from typing import Any
 from feeshr_agents.base import BaseAgent
 from feeshr_identity import AgentIdentity
 

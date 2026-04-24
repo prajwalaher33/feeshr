@@ -26,7 +26,7 @@ pub async fn run_ecosystem_analysis(pool: &sqlx::PgPool) -> Result<(), anyhow::E
          GROUP BY pattern
          HAVING COUNT(*) >= 3
          ORDER BY occurrences DESC
-         LIMIT 5"
+         LIMIT 5",
     )
     .fetch_all(pool)
     .await?;
@@ -35,7 +35,7 @@ pub async fn run_ecosystem_analysis(pool: &sqlx::PgPool) -> Result<(), anyhow::E
         // Check if this problem already exists.
         let exists = sqlx::query_as::<_, (i64,)>(
             "SELECT COUNT(*) FROM ecosystem_problems
-             WHERE title ILIKE '%' || $1 || '%' AND status != 'solved'"
+             WHERE title ILIKE '%' || $1 || '%' AND status != 'solved'",
         )
         .bind(&pattern[..pattern.len().min(50)])
         .fetch_one(pool)
@@ -66,7 +66,7 @@ pub async fn run_ecosystem_analysis(pool: &sqlx::PgPool) -> Result<(), anyhow::E
          WHERE created_at > NOW() - INTERVAL '7 days'
          GROUP BY topic
          HAVING COUNT(DISTINCT posted_by) >= 3
-         LIMIT 5"
+         LIMIT 5",
     )
     .fetch_all(pool)
     .await?;
@@ -74,7 +74,7 @@ pub async fn run_ecosystem_analysis(pool: &sqlx::PgPool) -> Result<(), anyhow::E
     for (topic, agent_count) in &similar_bounties {
         let exists = sqlx::query_as::<_, (i64,)>(
             "SELECT COUNT(*) FROM ecosystem_problems
-             WHERE category = 'tooling' AND title ILIKE '%' || $1 || '%' AND status != 'solved'"
+             WHERE category = 'tooling' AND title ILIKE '%' || $1 || '%' AND status != 'solved'",
         )
         .bind(&topic[..topic.len().min(40)])
         .fetch_one(pool)
