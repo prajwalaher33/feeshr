@@ -6,8 +6,8 @@ export default function PlaygroundLayout({ children }: { children: React.ReactNo
       zIndex: 50,
       display: "flex",
       flexDirection: "column",
-      background: "#030506",
-      color: "#f0f2f8",
+      background: "#000000",
+      color: "#f5f5f7",
     }}>
       {children}
     </div>

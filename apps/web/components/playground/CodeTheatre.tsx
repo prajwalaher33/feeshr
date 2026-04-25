@@ -14,7 +14,7 @@ export interface CodeTheatreProps {
 const DEMO_DIFF = `--- a/src/rate_limiter.ts
 +++ b/src/rate_limiter.ts
 @@ -42,8 +42,12 @@ export class RateLimiter {
-   async acquire(key: string): Promise<boolean> {
+  async acquire(key: string): Promise<boolean> {
 -    const count = this.store.get(key) ?? 0;
 -    if (count >= this.limit) return false;
 -    this.store.set(key, count + 1);
@@ -26,8 +26,8 @@ const DEMO_DIFF = `--- a/src/rate_limiter.ts
 +    } finally {
 +      lock.release();
 +    }
-     return true;
-   }`;
+    return true;
+  }`;
 
 function metaString(event: PlaygroundEvent | null, key: string): string | null {
   const value = event?.meta?.[key];
@@ -37,10 +37,6 @@ function metaString(event: PlaygroundEvent | null, key: string): string | null {
 function fileNameFrom(diff: string, event: PlaygroundEvent | null): string {
   const match = diff.match(/^\+\+\+\s+b\/(.+)$/m) ?? diff.match(/^---\s+a\/(.+)$/m);
   return metaString(event, "file") ?? match?.[1] ?? event?.target_name ?? "src/rate_limiter.ts";
-}
-
-function branchFrom(event: PlaygroundEvent | null): string {
-  return metaString(event, "branch") ?? event?.target_name ?? "agent/observed-commit";
 }
 
 function countDiff(lines: string[]) {
@@ -79,11 +75,9 @@ export function CodeTheatre({ event, collapsed, onToggle }: CodeTheatreProps) {
   const hasNext = currentIdx >= 0 && currentIdx < commitHistory.length - 1;
 
   const filename = fileNameFrom(diffContent, activeEvent);
-  const branch = branchFrom(activeEvent);
   const authorId = activeEvent?.actor_id ?? "";
   const authorName = activeEvent?.actor_name ?? "demo agent";
 
-  // Diff lines are revealed gradually so screen recordings show causality.
   useEffect(() => {
     if (collapsed) return;
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
@@ -124,81 +118,109 @@ export function CodeTheatre({ event, collapsed, onToggle }: CodeTheatreProps) {
     return (
       <button
         onClick={onToggle}
-        className="flex h-full min-h-[88px] w-full items-center justify-center gap-3 bg-black/10 px-5 text-sm text-white/50 transition hover:bg-white/[0.04] hover:text-white/75"
+        className="flex h-full min-h-[60px] w-full items-center justify-center gap-3 px-5 text-[13px] text-white/35 transition-colors hover:bg-white/[0.03] hover:text-white/60"
       >
-        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/35">
-          read-only diff
-        </span>
-        <span className="font-semibold tracking-[-0.02em]">Open Code Theatre</span>
-        {commitHistory.length > 0 && <span className="text-white/28">{commitHistory.length} commits</span>}
+        <span className="font-medium">Open diff viewer</span>
+        {commitHistory.length > 0 && (
+          <span className="font-mono text-white/20">{commitHistory.length} commits</span>
+        )}
       </button>
     );
   }
 
   return (
-    <div className="flex h-full min-h-[300px] w-full flex-col overflow-hidden bg-[#07080b]">
-      <div className="shrink-0 border-b border-white/10 bg-white/[0.035] px-5 py-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/36">
-                commit playback
-              </span>
-              <span className="rounded-full bg-[#61f6b9]/10 px-2.5 py-1 font-mono text-[10px] text-[#61f6b9]">
-                +{diffStats.additions}
-              </span>
-              <span className="rounded-full bg-[#ff8a8a]/10 px-2.5 py-1 font-mono text-[10px] text-[#ff8a8a]">
-                -{diffStats.deletions}
-              </span>
-            </div>
-            <h3 className="truncate text-xl font-semibold tracking-[-0.04em] text-white">{filename}</h3>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/45">
-              <span className="inline-flex items-center gap-2">
-                {authorId && <AgentHueDot agentId={authorId} size={7} glow />}
-                {authorName}
-              </span>
-              <span className="h-1 w-1 rounded-full bg-white/25" />
-              <span className="font-mono">{branch}</span>
-              <span className="h-1 w-1 rounded-full bg-white/25" />
-              <span>view-only</span>
-            </div>
+    <div className="flex h-full min-h-[260px] w-full flex-col overflow-hidden bg-[#0a0a0a]">
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-5 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" rx="3" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+              <path d="M5 8H11" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M5 5.5H9" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M5 10.5H10" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <span className="truncate text-[13px] font-medium text-white/70">{filename}</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => stepCommit(-1)}
-              disabled={!hasPrev}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/55 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              Previous
-            </button>
-            <span className="min-w-[68px] text-center font-mono text-[11px] text-white/35">
-              {currentIdx >= 0 ? currentIdx + 1 : "1"}/{Math.max(commitHistory.length, 1)}
-            </span>
-            <button
-              onClick={() => stepCommit(1)}
-              disabled={!hasNext}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/55 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => setTheatreFullscreen(!theatreFullscreen)}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/55 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              {theatreFullscreen ? "Exit full screen" : "Full screen"}
-            </button>
-            <button
-              onClick={onToggle}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              {theatreFullscreen ? "Close" : "Collapse"}
-            </button>
+          <span className="hidden text-white/10 sm:inline">|</span>
+
+          <div className="hidden items-center gap-2 sm:flex">
+            {authorId && <AgentHueDot agentId={authorId} size={6} glow />}
+            <span className="text-[12px] text-white/35">{authorName}</span>
           </div>
+
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="rounded-md bg-[#30d158]/10 px-1.5 py-0.5 font-mono text-[11px] text-[#30d158]">
+              +{diffStats.additions}
+            </span>
+            <span className="rounded-md bg-[#ff453a]/10 px-1.5 py-0.5 font-mono text-[11px] text-[#ff453a]">
+              -{diffStats.deletions}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          {commitHistory.length > 1 && (
+            <>
+              <button
+                onClick={() => stepCommit(-1)}
+                disabled={!hasPrev}
+                className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5 text-[12px] text-white/40 transition hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-20"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M6 2L3.5 5L6 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <span className="min-w-[40px] text-center font-mono text-[11px] text-white/25">
+                {currentIdx >= 0 ? currentIdx + 1 : "1"}/{Math.max(commitHistory.length, 1)}
+              </span>
+              <button
+                onClick={() => stepCommit(1)}
+                disabled={!hasNext}
+                className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5 text-[12px] text-white/40 transition hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-20"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M4 2L6.5 5L4 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={() => setTheatreFullscreen(!theatreFullscreen)}
+            className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-1.5 text-white/30 transition hover:bg-white/[0.06] hover:text-white/60"
+            aria-label={theatreFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              {theatreFullscreen ? (
+                <>
+                  <path d="M4 1V4H1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M8 11V8H11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </>
+              ) : (
+                <>
+                  <path d="M1 4V1H4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M11 8V11H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </>
+              )}
+            </svg>
+          </button>
+
+          <button
+            onClick={onToggle}
+            className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-1.5 text-white/30 transition hover:bg-white/[0.06] hover:text-white/60"
+            aria-label={theatreFullscreen ? "Close" : "Collapse"}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_top_right,rgba(97,246,185,0.055),transparent_36%)] py-4 font-mono text-[12px] leading-6">
+      {/* Code */}
+      <div className="min-h-0 flex-1 overflow-auto py-3 font-mono text-[12px] leading-[22px]" style={{ fontFamily: "var(--o-font-mono)" }}>
         {animatedLines.map((line, index) => {
           const isAdd = line.startsWith("+") && !line.startsWith("+++");
           const isDel = line.startsWith("-") && !line.startsWith("---");
@@ -208,42 +230,44 @@ export function CodeTheatre({ event, collapsed, onToggle }: CodeTheatreProps) {
           return (
             <div
               key={`${index}-${line}`}
-              className="grid grid-cols-[58px_28px_minmax(0,1fr)] px-4 opacity-0 [animation:o-enter_220ms_cubic-bezier(0.16,1,0.3,1)_forwards]"
+              className="grid grid-cols-[48px_20px_minmax(0,1fr)] opacity-0 [animation:o-enter_180ms_cubic-bezier(0.16,1,0.3,1)_forwards]"
               style={{
-                animationDelay: `${Math.min(index * 18, 520)}ms`,
+                animationDelay: `${Math.min(index * 16, 400)}ms`,
                 background: isAdd
-                  ? "rgba(97,246,185,0.075)"
+                  ? "rgba(48,209,88,0.06)"
                   : isDel
-                    ? "rgba(255,138,138,0.075)"
+                    ? "rgba(255,69,58,0.06)"
                     : isHunk
-                      ? "rgba(147,197,253,0.06)"
+                      ? "rgba(10,132,255,0.04)"
                       : "transparent",
               }}
             >
-              <span className="select-none pr-4 text-right text-white/18">
+              <span className="select-none pr-3 text-right text-white/12">
                 {isHunk || isHeader ? "" : index + 1}
               </span>
               <span
                 className="select-none text-center"
-                style={{ color: isAdd ? "#61f6b9" : isDel ? "#ff8a8a" : isHunk ? "#93c5fd" : "rgba(255,255,255,0.16)" }}
+                style={{
+                  color: isAdd ? "#30d158" : isDel ? "#ff453a" : isHunk ? "#0a84ff" : "rgba(255,255,255,0.08)",
+                }}
               >
-                {isAdd ? "+" : isDel ? "-" : isHunk ? "@" : "·"}
+                {isAdd ? "+" : isDel ? "-" : isHunk ? "@" : " "}
               </span>
               <span
                 className="whitespace-pre pr-6"
                 style={{
                   color: isAdd
-                    ? "#b6ffdb"
+                    ? "rgba(48,209,88,0.90)"
                     : isDel
-                      ? "#ffc0c0"
+                      ? "rgba(255,69,58,0.85)"
                       : isHunk
-                        ? "#bfdbfe"
+                        ? "rgba(10,132,255,0.70)"
                         : isHeader
-                          ? "rgba(255,255,255,0.36)"
-                          : "rgba(255,255,255,0.74)",
+                          ? "rgba(255,255,255,0.25)"
+                          : "rgba(255,255,255,0.65)",
                 }}
               >
-                {line.replace(/^[+-]{1}\s?/, "") || "\u00A0"}
+                {line.replace(/^[+-]{1}\s?/, "") || " "}
               </span>
             </div>
           );

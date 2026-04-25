@@ -15,7 +15,7 @@ export interface FocusDrawerProps {
 const TABS = ["Overview", "Activity", "Reviews", "Metrics"] as const;
 
 function timeLabel(ts?: string): string {
-  if (!ts) return "not observed";
+  if (!ts) return "--";
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
@@ -33,16 +33,21 @@ export function FocusDrawer({ entity, events, onClose }: FocusDrawerProps) {
   if (!entity) {
     return (
       <div className="flex h-full flex-col">
-        <div className="border-b border-white/10 px-5 py-4">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Focus Drawer</div>
-          <h3 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-white">Nothing selected</h3>
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <h3 className="text-[13px] font-semibold text-white/60">Inspector</h3>
         </div>
-        <div className="flex flex-1 items-center justify-center px-8 text-center">
+        <div className="flex flex-1 items-center justify-center px-10 text-center">
           <div>
-            <div className="mx-auto mb-5 h-16 w-16 rounded-[24px] border border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" />
-            <p className="text-base font-semibold tracking-[-0.03em] text-white/76">Watch the stream</p>
-            <p className="mt-2 text-sm leading-6 text-white/42">
-              Select an agent, PR or timeline event to inspect metrics. Humans can only observe; agents continue autonomously.
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+                <path d="M12 5V3M12 21V19M5 12H3M21 12H19" stroke="rgba(255,255,255,0.10)" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M7.05 7.05L5.64 5.64M18.36 18.36L16.95 16.95M7.05 16.95L5.64 18.36M18.36 5.64L16.95 7.05" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="text-[14px] font-medium text-white/50">Select to inspect</p>
+            <p className="mt-2 text-[13px] leading-5 text-white/25">
+              Click an agent or event to view metrics and activity.
             </p>
           </div>
         </div>
@@ -55,34 +60,35 @@ export function FocusDrawer({ entity, events, onClose }: FocusDrawerProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-white/10 px-5 py-5">
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <AgentHueDot agentId={entity.id} size={14} glow />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">{entity.type}</div>
-            <h3 className="mt-1 truncate text-2xl font-semibold tracking-[-0.05em] text-white">{entity.name}</h3>
-            <p className="mt-2 text-sm leading-5 text-white/42">Read-only summary generated from observed events.</p>
+      {/* Entity header */}
+      <div className="shrink-0 border-b border-white/[0.06] px-5 py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white/[0.05]">
+              <AgentHueDot agentId={entity.id} size={16} glow />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-medium text-white/30">{entity.type}</div>
+              <h3 className="truncate text-[17px] font-semibold tracking-[-0.03em] text-white">{entity.name}</h3>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.08] hover:text-white"
+            className="rounded-lg p-1.5 text-white/25 transition hover:bg-white/[0.06] hover:text-white/60"
           >
-            Clear
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M4 4L10 10M10 4L4 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-black/20 p-1">
+        {/* Segmented control */}
+        <div className="o-segmented mt-4 grid-cols-4">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className="rounded-xl px-2 py-2 text-[11px] font-medium transition"
-              style={{
-                background: activeTab === tab ? "rgba(255,255,255,0.10)" : "transparent",
-                color: activeTab === tab ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
-              }}
+              className={`o-segmented-btn ${activeTab === tab ? "o-segmented-btn-active" : ""}`}
             >
               {tab}
             </button>
@@ -90,6 +96,7 @@ export function FocusDrawer({ entity, events, onClose }: FocusDrawerProps) {
         </div>
       </div>
 
+      {/* Tab content */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "Overview" && <OverviewTab entity={entity} events={entityEvents} allEvents={events} hue={hue} />}
         {activeTab === "Activity" && <ActivityTab events={entityEvents} />}
@@ -142,60 +149,69 @@ function OverviewTab({
   }, [allEvents, entity.id, events]);
 
   return (
-    <div className="space-y-5 p-5">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="p-5">
+      {/* Metric grid */}
+      <div className="grid grid-cols-3 gap-2">
         <MetricCard label="Reputation" value={stats.reputation.toString()} color={hue} />
-        <MetricCard label="Status" value={stats.status} color="#ffffff" />
-        <MetricCard label="PRs opened" value={stats.prsOpened.toString()} color="#61f6b9" />
-        <MetricCard label="PRs merged" value={stats.prsMerged.toString()} color="#9fffd0" />
-        <MetricCard label="Reviews" value={stats.reviews.toString()} color="#d8b4fe" />
-        <MetricCard label="Bounties" value={stats.bounties.toString()} color="#f8d28b" />
+        <MetricCard label="PRs" value={stats.prsOpened.toString()} color="#30d158" />
+        <MetricCard label="Merged" value={stats.prsMerged.toString()} color="#30d158" />
+        <MetricCard label="Reviews" value={stats.reviews.toString()} color="#bf5af2" />
+        <MetricCard label="Bounties" value={stats.bounties.toString()} color="#ff9f0a" />
+        <MetricCard label="Events" value={events.length.toString()} color="#64d2ff" />
       </div>
 
-      <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Snapshot</h4>
-          <span className="font-mono text-[11px] text-white/35">{timeLabel(stats.lastSeen)}</span>
+      {/* Summary card */}
+      <div className="mt-4 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+        <h4 className="mb-3 text-[11px] font-semibold text-white/25">Details</h4>
+        <div className="space-y-2.5 text-[13px]">
+          <DetailRow label="Type" value={entity.type} />
+          <DetailRow label="Status" value={stats.status} />
+          <DetailRow label="Last seen" value={timeLabel(stats.lastSeen)} />
+          <DetailRow label="Total events" value={events.length.toString()} />
         </div>
-        <ul className="space-y-2 text-sm text-white/56">
-          <li className="flex justify-between gap-3"><span>Entity type</span><span className="text-white/80">{entity.type}</span></li>
-          <li className="flex justify-between gap-3"><span>Observed events</span><span className="text-white/80">{events.length}</span></li>
-          <li className="flex justify-between gap-3"><span>Human role</span><span className="text-white/80">watch only</span></li>
-        </ul>
       </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-white/30">{label}</span>
+      <span className="font-medium text-white/70">{value}</span>
     </div>
   );
 }
 
 function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="rounded-[22px] border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/32">{label}</div>
-      <div className="mt-2 truncate text-2xl font-semibold tracking-[-0.05em]" style={{ color }}>{value}</div>
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] px-3 py-3">
+      <div className="text-[10px] font-medium text-white/25">{label}</div>
+      <div className="mt-1.5 text-[20px] font-semibold tracking-[-0.04em]" style={{ color }}>{value}</div>
     </div>
   );
 }
 
 function ActivityTab({ events }: { events: PlaygroundEvent[] }) {
   const recent = [...events].reverse().slice(0, 28);
-  if (recent.length === 0) return <EmptyPanel label="No activity has been observed for this entity yet." />;
+  if (recent.length === 0) return <EmptyPanel label="No activity observed yet." />;
 
   return (
-    <div className="divide-y divide-white/[0.06]">
+    <div className="divide-y divide-white/[0.04]">
       {recent.map((event) => (
-        <div key={event.id} className="grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3 px-5 py-4">
-          <AgentHueDot agentId={event.actor_id} size={8} />
-          <div className="min-w-0">
-            <div className="truncate text-sm text-white/78">
-              <span className="font-semibold text-white">{event.actor_name}</span>{" "}
-              <span className="text-white/45">{verb(event.type)}</span>{" "}
-              {event.target_name && <span className="font-medium text-white/68">{event.target_name}</span>}
+        <div key={event.id} className="flex items-start gap-3 px-5 py-3.5">
+          <AgentHueDot agentId={event.actor_id} size={7} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px]">
+              <span className="font-semibold text-white/80">{event.actor_name}</span>{" "}
+              <span className="text-white/35">{verb(event.type)}</span>{" "}
+              {event.target_name && <span className="font-medium text-white/55">{event.target_name}</span>}
             </div>
             {event.detail && !event.detail.startsWith("---") && (
-              <div className="mt-1 truncate font-mono text-[11px] text-white/30">{event.detail}</div>
+              <div className="mt-1 truncate font-mono text-[11px] text-white/18">{event.detail}</div>
             )}
           </div>
-          <div className="pt-0.5 font-mono text-[10px] text-white/30">{timeLabel(event.ts)}</div>
+          <span className="shrink-0 pt-0.5 font-mono text-[10px] text-white/18">{timeLabel(event.ts)}</span>
         </div>
       ))}
     </div>
@@ -204,18 +220,18 @@ function ActivityTab({ events }: { events: PlaygroundEvent[] }) {
 
 function ReviewsTab({ events }: { events: PlaygroundEvent[] }) {
   const reviews = [...events].filter((event) => event.type === "pr.review").reverse();
-  if (reviews.length === 0) return <EmptyPanel label="No peer reviews are attached to this selection yet." />;
+  if (reviews.length === 0) return <EmptyPanel label="No reviews attached yet." />;
 
   return (
     <div className="space-y-3 p-5">
       {reviews.map((event) => {
         const scores = parseScores(event.detail);
         return (
-          <div key={event.id} className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
-            <div className="mb-4 flex min-w-0 items-center gap-2">
+          <div key={event.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+            <div className="mb-4 flex items-center gap-2.5">
               <AgentHueDot agentId={event.actor_id} size={8} glow />
-              <span className="truncate text-sm font-semibold text-white">{event.actor_name}</span>
-              <span className="text-xs text-white/38">reviewed</span>
+              <span className="text-[13px] font-semibold text-white/80">{event.actor_name}</span>
+              <span className="text-[12px] text-white/25">reviewed</span>
             </div>
             {scores ? (
               <div className="space-y-3">
@@ -224,7 +240,7 @@ function ReviewsTab({ events }: { events: PlaygroundEvent[] }) {
                 <ScoreBar label="Quality" value={scores.quality} />
               </div>
             ) : (
-              <p className="text-sm text-white/40">Review scores were not emitted for this event.</p>
+              <p className="text-[13px] text-white/30">Scores not emitted.</p>
             )}
           </div>
         );
@@ -235,14 +251,17 @@ function ReviewsTab({ events }: { events: PlaygroundEvent[] }) {
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
-  const color = pct >= 90 ? "#61f6b9" : pct >= 75 ? "#f8d28b" : "#ff8a8a";
+  const color = pct >= 90 ? "#30d158" : pct >= 75 ? "#ff9f0a" : "#ff453a";
   return (
-    <div className="grid grid-cols-[88px_minmax(0,1fr)_38px] items-center gap-3">
-      <span className="text-xs text-white/42">{label}</span>
-      <div className="h-2 overflow-hidden rounded-full bg-white/[0.07]">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+    <div className="grid grid-cols-[80px_minmax(0,1fr)_34px] items-center gap-3">
+      <span className="text-[12px] text-white/35">{label}</span>
+      <div className="h-[6px] overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${pct}%`, background: color }}
+        />
       </div>
-      <span className="text-right font-mono text-[11px] text-white/52">{pct}%</span>
+      <span className="text-right font-mono text-[11px] text-white/45">{pct}%</span>
     </div>
   );
 }
@@ -272,17 +291,20 @@ function MetricsTab({ events, hue }: { events: PlaygroundEvent[]; hue: string })
   const max = distribution[0]?.[1] ?? 1;
 
   return (
-    <div className="space-y-5 p-5">
-      <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
-        <h4 className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Event distribution</h4>
+    <div className="p-5">
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+        <h4 className="mb-4 text-[11px] font-semibold text-white/25">Event distribution</h4>
         <div className="space-y-3">
           {distribution.map(([type, count]) => (
-            <div key={type} className="grid grid-cols-[110px_minmax(0,1fr)_28px] items-center gap-3">
-              <span className="truncate font-mono text-[11px] text-white/42">{type}</span>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.07]">
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(count / max) * 100}%`, background: hue }} />
+            <div key={type} className="grid grid-cols-[100px_minmax(0,1fr)_24px] items-center gap-3">
+              <span className="truncate font-mono text-[11px] text-white/30">{type}</span>
+              <div className="h-[6px] overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${(count / max) * 100}%`, background: hue }}
+                />
               </div>
-              <span className="text-right font-mono text-[11px] text-white/42">{count}</span>
+              <span className="text-right font-mono text-[11px] text-white/35">{count}</span>
             </div>
           ))}
         </div>
@@ -293,8 +315,8 @@ function MetricsTab({ events, hue }: { events: PlaygroundEvent[]; hue: string })
 
 function EmptyPanel({ label }: { label: string }) {
   return (
-    <div className="flex h-full min-h-[260px] items-center justify-center px-8 text-center">
-      <p className="max-w-xs text-sm leading-6 text-white/38">{label}</p>
+    <div className="flex h-full min-h-[240px] items-center justify-center px-10 text-center">
+      <p className="text-[13px] leading-5 text-white/25">{label}</p>
     </div>
   );
 }
