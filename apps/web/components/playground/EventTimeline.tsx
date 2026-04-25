@@ -13,16 +13,16 @@ interface EventTimelineProps {
 
 type EventCategory = "agent" | "pr" | "review" | "bounty" | "repo" | "project" | "ecosystem" | "package" | "scene";
 
-const CATEGORY_CONFIG: Record<EventCategory, { label: string; color: string; bg: string; icon: string }> = {
-  agent: { label: "Agent", color: "#7dd3fc", bg: "rgba(125,211,252,0.12)", icon: "●" },
-  pr: { label: "Pull request", color: "#61f6b9", bg: "rgba(97,246,185,0.12)", icon: "↗" },
-  review: { label: "Review", color: "#d8b4fe", bg: "rgba(216,180,254,0.13)", icon: "✓" },
-  bounty: { label: "Bounty", color: "#f8d28b", bg: "rgba(248,210,139,0.13)", icon: "★" },
-  repo: { label: "Repo", color: "#93c5fd", bg: "rgba(147,197,253,0.12)", icon: "□" },
-  project: { label: "Project", color: "#c4b5fd", bg: "rgba(196,181,253,0.12)", icon: "◇" },
-  ecosystem: { label: "Ecosystem", color: "#99f6e4", bg: "rgba(153,246,228,0.12)", icon: "≋" },
-  package: { label: "Package", color: "#f0abfc", bg: "rgba(240,171,252,0.12)", icon: "⬡" },
-  scene: { label: "Scene", color: "#cbd5e1", bg: "rgba(203,213,225,0.10)", icon: "▶" },
+const CATEGORY_CONFIG: Record<EventCategory, { label: string; color: string; bg: string }> = {
+  agent:     { label: "Agent",     color: "#64d2ff", bg: "rgba(100,210,255,0.10)" },
+  pr:        { label: "PR",        color: "#30d158", bg: "rgba(48,209,88,0.10)" },
+  review:    { label: "Review",    color: "#bf5af2", bg: "rgba(191,90,242,0.10)" },
+  bounty:    { label: "Bounty",    color: "#ff9f0a", bg: "rgba(255,159,10,0.10)" },
+  repo:      { label: "Repo",      color: "#0a84ff", bg: "rgba(10,132,255,0.10)" },
+  project:   { label: "Project",   color: "#ac8e68", bg: "rgba(172,142,104,0.10)" },
+  ecosystem: { label: "Ecosystem", color: "#63e6be", bg: "rgba(99,230,190,0.10)" },
+  package:   { label: "Package",   color: "#ff6482", bg: "rgba(255,100,130,0.10)" },
+  scene:     { label: "Scene",     color: "#86868b", bg: "rgba(134,134,139,0.08)" },
 };
 
 const FILTERS = [
@@ -75,10 +75,10 @@ function getVerb(type: string): string {
 
 function relativeTime(ts: string): string {
   const diff = Math.max(0, Date.now() - new Date(ts).getTime());
-  if (diff < 60_000) return `${Math.max(1, Math.floor(diff / 1000))}s ago`;
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  return `${Math.floor(diff / 86_400_000)}d ago`;
+  if (diff < 60_000) return `${Math.max(1, Math.floor(diff / 1000))}s`;
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`;
+  return `${Math.floor(diff / 86_400_000)}d`;
 }
 
 export function EventTimeline({ events, onSelect, pinnedId }: EventTimelineProps) {
@@ -107,18 +107,22 @@ export function EventTimeline({ events, onSelect, pinnedId }: EventTimelineProps
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-white/10 bg-black/10 px-5 py-4">
+      {/* Toolbar */}
+      <div className="shrink-0 border-b border-white/[0.04] px-4 py-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative flex-1">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/30">⌕</span>
+            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="5.75" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+              <path d="M13 13L17 17" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
             <input
               value={timelineSearch}
               onChange={(event) => setTimelineSearch(event.target.value)}
-              placeholder="Search actor, action or target"
-              className="h-10 w-full rounded-2xl border border-white/10 bg-white/[0.055] pl-9 pr-3 text-sm text-white/80 outline-none transition focus:border-white/20 focus:bg-white/[0.08] placeholder:text-white/28"
+              placeholder="Search events..."
+              className="h-9 w-full rounded-xl border border-white/[0.06] bg-white/[0.03] pl-9 pr-3 text-[13px] text-white/80 outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.05] placeholder:text-white/20"
             />
           </label>
-          <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-[560px]">
+          <div className="no-scrollbar flex gap-1 overflow-x-auto">
             {FILTERS.map((filter) => {
               const active = timelineFilter === filter.value;
               const cfg = filter.value === "all" ? null : CATEGORY_CONFIG[filter.value as EventCategory];
@@ -126,11 +130,10 @@ export function EventTimeline({ events, onSelect, pinnedId }: EventTimelineProps
                 <button
                   key={filter.value}
                   onClick={() => setTimelineFilter(filter.value)}
-                  className="shrink-0 rounded-full border px-3 py-2 text-[11px] font-medium transition"
+                  className="shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-all"
                   style={{
-                    borderColor: active ? (cfg?.color ?? "rgba(255,255,255,0.28)") : "rgba(255,255,255,0.09)",
-                    background: active ? (cfg?.bg ?? "rgba(255,255,255,0.08)") : "rgba(255,255,255,0.035)",
-                    color: active ? (cfg?.color ?? "rgba(255,255,255,0.86)") : "rgba(255,255,255,0.46)",
+                    background: active ? (cfg?.bg ?? "rgba(255,255,255,0.08)") : "transparent",
+                    color: active ? (cfg?.color ?? "#f5f5f7") : "rgba(255,255,255,0.30)",
                   }}
                 >
                   {filter.label}
@@ -141,18 +144,17 @@ export function EventTimeline({ events, onSelect, pinnedId }: EventTimelineProps
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        <div className="absolute bottom-6 left-[35px] top-6 w-px bg-gradient-to-b from-white/10 via-white/10 to-transparent" />
-
+      {/* Event list */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="flex h-full min-h-[180px] items-center justify-center text-center">
+          <div className="flex h-full min-h-[160px] items-center justify-center text-center">
             <div>
-              <div className="text-sm font-medium text-white/60">No matching events</div>
-              <p className="mt-1 text-xs text-white/35">This surface is view-only; adjust filters to change what you watch.</p>
+              <p className="text-[13px] text-white/40">No matching events</p>
+              <p className="mt-1 text-[12px] text-white/20">Adjust filters to see more.</p>
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-white/[0.04]">
             {filtered.map((event, index) => (
               <TimelineEntry
                 key={event.id}
@@ -186,50 +188,43 @@ function TimelineEntry({
   return (
     <button
       onClick={onClick}
-      className="group relative grid w-full grid-cols-[42px_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.065]"
+      className="group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03]"
       style={{
-        borderColor: pinned ? `${cfg.color}66` : "rgba(255,255,255,0.08)",
-        background: pinned ? `${cfg.bg}` : "rgba(255,255,255,0.035)",
-        boxShadow: pinned ? `0 18px 48px ${cfg.color}18` : "none",
+        background: pinned ? cfg.bg : undefined,
       }}
     >
-      <div
-        className="relative z-10 flex h-9 w-9 items-center justify-center rounded-2xl border text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]"
-        style={{ borderColor: `${cfg.color}44`, background: cfg.bg, color: cfg.color }}
+      {/* Category indicator */}
+      <div className="relative mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px]"
+        style={{ background: cfg.bg, color: cfg.color }}
       >
-        {cfg.icon}
-        {isFirst && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#61f6b9] shadow-[0_0_12px_rgba(97,246,185,0.7)]" />}
+        <span className="font-semibold">{cfg.label.charAt(0)}</span>
+        {isFirst && (
+          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#30d158] shadow-[0_0_6px_rgba(48,209,88,0.6)]" />
+        )}
       </div>
 
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <AgentHueDot agentId={event.actor_id} size={7} glow={pinned} />
-          <span className="font-semibold tracking-[-0.02em] text-white/90">{event.actor_name}</span>
-          <span className="text-white/48">{getVerb(event.type)}</span>
+      {/* Content */}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-1.5 text-[13px]">
+          <AgentHueDot agentId={event.actor_id} size={6} glow={pinned} />
+          <span className="font-semibold text-white/90">{event.actor_name}</span>
+          <span className="text-white/35">{getVerb(event.type)}</span>
           {event.target_name && (
-            <span className="truncate font-semibold tracking-[-0.01em] text-white/72">{event.target_name}</span>
+            <span className="truncate font-medium text-white/60">{event.target_name}</span>
           )}
         </div>
 
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-white/34">
-          <span style={{ color: cfg.color }}>{cfg.label}</span>
-          <span>•</span>
-          <span>{event.severity}</span>
-          {event.detail && !event.detail.startsWith("---") && (
-            <>
-              <span>•</span>
-              <span className="max-w-[460px] truncate font-mono">{event.detail}</span>
-            </>
-          )}
-        </div>
+        {event.detail && !event.detail.startsWith("---") && (
+          <div className="mt-1 max-w-[400px] truncate font-mono text-[11px] text-white/20">
+            {event.detail}
+          </div>
+        )}
       </div>
 
-      <div className="pt-1 text-right font-mono text-[10px] text-white/32">
-        <div>{relativeTime(event.ts)}</div>
-        <div className="mt-1 text-white/22">
-          {new Date(event.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-        </div>
-      </div>
+      {/* Time */}
+      <span className="shrink-0 pt-0.5 font-mono text-[11px] text-white/20">
+        {relativeTime(event.ts)}
+      </span>
     </button>
   );
 }

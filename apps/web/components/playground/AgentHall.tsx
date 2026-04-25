@@ -32,10 +32,8 @@ export interface AgentHallProps {
   mode: "live" | "scenario" | "replay";
 }
 
-// ─── Constants ──────────────────────────────────────────────────────────────
-
-const MIN_NODE_RADIUS = 13;
-const MAX_NODE_RADIUS = 38;
+const MIN_NODE_RADIUS = 14;
+const MAX_NODE_RADIUS = 40;
 const MAX_REPUTATION = 500;
 const PARTICLE_MAX = 400;
 const PARTICLE_SPEED = 2.2;
@@ -45,8 +43,6 @@ const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.12;
 
-// ─── Utility ────────────────────────────────────────────────────────────────
-
 function nodeRadius(reputation: number): number {
   const t = Math.min(reputation / MAX_REPUTATION, 1);
   return MIN_NODE_RADIUS + t * (MAX_NODE_RADIUS - MIN_NODE_RADIUS);
@@ -54,10 +50,10 @@ function nodeRadius(reputation: number): number {
 
 function strokeWidth(lastActiveAt: number, now: number): number {
   const elapsed = now - lastActiveAt;
-  if (elapsed < 5_000) return 3;
-  if (elapsed < 30_000) return 2;
-  if (elapsed < 120_000) return 1.5;
-  return 1;
+  if (elapsed < 5_000) return 2.5;
+  if (elapsed < 30_000) return 1.8;
+  if (elapsed < 120_000) return 1.2;
+  return 0.8;
 }
 
 function hexToNum(hex: string): number {
@@ -67,8 +63,6 @@ function hexToNum(hex: string): number {
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
-
-// ─── Simulation Types ───────────────────────────────────────────────────────
 
 interface SimNode {
   id: string;
@@ -97,8 +91,6 @@ interface Particle {
   life: number;
   color: number;
 }
-
-// ─── FPS Tracker ────────────────────────────────────────────────────────────
 
 interface FpsTracker {
   frames: number;
@@ -130,8 +122,6 @@ function tickFps(tracker: FpsTracker): boolean {
   }
   return false;
 }
-
-// ─── Internal state ─────────────────────────────────────────────────────────
 
 type PixiApp = { view: HTMLCanvasElement; stage: PixiContainer; renderer: { resize(w: number, h: number): void }; destroy(removeView: boolean, opts: { children: boolean }): void };
 type PixiContainer = { position: { set(x: number, y: number): void }; scale: { set(s: number): void }; addChild(child: unknown): void; removeChild(child: unknown): void };
@@ -165,8 +155,6 @@ interface HallState {
   _cleanup?: () => void;
 }
 
-// ─── Avatar initials ────────────────────────────────────────────────────────
-
 const AGENT_ICONS: Record<string, string> = {
   obsidian: "OB",
   ember: "EM",
@@ -180,8 +168,6 @@ const AGENT_ICONS: Record<string, string> = {
 function getInitials(name: string): string {
   return AGENT_ICONS[name.toLowerCase()] || name.slice(0, 2).toUpperCase();
 }
-
-// ─── Component ──────────────────────────────────────────────────────────────
 
 export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: AgentHallProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -211,7 +197,6 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Initialize pixi + d3-force
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -228,7 +213,7 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
 
       const app = new PIXI.Application({
         width: rect.width, height: rect.height,
-        backgroundColor: hexToNum(rawColor.bg0),
+        backgroundColor: 0x000000,
         antialias: true,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
@@ -255,12 +240,12 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
       state.nodeContainer = nodeContainer as unknown as PixiContainer;
 
       const sim = d3.forceSimulation<SimNode>(state.nodes)
-        .force("charge", d3.forceManyBody().strength(-220))
-        .force("center", d3.forceCenter(0, 0).strength(0.055))
-        .force("collision", d3.forceCollide<SimNode>().radius((n: SimNode) => nodeRadius(n.reputation) + 18))
+        .force("charge", d3.forceManyBody().strength(-240))
+        .force("center", d3.forceCenter(0, 0).strength(0.05))
+        .force("collision", d3.forceCollide<SimNode>().radius((n: SimNode) => nodeRadius(n.reputation) + 20))
         .force("link", d3.forceLink<SimNode, SimLink>(state.links)
           .id((d: SimNode) => d.id)
-          .distance(150)
+          .distance(160)
           .strength((l: SimLink) => Math.min(0.12 + l.weight / 14, 0.56))
         )
         .alphaDecay(0.02)
@@ -275,12 +260,11 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
         if (state.destroyed) return;
         rafId = requestAnimationFrame(renderFrame);
 
-        // Smooth camera interpolation
         const cam = state.camera;
         const tc = state.targetCamera;
-        cam.x += (tc.x - cam.x) * 0.09;
-        cam.y += (tc.y - cam.y) * 0.09;
-        cam.zoom += (tc.zoom - cam.zoom) * 0.09;
+        cam.x += (tc.x - cam.x) * 0.08;
+        cam.y += (tc.y - cam.y) * 0.08;
+        cam.zoom += (tc.zoom - cam.zoom) * 0.08;
 
         worldContainer.position.set(
           state.size.width / 2 + cam.x * cam.zoom,
@@ -320,7 +304,6 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
     return () => { state.destroyed = true; if (state._cleanup) state._cleanup(); };
   }, []);
 
-  // Update sim nodes/links
   useEffect(() => {
     const state = stateRef.current;
     if (!state.sim) return;
@@ -354,7 +337,6 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
     state.sim.alpha(0.24).restart();
   }, [agents, edges]);
 
-  // Spawn particles
   useEffect(() => {
     const state = stateRef.current;
     if (state.reducedMotion) return;
@@ -376,8 +358,6 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
       state.processedEvents = new Set(arr.slice(-500));
     }
   }, [events]);
-
-  // ─── Interaction ──────────────────────────────────────────────────────────
 
   const screenToWorld = useCallback((clientX: number, clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -447,7 +427,6 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
     state.targetCamera.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, state.targetCamera.zoom + delta));
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -488,7 +467,7 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
   }, [pinnedId]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.06),transparent_45%)]">
+    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.03),transparent_70%)]">
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
@@ -501,54 +480,53 @@ export function AgentHall({ agents, edges, events, onSelect, pinnedId, mode }: A
         tabIndex={0}
       />
 
-      <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/40 backdrop-blur-xl">
-        observation only
-      </div>
-
       {/* Hover card */}
       {hoveredAgent && (
         <div
-          className="pointer-events-none fixed z-10 rounded-2xl border border-white/10 bg-[#11141b]/90 px-3.5 py-3 shadow-2xl backdrop-blur-xl"
-          style={{ left: hoverPos.x + 14, top: hoverPos.y - 10 }}
+          className="pointer-events-none fixed z-10 rounded-2xl border border-white/[0.12] bg-black/80 px-4 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-[40px] backdrop-saturate-[1.8]"
+          style={{ left: hoverPos.x + 16, top: hoverPos.y - 8 }}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <AgentHueDot agentId={hoveredAgent.id} size={8} glow />
-            <span className="text-sm font-semibold tracking-[-0.02em] text-white">{hoveredAgent.name}</span>
+          <div className="flex items-center gap-2.5">
+            <AgentHueDot agentId={hoveredAgent.id} size={10} glow />
+            <span className="text-[14px] font-semibold tracking-[-0.02em] text-white">{hoveredAgent.name}</span>
           </div>
-          <span className="font-mono text-[11px] text-white/45">
-            rep {hoveredAgent.reputation}
-          </span>
+          <div className="mt-1.5 flex items-center gap-3">
+            <span className="font-mono text-[11px] text-white/40">rep {hoveredAgent.reputation}</span>
+            <span className="text-[11px] text-white/25">
+              {hoveredAgent.status === "active" ? "active" : "idle"}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 flex flex-col gap-2 rounded-2xl border border-white/10 bg-black/25 px-3.5 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.34)] backdrop-blur-xl">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Legend</span>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-full bg-white/45 shadow-[0_0_0_5px_rgba(255,255,255,0.06)]" />
-          <span className="text-[10px] text-white/45">Node size = reputation</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-[2px] w-5 rounded-full bg-white/45" />
-          <span className="text-[10px] text-white/45">Edge weight = interactions</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] text-white/35">↑↓←→ / +/-</span>
-          <span className="text-[10px] text-white/35">pan and zoom</span>
-        </div>
+      {/* Mode + FPS */}
+      <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/50 px-3 py-1.5 backdrop-blur-xl">
+        <span
+          className="h-[5px] w-[5px] rounded-full"
+          style={{
+            background: mode === "live" ? "#30d158" : mode === "scenario" ? "#0a84ff" : "#ff9f0a",
+          }}
+        />
+        <span className="font-mono text-[10px] text-white/40">{mode}</span>
+        <span className="font-mono text-[10px] text-white/20">{fpsDisplay}fps</span>
       </div>
 
-      {/* Mode + FPS (minimal) */}
-      <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 backdrop-blur-xl">
-        <span className={`w-1.5 h-1.5 rounded-full ${mode === "live" ? "bg-[#3BD01F]" : mode === "scenario" ? "bg-[#5B8DEF]" : "bg-[#E8B339]"}`} />
-        <span className="font-mono text-[9px] uppercase text-white/45">{mode}</span>
-        <span className="font-mono text-[9px] text-white/25">{fpsDisplay}fps</span>
+      {/* Keyboard hint */}
+      <div className="absolute bottom-4 left-4 rounded-xl border border-white/[0.06] bg-black/40 px-3 py-2 backdrop-blur-xl">
+        <div className="flex items-center gap-3 text-[10px] text-white/25">
+          <span className="font-mono">arrows</span>
+          <span>pan</span>
+          <span className="text-white/10">|</span>
+          <span className="font-mono">+/-</span>
+          <span>zoom</span>
+          <span className="text-white/10">|</span>
+          <span className="font-mono">F</span>
+          <span>reset</span>
+        </div>
       </div>
     </div>
   );
 }
-
-// ─── Render helpers ─────────────────────────────────────────────────────────
 
 function renderEdges(state: HallState) {
   const gfx = state.edgeGfx;
@@ -564,8 +542,8 @@ function renderEdges(state: HallState) {
     if (!src || !tgt) continue;
 
     const color = hexToNum(getAgentHue(link.initiatorId));
-    const alpha = 0.10 + Math.min(link.weight / 10, 0.38);
-    const width = 1 + Math.min(link.weight / 4, 3.2);
+    const alpha = 0.06 + Math.min(link.weight / 12, 0.30);
+    const width = 0.8 + Math.min(link.weight / 5, 2.5);
 
     gfx.lineStyle(width, color, alpha);
     gfx.moveTo(src.x, src.y);
@@ -595,16 +573,16 @@ function renderParticles(state: HallState) {
 
     const x = lerp(src.x, tgt.x, p.progress);
     const y = lerp(src.y, tgt.y, p.progress);
-    const alpha = (1 - p.progress) * 0.8;
+    const alpha = (1 - p.progress) * 0.7;
 
     gfx.beginFill(p.color, alpha);
-    gfx.drawCircle(x, y, 3);
+    gfx.drawCircle(x, y, 2.5);
     gfx.endFill();
 
     const tx = lerp(src.x, tgt.x, Math.max(0, p.progress - 0.1));
     const ty = lerp(src.y, tgt.y, Math.max(0, p.progress - 0.1));
-    gfx.beginFill(p.color, alpha * 0.4);
-    gfx.drawCircle(tx, ty, 2);
+    gfx.beginFill(p.color, alpha * 0.35);
+    gfx.drawCircle(tx, ty, 1.5);
     gfx.endFill();
   }
 
@@ -632,9 +610,8 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
       s.addChild(bg);
       (s as unknown as PixiNodeSprite)._bg = bg;
 
-      // Initials form the avatar. They keep identities legible in video.
       const label = new PIXI.Text(getInitials(node.name), {
-        fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Text, ui-sans-serif, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Display, system-ui, sans-serif",
         fontSize: 11,
         fill: hexToNum(rawColor.ink0),
         align: "center",
@@ -644,12 +621,12 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
       s.addChild(label);
       (s as unknown as PixiNodeSprite)._label = label as unknown as PixiNodeSprite["_label"];
 
-      // Name label below node
       const nameLabel = new PIXI.Text(node.name, {
-        fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Text, ui-sans-serif, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Text, system-ui, sans-serif",
         fontSize: 10,
-        fill: hexToNum(rawColor.ink2),
+        fill: 0x86868b,
         align: "center",
+        fontWeight: "500",
       });
       nameLabel.anchor.set(0.5, 0);
       s.addChild(nameLabel);
@@ -670,35 +647,34 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
     const bg = sprite._bg;
     bg.clear();
 
-    // Soft aura keeps selected/hovered nodes readable on recorded video.
     if (isHovered) {
-      bg.beginFill(hueColor, 0.12);
-      bg.drawCircle(0, 0, r + 10);
+      bg.beginFill(hueColor, 0.08);
+      bg.drawCircle(0, 0, r + 12);
       bg.endFill();
     }
 
-    bg.beginFill(hueColor, isHovered ? 0.18 : 0.10);
+    bg.beginFill(hueColor, isHovered ? 0.14 : 0.06);
     bg.drawCircle(0, 0, r + 4);
     bg.endFill();
 
-    bg.beginFill(hexToNum(rawColor.bg2), 0.95);
+    bg.beginFill(0x1c1c1e, 0.95);
     bg.drawCircle(0, 0, r);
     bg.endFill();
 
-    bg.beginFill(hueColor, 0.18);
-    bg.drawCircle(0, 0, Math.max(7, r * 0.54));
+    bg.beginFill(hueColor, 0.15);
+    bg.drawCircle(0, 0, Math.max(6, r * 0.5));
     bg.endFill();
 
-    bg.lineStyle(sw, hueColor, isHovered ? 1 : 0.72);
+    bg.lineStyle(sw, hueColor, isHovered ? 0.9 : 0.5);
     bg.drawCircle(0, 0, r);
 
-    sprite._label.style.fontSize = Math.max(9, r * 0.55);
+    sprite._label.style.fontSize = Math.max(9, r * 0.52);
     sprite._label.text = getInitials(node.name);
 
     if (sprite._nameLabel) {
       sprite._nameLabel.text = node.name;
       sprite._nameLabel.style.fontSize = 10;
-      (sprite._nameLabel as unknown as { position: { set(x: number, y: number): void } }).position?.set?.(0, r + 8);
+      (sprite._nameLabel as unknown as { position: { set(x: number, y: number): void } }).position?.set?.(0, r + 10);
     }
   }
 
@@ -710,8 +686,6 @@ function renderNodes(state: HallState, PIXI: PixiModule) {
     }
   }
 }
-
-// ─── Perf Harness ───────────────────────────────────────────────────────────
 
 export interface PerfResult { p50: number; p95: number; mean: number; samples: number; }
 
