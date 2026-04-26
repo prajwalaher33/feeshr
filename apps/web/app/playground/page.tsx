@@ -60,38 +60,23 @@ export default function PlaygroundPage() {
 
   return (
     <div
-      className="observatory flex h-full min-h-screen flex-col overflow-hidden text-white"
+      className="observatory flex min-h-[calc(100vh-68px)] flex-col text-white"
       style={{ background: "#000", fontFamily: "var(--o-font-display)" }}
     >
-      {/* Ambient glow - subtle, Apple-style radial gradients */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,119,198,0.15),transparent)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_80%_-20%,rgba(48,209,88,0.06),transparent)]" />
       </div>
 
-      {/* Header */}
-      <header className="shrink-0 border-b border-white/[0.06] bg-black/60 backdrop-blur-[40px] backdrop-saturate-[1.8]">
-        <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-6 py-4 md:px-10">
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-b from-white/[0.12] to-white/[0.04]">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="3" fill="#30d158" />
-                  <circle cx="8" cy="8" r="6" stroke="#30d158" strokeWidth="1" opacity="0.3" />
-                  <circle cx="8" cy="8" r="7.5" stroke="#30d158" strokeWidth="0.5" opacity="0.15" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-white">Playground</h1>
-                <p className="text-[11px] text-white/40">Agent collaboration observatory</p>
-              </div>
-            </div>
-
-            <div className="hidden h-5 w-px bg-white/[0.08] md:block" />
-
+      {/* Compact status bar - sits below site navbar */}
+      <div className="shrink-0 border-b border-white/[0.06] bg-white/[0.02]">
+        <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-5 py-2.5 md:px-8">
+          <div className="flex items-center gap-3">
             <StatusPill active={!isDemo}>
               {isDemo ? "Demo" : "Live"}
             </StatusPill>
+            <span className="text-[12px] text-white/30">Agent collaboration observatory</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -103,15 +88,15 @@ export default function PlaygroundPage() {
             />
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main content */}
-      <main className="mx-auto flex w-full max-w-[1920px] flex-1 gap-0 overflow-hidden xl:gap-0">
+      <div className="mx-auto flex w-full max-w-[1920px] flex-1 overflow-hidden">
         {/* Left column */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ReputationAscendant events={events} />
 
-          {/* Agent Hall - hero section */}
+          {/* Agent Hall */}
           <Section
             title="Agent Hall"
             trailing={`${agents.length} agents`}
@@ -172,7 +157,7 @@ export default function PlaygroundPage() {
             onClose={() => setPinnedId(null)}
           />
         </aside>
-      </main>
+      </div>
 
       {/* Fullscreen theatre overlay */}
       {theatreFullscreen && (
@@ -192,7 +177,7 @@ export default function PlaygroundPage() {
 
 function StatusPill({ active, children }: { active: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5">
+    <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1">
       <span
         className="h-[6px] w-[6px] rounded-full"
         style={{
@@ -208,7 +193,7 @@ function StatusPill({ active, children }: { active: boolean; children: React.Rea
 
 function StatChip({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="hidden items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 md:flex">
+    <div className="hidden items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-1 md:flex">
       <span className="text-[11px] text-white/30">{label}</span>
       <span className="font-mono text-[12px] font-medium text-white/70">{String(value)}</span>
     </div>
