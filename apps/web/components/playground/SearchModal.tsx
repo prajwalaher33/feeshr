@@ -24,6 +24,13 @@ interface SearchResult {
   data: ObsAgent | ObsEvent | PullRequestDetail | Project;
 }
 
+const typeColors: Record<string, string> = {
+  agent: 'var(--ok, #3BD01F)',
+  event: 'var(--ink-3, #5A616B)',
+  pr: 'var(--info, #5B8DEF)',
+  project: '#bf5af2',
+};
+
 export function SearchModal({ open, onClose, agents, events, prs, projects, onSelectEvent }: SearchModalProps) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -81,45 +88,83 @@ export function SearchModal({ open, onClose, agents, events, prs, projects, onSe
   if (!open) return null;
 
   return (
-    <div className="o-search-backdrop" onClick={onClose}>
-      <div className="o-search-modal" onClick={e => e.stopPropagation()}>
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        paddingTop: 120,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 520,
+          background: 'var(--bg-1, #0B0D10)',
+          border: '1px solid var(--line, #1E242B)',
+          borderRadius: 16,
+          overflow: 'hidden',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        }}
+      >
         <input
           ref={inputRef}
-          className="o-search-input"
           placeholder="Search agents, events, PRs, projects..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
+          style={{
+            width: '100%', padding: '14px 20px',
+            background: 'transparent',
+            border: 'none', borderBottom: '1px solid var(--line, #1E242B)',
+            color: 'var(--ink-0, #F4F5F7)',
+            fontSize: 14, outline: 'none',
+            fontFamily: 'var(--font-body, Inter, system-ui, sans-serif)',
+          }}
         />
         <div style={{ maxHeight: 340, overflow: 'auto' }}>
           {query && results.length === 0 && (
-            <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--o-text-4)', fontSize: 12 }}>
+            <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--ink-4, #3A4049)', fontSize: 12 }}>
               No results for &quot;{query}&quot;
             </div>
           )}
           {results.map((r, i) => (
             <div
               key={r.id}
-              className={`o-search-result${i === activeIdx ? ' o-search-result-active' : ''}`}
               onClick={() => {
                 if (r.type === "event") onSelectEvent(r.data as ObsEvent);
                 onClose();
               }}
               onMouseEnter={() => setActiveIdx(i)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 16px', cursor: 'pointer',
+                background: i === activeIdx ? 'var(--bg-2, #111418)' : 'transparent',
+                transition: 'background 100ms ease',
+              }}
             >
-              {/* Type icon */}
-              <span className="o-badge" style={{
-                color: r.type === 'agent' ? 'var(--o-live)' : r.type === 'event' ? CATEGORY_STYLE[(r.data as ObsEvent).category]?.color || 'var(--o-text-3)' : r.type === 'pr' ? 'var(--o-live)' : 'var(--o-genesis)',
-                background: 'var(--o-surface)', border: '1px solid var(--o-border)',
-                fontSize: 9,
+              <span style={{
+                display: 'inline-flex', alignItems: 'center',
+                padding: '2px 6px', borderRadius: 4,
+                fontSize: 9, fontWeight: 600,
+                color: r.type === 'event'
+                  ? (CATEGORY_STYLE[(r.data as ObsEvent).category]?.color || 'var(--ink-3, #5A616B)')
+                  : (typeColors[r.type] || 'var(--ink-3, #5A616B)'),
+                background: 'var(--bg-2, #111418)',
+                border: '1px solid var(--line, #1E242B)',
               }}>
                 {r.type}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: 'var(--o-text-0)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 12, color: 'var(--ink-0, #F4F5F7)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.title}
                 </div>
-                <div className="o-mono" style={{ fontSize: 10, color: 'var(--o-text-3)', marginTop: 1 }}>
+                <div style={{
+                  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+                  fontSize: 10, color: 'var(--ink-3, #5A616B)', marginTop: 1,
+                }}>
                   {r.subtitle}
                 </div>
               </div>
@@ -127,12 +172,21 @@ export function SearchModal({ open, onClose, agents, events, prs, projects, onSe
             </div>
           ))}
           {!query && (
-            <div style={{ padding: '16px', color: 'var(--o-text-4)', fontSize: 11, lineHeight: 1.6 }}>
+            <div style={{ padding: '16px', color: 'var(--ink-4, #3A4049)', fontSize: 11, lineHeight: 1.6 }}>
               <div>Type to search across agents, events, PRs, and projects.</div>
               <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
-                <span><span className="o-mono" style={{ fontSize: 9, padding: '1px 4px', background: 'var(--o-raised)', borderRadius: 2 }}>↑↓</span> navigate</span>
-                <span><span className="o-mono" style={{ fontSize: 9, padding: '1px 4px', background: 'var(--o-raised)', borderRadius: 2 }}>↵</span> select</span>
-                <span><span className="o-mono" style={{ fontSize: 9, padding: '1px 4px', background: 'var(--o-raised)', borderRadius: 2 }}>esc</span> close</span>
+                <span><span style={{
+                  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+                  fontSize: 9, padding: '1px 4px', background: 'var(--bg-2, #111418)', borderRadius: 2,
+                }}>↑↓</span> navigate</span>
+                <span><span style={{
+                  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+                  fontSize: 9, padding: '1px 4px', background: 'var(--bg-2, #111418)', borderRadius: 2,
+                }}>↵</span> select</span>
+                <span><span style={{
+                  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+                  fontSize: 9, padding: '1px 4px', background: 'var(--bg-2, #111418)', borderRadius: 2,
+                }}>esc</span> close</span>
               </div>
             </div>
           )}

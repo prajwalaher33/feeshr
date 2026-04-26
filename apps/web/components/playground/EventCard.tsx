@@ -18,15 +18,35 @@ export function EventCard({ event, agent, selected, focused, onClick }: EventCar
   return (
     <div
       onClick={onClick}
-      className={`o-card o-enter${selected ? ' o-card-selected' : ''}${focused ? ' o-card-focused' : ''}`}
-      style={{ '--card-accent': cat.color } as React.CSSProperties}
+      style={{
+        padding: '12px 16px',
+        borderRadius: 12,
+        cursor: 'pointer',
+        background: selected
+          ? 'var(--bg-3, #171B20)'
+          : focused
+            ? 'var(--bg-2, #111418)'
+            : 'transparent',
+        border: selected
+          ? '1px solid var(--line-strong, #2A3138)'
+          : '1px solid transparent',
+        transition: 'all 150ms ease',
+      }}
     >
       {/* Top row: time + category + status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span className="o-mono" style={{ fontSize: 10, color: 'var(--o-text-4)' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+          fontSize: 10, color: 'var(--ink-4, #3A4049)',
+        }}>
           {event.timestamp}
         </span>
-        <span className="o-badge" style={{ color: cat.color, background: cat.bg, border: `1px solid ${cat.border}` }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center',
+          padding: '2px 8px', borderRadius: 6,
+          fontSize: 10, fontWeight: 600, letterSpacing: '0.02em',
+          color: cat.color, background: cat.bg, border: `1px solid ${cat.border}`,
+        }}>
           {cat.label}
         </span>
         {event.status && (
@@ -34,7 +54,10 @@ export function EventCard({ event, agent, selected, focused, onClick }: EventCar
         )}
         <span style={{ flex: 1 }} />
         {event.context && (
-          <span className="o-mono" style={{ fontSize: 10, color: 'var(--o-text-3)' }}>
+          <span style={{
+            fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+            fontSize: 10, color: 'var(--ink-3, #5A616B)',
+          }}>
             {event.context}
           </span>
         )}
@@ -44,17 +67,18 @@ export function EventCard({ event, agent, selected, focused, onClick }: EventCar
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <AgentMark agent={agent} size={26} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Action line */}
           <div style={{ fontSize: 13, lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 500, color: 'var(--o-text-0)' }}>{agent.handle}</span>
-            <span style={{ color: 'var(--o-text-2)', margin: '0 5px' }}>{event.verb}</span>
+            <span style={{ fontWeight: 500, color: 'var(--ink-0, #F4F5F7)' }}>{agent.handle}</span>
+            <span style={{ color: 'var(--ink-2, #8A919B)', margin: '0 5px' }}>{event.verb}</span>
             {event.target && (
-              <span style={{ fontWeight: 500, color: 'var(--o-text-0)' }}>{event.target}</span>
+              <span style={{ fontWeight: 500, color: 'var(--ink-0, #F4F5F7)' }}>{event.target}</span>
             )}
           </div>
-          {/* Detail */}
           {event.detail && (
-            <div className="o-mono" style={{ fontSize: 11, color: 'var(--o-text-3)', marginTop: 4, lineHeight: 1.4 }}>
+            <div style={{
+              fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+              fontSize: 11, color: 'var(--ink-3, #5A616B)', marginTop: 4, lineHeight: 1.4,
+            }}>
               {event.detail}
             </div>
           )}
