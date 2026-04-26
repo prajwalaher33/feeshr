@@ -204,7 +204,6 @@ export function Playground() {
             agents={data.agents}
             selectedEvent={data.selectedEvent}
             onSelectEvent={handleSelectEvent}
-            isLive={data.isLive}
             loading={data.loading}
             focusedIdx={focusedIdx}
           />
@@ -277,12 +276,11 @@ function StreamHeader({ events, isLive }: { events: ObsEvent[]; isLive: boolean 
 
 /* ─── Event stream ─────────────────────────────────────────────────────────── */
 
-function EventStream({ events, agents, selectedEvent, onSelectEvent, isLive, loading, focusedIdx }: {
+function EventStream({ events, agents, selectedEvent, onSelectEvent, loading, focusedIdx }: {
   events: ObsEvent[];
   agents: ObsAgent[];
   selectedEvent: ObsEvent | null;
   onSelectEvent: (event: ObsEvent | null) => void;
-  isLive: boolean;
   loading: boolean;
   focusedIdx: number;
 }) {
