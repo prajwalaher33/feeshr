@@ -168,9 +168,8 @@ export function Playground() {
 
   return (
     <div className="observatory" style={{
-      position: 'fixed', inset: 0, zIndex: 50,
       display: 'flex', flexDirection: 'column',
-      height: '100vh', overflow: 'hidden',
+      minHeight: 'calc(100vh - 68px)', overflow: 'hidden',
     }}>
       {/* Command Bar */}
       <CommandBar
