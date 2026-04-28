@@ -47,18 +47,9 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50">
       <div
-        className="transition-all duration-300"
-        style={{
-          backdropFilter: "blur(48px) saturate(1.8)",
-          WebkitBackdropFilter: "blur(48px) saturate(1.8)",
-          background: scrolled
-            ? "linear-gradient(180deg, rgba(6,10,18,0.88) 0%, rgba(3,5,6,0.85) 100%)"
-            : "linear-gradient(180deg, rgba(3,5,6,0.65) 0%, rgba(3,5,6,0.55) 100%)",
-          borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)"}`,
-          boxShadow: scrolled ? "0 4px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.02) inset" : "none",
-        }}
+        className={`transition-all duration-300 ${scrolled ? "nav-scrolled" : "nav-top"}`}
       >
-        <div className="flex items-center justify-between px-[118px] py-3 max-[1024px]:px-6 max-[768px]:px-4">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3 lg:px-12">
           {/* Logo */}
           <Link href="/" className="relative shrink-0 h-[44px] w-[82px] overflow-hidden">
             <Image
@@ -72,20 +63,12 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-0.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-1.5 py-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative px-4 py-2 rounded-lg text-[13px] tracking-[-0.2px] transition-all duration-250 ${
-                  isActive(link.href)
-                    ? "font-semibold text-cyan-light bg-[rgba(34,211,238,0.06)]"
-                    : "font-medium text-secondary hover:text-primary hover:bg-[rgba(255,255,255,0.04)]"
-                }`}
-                style={{
-                  fontFamily: "var(--font-display)",
-                  textShadow: isActive(link.href) ? "0 0 14px rgba(103,232,249,0.3)" : "none",
-                }}
+                className={`nav-link ${isActive(link.href) ? "nav-link-active" : ""}`}
               >
                 {link.label}
               </Link>
@@ -96,35 +79,18 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 h-10 cursor-pointer transition-all duration-250"
-              style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.015))",
-                border: "1px solid rgba(255,255,255,0.06)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 1px 3px rgba(0,0,0,0.2)",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)"; e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025))"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.015))"; }}
+              className="nav-search-trigger"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-muted shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white/30">
                 <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="text-[13px] text-[#4a5568] whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>
-                Search...
-              </span>
-              <kbd className="text-[10px] text-[#4a5568] border border-[rgba(255,255,255,0.06)] rounded px-1.5 py-0.5 ml-4 bg-[rgba(255,255,255,0.02)]">⌘K</kbd>
+              <span className="text-[13px] text-white/25">Search</span>
+              <kbd className="ml-3 rounded border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-white/25">
+                ⌘K
+              </kbd>
             </button>
-            <Link
-              href="/connect"
-              className="shrink-0 flex items-center h-10 px-6 rounded-lg font-semibold text-sm transition-all duration-250"
-              style={{
-                fontFamily: "var(--font-display)",
-                background: "linear-gradient(135deg, #22d3ee 0%, #4de8f5 50%, #67e8f9 100%)",
-                color: "#021a1f",
-                textShadow: "0 1px 0 rgba(255,255,255,0.12)",
-                boxShadow: "0 0 16px rgba(34,211,238,0.15), 0 2px 8px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.15)",
-              }}
-            >
-              Signup
+            <Link href="/connect" className="nav-cta">
+              Get Started
             </Link>
           </div>
 
@@ -134,9 +100,9 @@ export default function Navbar() {
             className="md:hidden flex flex-col gap-1.5 p-2"
             aria-label="Toggle menu"
           >
-            <span className={`block h-0.5 w-5 bg-secondary transition-transform ${mobileOpen ? "translate-y-2 rotate-45" : ""}`} />
-            <span className={`block h-0.5 w-5 bg-secondary transition-opacity ${mobileOpen ? "opacity-0" : ""}`} />
-            <span className={`block h-0.5 w-5 bg-secondary transition-transform ${mobileOpen ? "-translate-y-2 -rotate-45" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-white/50 transition-transform duration-200 ${mobileOpen ? "translate-y-2 rotate-45" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-white/50 transition-opacity duration-200 ${mobileOpen ? "opacity-0" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-white/50 transition-transform duration-200 ${mobileOpen ? "-translate-y-2 -rotate-45" : ""}`} />
           </button>
         </div>
       </div>
@@ -149,33 +115,35 @@ export default function Navbar() {
       >
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
         <div
-          className={`absolute right-0 top-0 h-full w-64 bg-surface border-l border-border p-6 transition-transform duration-300 ease-out ${
+          className={`absolute right-0 top-0 h-full w-72 border-l border-white/[0.06] bg-[#0a0c10]/95 backdrop-blur-xl p-8 transition-transform duration-300 ease-out ${
             mobileOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className={`text-base transition-colors ${
+                className={`rounded-lg px-4 py-3 text-[15px] transition-colors ${
                   isActive(link.href)
-                    ? "font-semibold text-cyan-light"
-                    : "font-medium text-secondary hover:text-primary"
+                    ? "font-semibold text-cyan bg-cyan/[0.06]"
+                    : "font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.04]"
                 }`}
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/connect"
-              onClick={() => setMobileOpen(false)}
-              className="btn-cta !text-sm !py-2.5 mt-4"
-            >
-              Signup
-            </Link>
+            <div className="mt-6 pt-6 border-t border-white/[0.06]">
+              <Link
+                href="/connect"
+                onClick={() => setMobileOpen(false)}
+                className="nav-cta w-full justify-center"
+              >
+                Get Started
+              </Link>
+            </div>
           </div>
         </div>
       </div>

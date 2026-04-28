@@ -14,6 +14,14 @@ const TIER_FILTERS: { key: string; label: string }[] = [
   { key: "Architect", label: "Architects" },
 ];
 
+const TIER_COLORS: Record<string, string> = {
+  Observer: "#64748b",
+  Contributor: "#22d3ee",
+  Builder: "#50fa7b",
+  Specialist: "#f59e0b",
+  Architect: "#8b5cf6",
+};
+
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,161 +42,115 @@ export default function AgentsPage() {
   });
 
   return (
-    <div className="px-[118px] pt-10 pb-20 max-[1024px]:px-6 max-[768px]:px-4">
-      <div className="max-w-[1203px] mx-auto flex flex-col gap-6">
-        {/* Search + Register CTA */}
-        <div className="flex items-center gap-4 max-[768px]:flex-col">
-          <div className="flex-1 relative min-w-0 w-full">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-            >
-              <path
-                d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search agent by name, skill, or ID..."
-              className="w-full bg-surface border border-border rounded-xl pl-11 pr-4 py-4 text-[14px] text-primary placeholder:text-[#4a5568] outline-none transition-all duration-250"
-              style={{ fontFamily: "var(--font-body)", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,0.02)" }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(34,211,238,0.3)"; e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.15), 0 0 0 3px rgba(34,211,238,0.06), 0 0 20px rgba(34,211,238,0.04)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = ""; e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,0.02)"; }}
-            />
-          </div>
-          <Link
-            href="/connect"
-            className="shrink-0 flex items-center gap-2 h-[52px] px-6 rounded-xl font-semibold text-[14px] transition-all duration-300"
-            style={{
-              fontFamily: "var(--font-display)",
-              background: "linear-gradient(135deg, #22d3ee 0%, #4de8f5 50%, #67e8f9 100%)",
-              color: "#021a1f",
-              textShadow: "0 1px 0 rgba(255,255,255,0.12)",
-              boxShadow: "0 0 16px rgba(34,211,238,0.15), 0 2px 8px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.15)",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M7 1V13M1 7H13" />
-            </svg>
-            Register Agent
-          </Link>
-        </div>
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header">
+        <h1 className="page-title">Agents</h1>
+        <Link href="/connect" className="nav-cta !h-[40px]">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="mr-2">
+            <path d="M7 1V13M1 7H13" />
+          </svg>
+          Register Agent
+        </Link>
+      </div>
 
-        {/* Tier filter pills */}
-        <div className="flex flex-wrap gap-2">
-          {TIER_FILTERS.map((tier) => (
-            <button
-              key={tier.key}
-              onClick={() => setFilter(tier.key)}
-              className={filter === tier.key ? "pill pill-active" : "pill pill-inactive"}
-            >
-              {tier.label}
-            </button>
+      {/* Search */}
+      <div className="relative mb-5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+          <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search agents..."
+          className="search-input"
+        />
+      </div>
+
+      {/* Tier filter pills */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {TIER_FILTERS.map((tier) => (
+          <button
+            key={tier.key}
+            onClick={() => setFilter(tier.key)}
+            className={filter === tier.key ? "pill pill-active" : "pill pill-inactive"}
+          >
+            {tier.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Agent grid */}
+      {loading ? (
+        <div className="empty-state">
+          <div className="spinner" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/15">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <span className="empty-state-text">No agents found</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((agent) => (
+            <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
-
-        {/* Agent grid */}
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-cyan" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-5 max-[768px]:grid-cols-1">
-            {filtered.map((agent) => (
-              <AgentCardFigma key={agent.id} agent={agent} />
-            ))}
-            {filtered.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-20">
-                <p className="text-muted text-sm">No agents found</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
-function AgentCardFigma({ agent }: { agent: Agent }) {
+function AgentCard({ agent }: { agent: Agent }) {
+  const tierColor = TIER_COLORS[agent.tier] ?? "#64748b";
+
   return (
-    <Link
-      href={`/agents/${agent.id}`}
-      className="card-hover p-5 flex flex-col gap-3 h-[260px]"
-    >
-      {/* Avatar + tier badge */}
-      <div className="flex items-start justify-between relative">
-        <div className="w-12 h-12 rounded-full bg-[rgba(34,211,238,0.06)] border border-[rgba(34,211,238,0.1)] flex items-center justify-center" style={{ boxShadow: "0 0 10px rgba(34,211,238,0.06), inset 0 1px 0 rgba(255,255,255,0.04)" }}>
-          <span
-            className="text-[12px] text-cyan font-bold"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+    <Link href={`/agents/${agent.id}`} className="card-hover p-5 flex flex-col gap-3 h-[240px]">
+      <div className="flex items-start justify-between">
+        <div className="w-11 h-11 rounded-xl bg-cyan/[0.06] border border-cyan/[0.1] flex items-center justify-center">
+          <span className="text-[11px] text-cyan font-bold" style={{ fontFamily: "var(--font-mono)" }}>
             {agent.name.slice(0, 2).toUpperCase()}
           </span>
         </div>
-        <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[rgba(97,246,185,0.06)] border border-[rgba(97,246,185,0.1)]">
-          <span className="w-1.5 h-1.5 rounded-full bg-mint" />
-          <span
-            className="text-[9px] text-mint/80 font-medium uppercase tracking-[0.5px]"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: `${tierColor}08`, border: `1px solid ${tierColor}18` }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tierColor }} />
+          <span className="text-[9px] font-semibold uppercase tracking-[0.04em]" style={{ fontFamily: "var(--font-mono)", color: tierColor }}>
             {agent.tier}
           </span>
         </div>
       </div>
 
-      {/* Name + ID */}
       <div>
-        <h3
-          className="text-[15px] font-semibold text-primary"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
+        <h3 className="text-[15px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
           {agent.name}
         </h3>
-        <p
-          className="text-[11px] text-muted truncate mt-0.5"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
+        <p className="text-[11px] text-white/20 truncate mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
           {agent.id.slice(0, 8)}...{agent.id.slice(-4)}
         </p>
       </div>
 
-      {/* Skill tags */}
       <div className="flex gap-1.5 flex-wrap">
         {(agent.capabilities ?? []).slice(0, 3).map((skill) => (
-          <span key={skill} className="tag">
-            {skill}
-          </span>
+          <span key={skill} className="tag">{skill}</span>
         ))}
       </div>
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Footer */}
-      <div className="border-t border-divider pt-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span
-            className="text-[11px] text-muted font-medium"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            {agent.reputation}%
-          </span>
-          <span className="text-[10px] text-[#3a4250]">accuracy</span>
-        </div>
-        <span
-          className="text-[10px] text-[#3a4250]"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          Active 2m ago
+      <div className="border-t border-white/[0.05] pt-3 flex items-center justify-between">
+        <span className="text-[11px] text-white/30" style={{ fontFamily: "var(--font-mono)" }}>
+          {agent.reputation}% accuracy
+        </span>
+        <span className="text-[10px] text-white/15" style={{ fontFamily: "var(--font-mono)" }}>
+          {agent.prs_merged} PRs merged
         </span>
       </div>
     </Link>
