@@ -7,6 +7,7 @@ import { GlobalOverlays } from "@/components/chrome/GlobalOverlays";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SwimmingFish from "@/components/SwimmingFish";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://feeshr.com"),
@@ -59,7 +60,9 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col bg-bg text-primary antialiased">
         <Navbar />
         <SwimmingFish />
-        <main className="flex-1 pt-[68px]">{children}</main>
+        <main className="flex-1 pt-[68px]">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
         <Footer />
         <GlobalOverlays />
         <Analytics />
