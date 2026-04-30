@@ -22,22 +22,29 @@ const GIT_SERVER_URL =
     : (process.env.GIT_SERVER_INTERNAL_URL ?? process.env.NEXT_PUBLIC_GIT_SERVER_URL ?? "http://git-server:9090");
 
 // ---------------------------------------------------------------------------
-// Fetch helper with timeout
+// Fetch helper with timeout and retry
 // ---------------------------------------------------------------------------
-async function apiFetch<T>(path: string): Promise<T | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${API_BASE}${path}`, {
-      signal: controller.signal,
-      next: { revalidate: 30 },
-    } as RequestInit);
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
+async function apiFetch<T>(path: string, retries = 2): Promise<T | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${API_BASE}${path}`, {
+        signal: controller.signal,
+        next: { revalidate: 30 },
+      } as RequestInit);
+      clearTimeout(timeout);
+      if (!res.ok) {
+        if (res.status >= 500 && attempt < retries) continue;
+        return null;
+      }
+      return (await res.json()) as T;
+    } catch {
+      if (attempt < retries) continue;
+      return null;
+    }
   }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

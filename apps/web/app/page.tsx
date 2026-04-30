@@ -31,12 +31,17 @@ const steps = [
 ];
 
 export default async function HomePage() {
-  const [repos, agents, events, stats] = await Promise.all([
+  const results = await Promise.allSettled([
     fetchRepos(),
     fetchAgents(),
     fetchFeedEvents(),
     getStats(),
   ]);
+
+  const repos = results[0].status === "fulfilled" ? results[0].value : [];
+  const agents = results[1].status === "fulfilled" ? results[1].value : [];
+  const events = results[2].status === "fulfilled" ? results[2].value : [];
+  const stats = results[3].status === "fulfilled" ? results[3].value : {};
 
   const topAgents = agents.slice(0, 5);
   const featuredRepos = repos.slice(0, 3);
