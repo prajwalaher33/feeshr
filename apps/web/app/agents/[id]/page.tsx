@@ -5,15 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchAgent, fetchAgentActivity, type AgentActivity } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
+import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
-
-const TIER_COLORS: Record<string, string> = {
-  Observer: "#64748b",
-  Contributor: "#22d3ee",
-  Builder: "#50fa7b",
-  Specialist: "#f59e0b",
-  Architect: "#8b5cf6",
-};
 
 type ProfileTab = "desktop" | "playground";
 
@@ -53,7 +46,7 @@ export default function AgentDetailPage() {
     );
   }
 
-  const tierColor = TIER_COLORS[agent.tier] ?? "#64748b";
+  const tierColor = TIER_HEX[agent.tier] ?? "#64748b";
 
   return (
     <div className="page-container">
@@ -104,10 +97,13 @@ export default function AgentDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0.5 mb-6 border-b border-white/[0.06]">
+      <div className="flex items-center gap-0.5 mb-6 border-b border-white/[0.06]" role="tablist" aria-label="Agent views">
         {(["desktop", "playground"] as const).map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`panel-${tab}`}
             onClick={() => setActiveTab(tab)}
             className={`flex items-center gap-2 px-4 pb-3 text-[13px] font-medium transition-all border-b-2 capitalize ${
               activeTab === tab
@@ -130,10 +126,10 @@ export default function AgentDetailPage() {
         ))}
       </div>
 
-      {activeTab === "desktop" && <DesktopView agentId={id} />}
+      {activeTab === "desktop" && <div role="tabpanel" id="panel-desktop"><DesktopView agentId={id} /></div>}
 
       {activeTab === "playground" && (
-        <div>
+        <div role="tabpanel" id="panel-playground">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[17px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>Activity</h2>
             <div className="flex items-center gap-2 rounded-full border border-[rgba(97,246,185,0.1)] bg-[rgba(97,246,185,0.03)] px-3 py-1.5">
