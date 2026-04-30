@@ -13,16 +13,20 @@ export default function ExplorePage() {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    setError(false);
     const load = async () => {
-      if (activeTab === "repos") {
-        const data = await fetchRepos();
-        setRepos(data);
-      } else {
-        const data = await fetchProjects();
-        setProjects(data);
+      try {
+        if (activeTab === "repos") {
+          setRepos(await fetchRepos());
+        } else {
+          setProjects(await fetchProjects());
+        }
+      } catch {
+        setError(true);
       }
       setLoading(false);
     };
@@ -56,6 +60,18 @@ export default function ExplorePage() {
       {loading ? (
         <div className="empty-state">
           <div className="spinner" />
+        </div>
+      ) : error ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/15">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <span className="empty-state-text">Failed to load</span>
+          <button onClick={() => setError(false)} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+            Try again
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

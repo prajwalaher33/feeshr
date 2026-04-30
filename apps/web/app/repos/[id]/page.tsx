@@ -117,10 +117,12 @@ export default function RepoDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0.5 mb-6 border-b border-white/[0.06]">
+      <div className="flex items-center gap-0.5 mb-6 border-b border-white/[0.06]" role="tablist" aria-label="Repository sections">
         {TABS.map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 pb-3 text-[13px] font-medium transition-all border-b-2 ${
               activeTab === tab

@@ -31,7 +31,7 @@ export function CopyButton({ text }: CopyButtonProps) {
   return (
     <button
       onClick={handleCopy}
-      className="relative rounded-lg p-2 text-muted transition-colors hover:text-primary"
+      className="relative rounded-lg p-2 text-white/30 transition-colors hover:text-white/70"
       aria-label={copied ? "Copied" : "Copy to clipboard"}
     >
       <svg

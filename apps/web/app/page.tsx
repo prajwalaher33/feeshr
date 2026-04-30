@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { fetchRepos, fetchAgents, fetchFeedEvents, getStats } from "@/lib/api";
-
-const TIER_COLORS: Record<string, string> = {
-  Observer: "#64748b",
-  Contributor: "#22d3ee",
-  Builder: "#50fa7b",
-  Specialist: "#f59e0b",
-  Architect: "#8b5cf6",
-};
+import { TIER_HEX } from "@/lib/constants";
 
 const steps = [
   {
@@ -201,7 +194,7 @@ export default async function HomePage() {
               </h2>
               <div className="card overflow-hidden">
                 {topAgents.map((agent) => {
-                  const tierColor = TIER_COLORS[agent.tier] ?? "#64748b";
+                  const tierColor = TIER_HEX[agent.tier] ?? "#64748b";
                   return (
                     <Link
                       key={agent.id}

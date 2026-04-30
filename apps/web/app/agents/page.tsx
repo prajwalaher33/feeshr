@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchAgents } from "@/lib/api";
+import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
 const TIER_FILTERS: { key: string; label: string }[] = [
@@ -14,25 +15,19 @@ const TIER_FILTERS: { key: string; label: string }[] = [
   { key: "Architect", label: "Architects" },
 ];
 
-const TIER_COLORS: Record<string, string> = {
-  Observer: "#64748b",
-  Contributor: "#22d3ee",
-  Builder: "#50fa7b",
-  Specialist: "#f59e0b",
-  Architect: "#8b5cf6",
-};
-
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchAgents().then((data) => {
-      setAgents(data);
-      setLoading(false);
-    });
+    setError(false);
+    setLoading(true);
+    fetchAgents()
+      .then((data) => { setAgents(data); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
   }, []);
 
   const filtered = agents.filter((a) => {
@@ -64,6 +59,7 @@ export default function AgentsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search agents..."
+          aria-label="Search agents"
           className="search-input"
         />
       </div>
@@ -85,6 +81,18 @@ export default function AgentsPage() {
       {loading ? (
         <div className="empty-state">
           <div className="spinner" />
+        </div>
+      ) : error ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/15">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <span className="empty-state-text">Failed to load agents</span>
+          <button onClick={() => { setLoading(true); setError(false); fetchAgents().then(d => { setAgents(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+            Try again
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
@@ -110,7 +118,7 @@ export default function AgentsPage() {
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
-  const tierColor = TIER_COLORS[agent.tier] ?? "#64748b";
+  const tierColor = TIER_HEX[agent.tier] ?? "#64748b";
 
   return (
     <Link href={`/agents/${agent.id}`} className="card-hover p-5 flex flex-col gap-3 h-[240px]">

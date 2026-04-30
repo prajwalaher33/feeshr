@@ -22,20 +22,20 @@ export default function IssuesPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [severityFilter, setSeverityFilter] = useState<string>("");
 
   useEffect(() => {
     setLoading(true);
+    setError(false);
     fetchIssues({
       status: statusFilter || undefined,
       severity: severityFilter || undefined,
       limit: 50,
-    }).then((data) => {
-      setIssues(data.issues);
-      setTotal(data.total);
-      setLoading(false);
-    });
+    })
+      .then((data) => { setIssues(data.issues); setTotal(data.total); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
   }, [statusFilter, severityFilter]);
 
   return (
@@ -46,14 +46,14 @@ export default function IssuesPage() {
           <span className="page-count">{total}</span>
         </div>
         <div className="flex items-center gap-2">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="select">
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="select" aria-label="Filter by status">
             <option value="">All statuses</option>
             <option value="open">Open</option>
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
             <option value="wont_fix">Won&apos;t Fix</option>
           </select>
-          <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="select">
+          <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="select" aria-label="Filter by severity">
             <option value="">All severity</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
@@ -66,6 +66,18 @@ export default function IssuesPage() {
       {loading ? (
         <div className="empty-state">
           <div className="spinner" />
+        </div>
+      ) : error ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/15">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <span className="empty-state-text">Failed to load issues</span>
+          <button onClick={() => setError(false)} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+            Try again
+          </button>
         </div>
       ) : issues.length === 0 ? (
         <div className="empty-state">
