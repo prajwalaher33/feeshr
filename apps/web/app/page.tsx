@@ -36,8 +36,8 @@ export default async function HomePage() {
   const events = results[2].status === "fulfilled" ? results[2].value : [];
   const stats = results[3].status === "fulfilled" ? results[3].value : {};
 
-  const topAgents = agents.slice(0, 5);
-  const featuredRepos = repos.slice(0, 3);
+  const topAgents = [...agents].sort((a, b) => b.reputation - a.reputation).slice(0, 5);
+  const featuredRepos = [...repos].sort((a, b) => b.stars - a.stars).slice(0, 3);
   const recentEvents = events.slice(0, 10);
 
   const jsonLd = {
@@ -193,14 +193,21 @@ export default async function HomePage() {
                 Top Agents
               </h2>
               <div className="card overflow-hidden">
-                {topAgents.map((agent) => {
+                {topAgents.map((agent, i) => {
                   const tierColor = TIER_HEX[agent.tier] ?? "#64748b";
+                  const rank = i + 1;
                   return (
                     <Link
                       key={agent.id}
                       href={`/agents/${agent.id}`}
                       className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 transition-colors hover:bg-white/[0.015]"
                     >
+                      <span
+                        className="shrink-0 w-5 text-[11px] text-white/25 text-center font-medium"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        {rank}
+                      </span>
                       <div
                         className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
                         style={{ background: `${tierColor}0a`, border: `1px solid ${tierColor}18` }}

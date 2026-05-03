@@ -1,12 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import Link from "next/link";
 import { fetchRepos, fetchProjects } from "@/lib/api";
+import { SkeletonGrid } from "@/components/ui/Skeleton";
 import type { Repo } from "@/lib/types/repos";
 import type { Project } from "@/lib/types/projects";
 
 type Tab = "projects" | "repos";
+type RepoSort = "stars" | "recent" | "forks" | "name";
+type ProjectSort = "recent" | "discussion" | "name";
+
+const REPO_SORTS: { key: RepoSort; label: string }[] = [
+  { key: "stars", label: "Most stars" },
+  { key: "forks", label: "Most forks" },
+  { key: "recent", label: "Recently updated" },
+  { key: "name", label: "Name (A-Z)" },
+];
+
+const PROJECT_SORTS: { key: ProjectSort; label: string }[] = [
+  { key: "recent", label: "Recently created" },
+  { key: "discussion", label: "Most discussion" },
+  { key: "name", label: "Name (A-Z)" },
+];
 
 export default function ExplorePage() {
   const [activeTab, setActiveTab] = useState<Tab>("projects");
@@ -14,10 +30,14 @@ export default function ExplorePage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [search, setSearch] = useState("");
+  const [repoSort, setRepoSort] = useState<RepoSort>("stars");
+  const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
 
   useEffect(() => {
     setLoading(true);
     setError(false);
+    setSearch("");
     const load = async () => {
       try {
         if (activeTab === "repos") {
@@ -33,10 +53,52 @@ export default function ExplorePage() {
     load();
   }, [activeTab]);
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "projects", label: "Projects" },
-    { key: "repos", label: "Repos" },
+  const filteredProjects = useMemo(() => {
+    const q = search.toLowerCase();
+    const result = projects.filter(
+      (p) => !q || p.title.toLowerCase().includes(q) || p.problem_statement.toLowerCase().includes(q),
+    );
+    return result.sort((a, b) => {
+      switch (projectSort) {
+        case "name": return a.title.localeCompare(b.title);
+        case "discussion": return b.discussion_count - a.discussion_count;
+        case "recent": return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
+      }
+    });
+  }, [projects, search, projectSort]);
+
+  const filteredRepos = useMemo(() => {
+    const q = search.toLowerCase();
+    const result = repos.filter(
+      (r) => !q || r.name.toLowerCase().includes(q) || r.description.toLowerCase().includes(q),
+    );
+    return result.sort((a, b) => {
+      switch (repoSort) {
+        case "name": return a.name.localeCompare(b.name);
+        case "stars": return b.stars - a.stars;
+        case "forks": return b.forks - a.forks;
+        case "recent": return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+    });
+  }, [repos, search, repoSort]);
+
+  const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "projects", label: "Projects", count: projects.length || undefined },
+    { key: "repos", label: "Repos", count: repos.length || undefined },
   ];
+
+  const retry = () => {
+    setError(false);
+    setLoading(true);
+    const load = async () => {
+      try {
+        if (activeTab === "repos") setRepos(await fetchRepos());
+        else setProjects(await fetchProjects());
+      } catch { setError(true); }
+      setLoading(false);
+    };
+    load();
+  };
 
   return (
     <div className="page-container">
@@ -51,16 +113,60 @@ export default function ExplorePage() {
               className={activeTab === tab.key ? "pill pill-active" : "pill pill-inactive"}
             >
               {tab.label}
+              {tab.count !== undefined && (
+                <span className="ml-1.5 opacity-60 text-[10px]">{tab.count}</span>
+              )}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Search + Sort */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+            <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search ${activeTab}...`}
+            aria-label={`Search ${activeTab}`}
+            className="search-input"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] text-white/30 uppercase tracking-[0.1em] shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
+            Sort
+          </label>
+          {activeTab === "repos" ? (
+            <select
+              value={repoSort}
+              onChange={(e) => setRepoSort(e.target.value as RepoSort)}
+              aria-label="Sort repos"
+              className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[12px] text-white/80 hover:border-white/[0.12] focus:border-cyan/40 focus:outline-none transition-colors cursor-pointer"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {REPO_SORTS.map((opt) => <option key={opt.key} value={opt.key} className="bg-[#0a0e15]">{opt.label}</option>)}
+            </select>
+          ) : (
+            <select
+              value={projectSort}
+              onChange={(e) => setProjectSort(e.target.value as ProjectSort)}
+              aria-label="Sort projects"
+              className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[12px] text-white/80 hover:border-white/[0.12] focus:border-cyan/40 focus:outline-none transition-colors cursor-pointer"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {PROJECT_SORTS.map((opt) => <option key={opt.key} value={opt.key} className="bg-[#0a0e15]">{opt.label}</option>)}
+            </select>
+          )}
+        </div>
+      </div>
+
       {/* Content */}
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonGrid count={6} height={220} />
       ) : error ? (
         <div className="empty-state">
           <div className="empty-state-icon">
@@ -69,7 +175,7 @@ export default function ExplorePage() {
             </svg>
           </div>
           <span className="empty-state-text">Failed to load</span>
-          <button onClick={() => setError(false)} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+          <button onClick={retry} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
             Try again
           </button>
         </div>
@@ -77,30 +183,30 @@ export default function ExplorePage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {activeTab === "projects" && (
             <>
-              {projects.map((project) => (
+              {filteredProjects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
-              {projects.length === 0 && (
+              {filteredProjects.length === 0 && (
                 <div className="col-span-full empty-state">
                   <div className="empty-state-icon">
                     <div className="w-3 h-3 rounded-full bg-white/[0.08]" />
                   </div>
-                  <span className="empty-state-text">No projects found</span>
+                  <span className="empty-state-text">{search ? `No projects match "${search}"` : "No projects found"}</span>
                 </div>
               )}
             </>
           )}
           {activeTab === "repos" && (
             <>
-              {repos.map((repo) => (
+              {filteredRepos.map((repo) => (
                 <RepoCard key={repo.id} repo={repo} />
               ))}
-              {repos.length === 0 && (
+              {filteredRepos.length === 0 && (
                 <div className="col-span-full empty-state">
                   <div className="empty-state-icon">
                     <div className="w-3 h-3 rounded-full bg-white/[0.08]" />
                   </div>
-                  <span className="empty-state-text">No repos found</span>
+                  <span className="empty-state-text">{search ? `No repos match "${search}"` : "No repos found"}</span>
                 </div>
               )}
             </>
@@ -111,7 +217,7 @@ export default function ExplorePage() {
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+const ProjectCard = memo(function ProjectCard({ project }: { project: Project }) {
   const statusColor = project.status === "shipped" ? "#50fa7b" : project.status === "building" ? "#f7c948" : "#64748b";
 
   return (
@@ -152,9 +258,9 @@ function ProjectCard({ project }: { project: Project }) {
       </div>
     </Link>
   );
-}
+});
 
-function RepoCard({ repo }: { repo: Repo }) {
+const RepoCard = memo(function RepoCard({ repo }: { repo: Repo }) {
   return (
     <Link href={`/repos/${repo.id}`} className="card-hover p-5 flex flex-col h-[220px]">
       <div className="flex items-center justify-between mb-2">
@@ -198,4 +304,4 @@ function RepoCard({ repo }: { repo: Repo }) {
       </div>
     </Link>
   );
-}
+});

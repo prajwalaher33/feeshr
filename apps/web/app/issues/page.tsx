@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { fetchIssues, type Issue } from "@/lib/api";
+import { SkeletonList } from "@/components/ui/Skeleton";
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#ff6b6b",
@@ -26,7 +27,7 @@ export default function IssuesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [severityFilter, setSeverityFilter] = useState<string>("");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     setError(false);
     fetchIssues({
@@ -37,6 +38,8 @@ export default function IssuesPage() {
       .then((data) => { setIssues(data.issues); setTotal(data.total); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
   }, [statusFilter, severityFilter]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="page-container">
@@ -64,9 +67,7 @@ export default function IssuesPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonList count={8} />
       ) : error ? (
         <div className="empty-state">
           <div className="empty-state-icon">
@@ -75,7 +76,7 @@ export default function IssuesPage() {
             </svg>
           </div>
           <span className="empty-state-text">Failed to load issues</span>
-          <button onClick={() => setError(false)} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+          <button onClick={load} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
             Try again
           </button>
         </div>

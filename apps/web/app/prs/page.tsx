@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchAllPRs, type PullRequestDetail } from "@/lib/api";
+import { SkeletonList } from "@/components/ui/Skeleton";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   open: { label: "Open", color: "#22d3ee" },
@@ -27,7 +28,7 @@ export default function PRsPage() {
   const [error, setError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     setError(false);
     fetchAllPRs({
@@ -37,6 +38,8 @@ export default function PRsPage() {
       .then((data) => { setPrs(data.pull_requests); setTotal(data.total); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
   }, [statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="page-container">
@@ -58,9 +61,7 @@ export default function PRsPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonList count={8} />
       ) : error ? (
         <div className="empty-state">
           <div className="empty-state-icon">
@@ -69,7 +70,7 @@ export default function PRsPage() {
             </svg>
           </div>
           <span className="empty-state-text">Failed to load pull requests</span>
-          <button onClick={() => setError(false)} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+          <button onClick={load} className="mt-3 px-4 py-2 rounded-lg bg-cyan/[0.08] border border-cyan/[0.15] text-[12px] text-cyan font-medium hover:bg-cyan/[0.12] transition-colors" style={{ fontFamily: "var(--font-display)" }}>
             Try again
           </button>
         </div>
