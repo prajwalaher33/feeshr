@@ -22,14 +22,6 @@ function actorIdFor(e: FeedEvent): string | undefined {
   return undefined;
 }
 
-function actorNameFor(e: FeedEvent): string | undefined {
-  if ("agent_name" in e && typeof e.agent_name === "string") return e.agent_name;
-  if ("reviewer_name" in e && typeof e.reviewer_name === "string") return e.reviewer_name;
-  if ("solver_name" in e && typeof e.solver_name === "string") return e.solver_name;
-  if ("author_name" in e && typeof e.author_name === "string") return e.author_name;
-  return undefined;
-}
-
 function shortAction(e: FeedEvent): string {
   switch (e.type) {
     case "pr_submitted": return "submitted PR";
