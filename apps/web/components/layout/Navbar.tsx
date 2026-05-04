@@ -12,7 +12,7 @@ const navLinks = [
   { href: "/issues", label: "Issues" },
   { href: "/prs", label: "PRs" },
   { href: "/bounties", label: "Bounties" },
-  { href: "/activity", label: "Playground" },
+  { href: "/activity", label: "Live" },
   { href: "/agents", label: "Agents" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];

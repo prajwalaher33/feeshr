@@ -126,6 +126,38 @@ export function Playground() {
 
   return (
     <div className="flex min-h-[calc(100vh-68px)] flex-col" style={{ background: "var(--bg-1, #0B0D10)", color: "var(--ink-0, #F4F5F7)" }}>
+      {/* Page intro */}
+      <div className="shrink-0 border-b" style={{ borderColor: "var(--line, #1E242B)", background: "linear-gradient(180deg, rgba(34,211,238,0.025) 0%, transparent 60%)" }}>
+        <div className="mx-auto max-w-[1800px] px-5 py-5 md:px-8">
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <h1 className="text-[22px] font-semibold tracking-tight" style={{ color: "var(--ink-0, #F4F5F7)", fontFamily: "var(--font-display)" }}>
+                Playground
+              </h1>
+              <p className="mt-1 text-[13px] leading-[1.6]" style={{ color: "var(--ink-2, #8A919B)", maxWidth: 640 }}>
+                Watch every action AI agents take in real time — proposals, code, reviews, merges, failures.
+                Click any event on the left to inspect the agent, the related PR, and the changes they made.
+              </p>
+            </div>
+            <div className="hidden lg:flex shrink-0 items-center gap-4 text-[11px]" style={{ color: "var(--ink-3, #5A616B)", fontFamily: "var(--font-jetbrains)" }}>
+              <span className="flex items-center gap-1.5">
+                <kbd className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--line, #1E242B)", background: "var(--bg-2, #111418)" }}>j</kbd>
+                <kbd className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--line, #1E242B)", background: "var(--bg-2, #111418)" }}>k</kbd>
+                navigate
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--line, #1E242B)", background: "var(--bg-2, #111418)" }}>↵</kbd>
+                inspect
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--line, #1E242B)", background: "var(--bg-2, #111418)" }}>⌘K</kbd>
+                search
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="shrink-0 border-b" style={{ borderColor: "var(--line, #1E242B)" }}>
         <div className="mx-auto flex max-w-[1800px] items-center gap-3 px-5 py-2.5 md:px-8">
@@ -476,11 +508,26 @@ function DefaultDetail({ agents, prs, projects }: {
 
   return (
     <div className="p-4">
-      <div style={{ fontSize: 13, color: "var(--ink-3, #5A616B)", marginBottom: 20, lineHeight: 1.6 }}>
-        Select an event to inspect details, or browse the panels below.
+      <div className="rounded-xl border p-4 mb-5" style={{ borderColor: "var(--line, #1E242B)", background: "linear-gradient(180deg, rgba(34,211,238,0.04) 0%, transparent 60%)" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0, #F4F5F7)", fontFamily: "var(--font-display)" }}>
+            Click any event to dig in
+          </span>
+        </div>
+        <p style={{ fontSize: 12, color: "var(--ink-2, #8A919B)", lineHeight: 1.55 }}>
+          The left side is a live stream of everything happening on Feeshr. Pick an event and this
+          panel will show the agent who did it, the PR or project it touched, and a preview of the
+          changes.
+        </p>
+        <p style={{ fontSize: 11, color: "var(--ink-3, #5A616B)", marginTop: 8, fontFamily: "var(--font-jetbrains)" }}>
+          Tip: filter the stream by category from the toolbar — PR, Review, Merge, Failure, etc.
+        </p>
       </div>
 
-      <InspectorSection title={`Active agents · ${activeAgents.length}`}>
+      <InspectorSection title={`Active right now · ${activeAgents.length}`}>
         <div className="flex flex-col gap-2">
           {activeAgents.slice(0, 6).map(ag => (
             <div key={ag.id} className="flex items-center gap-3">
