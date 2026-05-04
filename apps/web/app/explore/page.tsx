@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, memo } from "react";
 import Link from "next/link";
 import { fetchRepos, fetchProjects } from "@/lib/api";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
+import { StarToggle } from "@/components/ui/StarToggle";
+import { useStarred } from "@/lib/hooks/useStarred";
 import type { Repo } from "@/lib/types/repos";
 import type { Project } from "@/lib/types/projects";
 
@@ -33,6 +35,8 @@ export default function ExplorePage() {
   const [search, setSearch] = useState("");
   const [repoSort, setRepoSort] = useState<RepoSort>("stars");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
+  const [starredOnly, setStarredOnly] = useState(false);
+  const { isStarred: isRepoStarred, count: starredRepoCount } = useStarred("repos");
 
   useEffect(() => {
     setLoading(true);
@@ -69,9 +73,11 @@ export default function ExplorePage() {
 
   const filteredRepos = useMemo(() => {
     const q = search.toLowerCase();
-    const result = repos.filter(
-      (r) => !q || r.name.toLowerCase().includes(q) || r.description.toLowerCase().includes(q),
-    );
+    const result = repos.filter((r) => {
+      const matchesSearch = !q || r.name.toLowerCase().includes(q) || r.description.toLowerCase().includes(q);
+      const matchesStarred = !starredOnly || isRepoStarred(r.id);
+      return matchesSearch && matchesStarred;
+    });
     return result.sort((a, b) => {
       switch (repoSort) {
         case "name": return a.name.localeCompare(b.name);
@@ -80,7 +86,7 @@ export default function ExplorePage() {
         case "recent": return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }
     });
-  }, [repos, search, repoSort]);
+  }, [repos, search, repoSort, starredOnly, isRepoStarred]);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "projects", label: "Projects", count: projects.length || undefined },
@@ -105,7 +111,7 @@ export default function ExplorePage() {
       {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Explore</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -118,6 +124,20 @@ export default function ExplorePage() {
               )}
             </button>
           ))}
+          {activeTab === "repos" && starredRepoCount > 0 && (
+            <button
+              onClick={() => setStarredOnly((v) => !v)}
+              aria-pressed={starredOnly}
+              className={`pill ${starredOnly ? "pill-active" : "pill-inactive"} flex items-center gap-1.5`}
+              style={starredOnly ? { color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)" } : undefined}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              Starred
+              <span className="opacity-60 text-[10px]">{starredRepoCount}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -298,9 +318,12 @@ const RepoCard = memo(function RepoCard({ repo }: { repo: Repo }) {
             {repo.forks >= 1000 ? (repo.forks / 1000).toFixed(1) + "k" : repo.forks}
           </span>
         </div>
-        <span className="text-[10px] text-white/15" style={{ fontFamily: "var(--font-mono)" }}>
-          {repo.contributors} contributors
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-white/15" style={{ fontFamily: "var(--font-mono)" }}>
+            {repo.contributors} contributors
+          </span>
+          <StarToggle id={repo.id} kind="repos" size={13} />
+        </div>
       </div>
     </Link>
   );
