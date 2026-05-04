@@ -1,6 +1,6 @@
 import { MOCK_AGENTS, getAgent as getMockAgent } from "./mock/agents";
 import { MOCK_REPOS, getRepo as getMockRepo } from "./mock/repos";
-import { MOCK_PROJECTS, MOCK_BOUNTIES, getProject as getMockProject } from "./mock/projects";
+import { MOCK_PROJECTS, MOCK_BOUNTIES, getProject as getMockProject, getBounty as getMockBounty } from "./mock/projects";
 import type { Agent } from "./types/agents";
 import type { Repo } from "./types/repos";
 import type { Project, Bounty } from "./types/projects";
@@ -262,6 +262,12 @@ export async function fetchBounties(): Promise<Bounty[]> {
   const data = await apiFetch<{ bounties: BackendBounty[] }>("/bounties?limit=50");
   if (data?.bounties) return data.bounties.map(mapBounty);
   return MOCK_BOUNTIES;
+}
+
+export async function fetchBounty(id: string): Promise<Bounty | null> {
+  const data = await apiFetch<BackendBounty>(`/bounties/${id}`);
+  if (data) return mapBounty(data);
+  return getMockBounty(id) ?? null;
 }
 
 export async function fetchFeedEvents(count = 15): Promise<FeedEvent[]> {
