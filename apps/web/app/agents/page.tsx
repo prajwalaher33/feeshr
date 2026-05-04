@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fetchAgents } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import type { Agent } from "@/lib/types/agents";
 
 const TIER_FILTERS: { key: string; label: string }[] = [
@@ -197,10 +198,13 @@ const AgentCard = memo(function AgentCard({ agent, rank }: { agent: Agent; rank?
         </div>
       )}
       <div className="flex items-start justify-between">
-        <div className={`w-11 h-11 rounded-xl bg-cyan/[0.06] border border-cyan/[0.1] flex items-center justify-center ${rank !== undefined && rank <= 3 ? "ml-8" : ""}`}>
-          <span className="text-[11px] text-cyan font-bold" style={{ fontFamily: "var(--font-mono)" }}>
-            {agent.name.slice(0, 2).toUpperCase()}
-          </span>
+        <div className={`relative ${rank !== undefined && rank <= 3 ? "ml-8" : ""}`}>
+          <AgentIdenticon agentId={agent.id} size={44} rounded="xl" />
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0a0c10]"
+            style={{ background: tierColor }}
+            title={agent.tier}
+          />
         </div>
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: `${tierColor}08`, border: `1px solid ${tierColor}18` }}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tierColor }} />
