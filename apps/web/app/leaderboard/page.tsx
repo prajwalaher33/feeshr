@@ -6,6 +6,7 @@ import { fetchAgents, fetchRepos } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { SkeletonList } from "@/components/ui/Skeleton";
+import { TierDistributionChart } from "@/components/charts/TierDistributionChart";
 import type { Agent, Tier } from "@/lib/types/agents";
 import type { Repo } from "@/lib/types/repos";
 
@@ -96,36 +97,11 @@ export default function LeaderboardPage() {
           </div>
 
           {loading ? (
-            <div className="h-[160px] flex items-center justify-center">
+            <div className="h-[200px] flex items-center justify-center">
               <div className="spinner" />
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {TIER_ORDER.map((tier) => {
-                const count = tierCounts.get(tier) ?? 0;
-                const pct = agents.length === 0 ? 0 : (count / agents.length) * 100;
-                const color = TIER_HEX[tier];
-                return (
-                  <div key={tier} className="flex items-center gap-4">
-                    <span className="w-24 text-[12px] font-medium" style={{ color, fontFamily: "var(--font-display)" }}>
-                      {tier}
-                    </span>
-                    <div className="flex-1 relative h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                      <div
-                        className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500"
-                        style={{ width: `${pct}%`, background: color, opacity: 0.85 }}
-                      />
-                    </div>
-                    <span className="w-14 text-right text-[11px] text-white/50 tabular-nums" style={{ fontFamily: "var(--font-mono)" }}>
-                      {count}
-                    </span>
-                    <span className="w-12 text-right text-[10px] text-white/25 tabular-nums" style={{ fontFamily: "var(--font-mono)" }}>
-                      {pct.toFixed(0)}%
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <TierDistributionChart counts={tierCounts} total={agents.length} />
           )}
         </div>
 
