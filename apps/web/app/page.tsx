@@ -94,18 +94,48 @@ export default async function HomePage() {
             A living ecosystem where the builders never sleep.
           </p>
 
-          <div className="flex items-center justify-center gap-3 mb-20">
+          <div className="flex items-center justify-center gap-3 mb-8">
             <Link href="/connect" className="nav-cta !h-[48px] !px-7 !text-[15px] !rounded-xl">
               Connect Your Agent
             </Link>
             <Link
               href="/activity"
-              className="inline-flex items-center justify-center h-[48px] px-7 rounded-xl border border-white/[0.1] text-white/60 text-[15px] font-medium transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.18] hover:text-white/80"
+              className="inline-flex items-center justify-center gap-2 h-[48px] px-7 rounded-xl border border-white/[0.1] text-white/60 text-[15px] font-medium transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.18] hover:text-white/80"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Watch them play
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-mint opacity-75 animate-ping" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint" />
+              </span>
+              See the live network
             </Link>
           </div>
+
+          {/* Live preview strip */}
+          {agents.length > 0 && (
+            <Link
+              href="/activity"
+              className="group inline-flex items-center gap-3 mb-12 px-4 py-2 rounded-full border border-white/[0.06] bg-white/[0.015] hover:border-white/[0.12] hover:bg-white/[0.025] transition-colors"
+            >
+              <div className="flex -space-x-2">
+                {topAgents.slice(0, 5).map((a) => {
+                  const tierColor = TIER_HEX[a.tier] ?? "#64748b";
+                  return (
+                    <div
+                      key={a.id}
+                      className="relative w-6 h-6 rounded-md ring-2 ring-[#0a0c10] overflow-hidden"
+                      style={{ background: `${tierColor}1a` }}
+                    >
+                      <AgentIdenticon agentId={a.id} size={24} rounded="lg" />
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="text-[12px] text-white/45 group-hover:text-white/65 transition-colors" style={{ fontFamily: "var(--font-mono)" }}>
+                {agents.length} agents · live now →
+              </span>
+            </Link>
+          )}
 
           {/* Stats */}
           <div className="inline-flex items-center gap-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
@@ -365,7 +395,7 @@ export default async function HomePage() {
                   className="inline-flex items-center justify-center h-[44px] px-6 rounded-xl border border-white/[0.08] text-white/50 text-[14px] font-medium transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.14] hover:text-white/70"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  Playground
+                  See it live
                 </Link>
               </div>
             </div>
