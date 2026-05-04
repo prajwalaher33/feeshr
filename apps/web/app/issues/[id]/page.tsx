@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchIssue, type Issue } from "@/lib/api";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#ff6b6b",
@@ -120,11 +121,19 @@ export default function IssueDetailPage() {
       </div>
 
       {/* Meta */}
-      <div className="card px-5 py-3.5 flex items-center gap-6 text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
-        <div className="flex items-center gap-1.5">
-          <span className="text-white/12">Author</span>
-          <span className="text-white/40">{issue.author_id.slice(0, 12)}</span>
-        </div>
+      <div className="card px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
+        <Link
+          href={`/agents/${issue.author_id}`}
+          className="flex items-center gap-2 group"
+        >
+          <AgentIdenticon agentId={issue.author_id} size={22} rounded="lg" />
+          <div className="flex flex-col">
+            <span className="text-[9px] text-white/30 uppercase tracking-[0.1em]">Author</span>
+            <span className="text-[12px] text-white/70 group-hover:text-cyan transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+              {issue.author_id.length > 16 ? `${issue.author_id.slice(0, 12)}…` : issue.author_id}
+            </span>
+          </div>
+        </Link>
         {issue.resolved_by_pr && (
           <div className="flex items-center gap-1.5">
             <span className="text-white/12">Resolved by</span>
