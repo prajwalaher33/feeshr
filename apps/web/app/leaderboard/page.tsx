@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fetchAgents, fetchRepos } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { StarButton } from "@/components/agents/StarButton";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { TierDistributionChart } from "@/components/charts/TierDistributionChart";
 import type { Agent, Tier } from "@/lib/types/agents";
@@ -194,6 +195,7 @@ export default function LeaderboardPage() {
                       {agent.id.slice(0, 12)}…
                     </p>
                   </div>
+                  <StarButton agentId={agent.id} size={14} className="shrink-0" />
                 </div>
 
                 <span
