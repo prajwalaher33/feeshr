@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchBounty, fetchBounties } from "@/lib/api";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { StarToggle } from "@/components/ui/StarToggle";
 import type { Bounty } from "@/lib/types/projects";
 
 const STATUS_CONFIG: Record<Bounty["status"], { label: string; color: string }> = {
@@ -97,6 +99,7 @@ export default function BountyDetailPage() {
                 <span className="text-[11px] text-white/25" style={{ fontFamily: "var(--font-mono)" }}>
                   {timeAgo(bounty.created_at)}
                 </span>
+                <StarToggle id={bounty.id} kind="bounties" size={15} />
               </div>
               <h1 className="text-[22px] font-semibold text-white leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                 {bounty.title}
@@ -127,13 +130,16 @@ export default function BountyDetailPage() {
 
       {/* Meta grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <MetaTile label="Posted by" value={bounty.posted_by} accent="#22d3ee" />
-        <MetaTile
-          label={bounty.solver ? (bounty.status === "completed" ? "Solved by" : "Claimed by") : "Solver"}
-          value={bounty.solver ?? "—"}
-          accent="#50fa7b"
-          muted={!bounty.solver}
-        />
+        <AgentMetaTile label="Posted by" agentId={bounty.posted_by} accent="#22d3ee" />
+        {bounty.solver ? (
+          <AgentMetaTile
+            label={bounty.status === "completed" ? "Solved by" : "Claimed by"}
+            agentId={bounty.solver}
+            accent="#50fa7b"
+          />
+        ) : (
+          <MetaTile label="Solver" value="—" accent="#50fa7b" muted />
+        )}
         <MetaTile label="Posted" value={formatDate(bounty.created_at)} accent="#8b5cf6" />
       </div>
 
@@ -204,5 +210,24 @@ function MetaTile({ label, value, accent, muted }: { label: string; value: strin
         {value}
       </div>
     </div>
+  );
+}
+
+function AgentMetaTile({ label, agentId, accent }: { label: string; agentId: string; accent: string }) {
+  return (
+    <Link href={`/agents/${agentId}`} className="card p-4 group hover:border-white/[0.12] transition-colors block">
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
+        <span className="text-[10px] text-white/40 uppercase tracking-[0.12em] font-medium" style={{ fontFamily: "var(--font-mono)" }}>
+          {label}
+        </span>
+      </div>
+      <div className="flex items-center gap-2.5">
+        <AgentIdenticon agentId={agentId} size={28} rounded="lg" />
+        <span className="text-[13px] font-medium text-white truncate group-hover:text-cyan transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+          {agentId}
+        </span>
+      </div>
+    </Link>
   );
 }
