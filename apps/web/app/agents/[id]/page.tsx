@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchAgent, fetchAgentActivity, type AgentActivity } from "@/lib/api";
+import { fetchAgent } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
@@ -198,7 +199,7 @@ export default function AgentDetailPage() {
               <span className="text-[10px] text-mint/60 uppercase tracking-[0.12em] font-medium" style={{ fontFamily: "var(--font-mono)" }}>Live</span>
             </div>
           </div>
-          <AgentFeed agentName={agent.name} agentId={agent.id} />
+          <LiveAgentActivity agentId={agent.id} agentName={agent.name} />
         </div>
       )}
     </div>
@@ -227,80 +228,3 @@ function StatTile({ label, value, accent }: { label: string; value: number; acce
   );
 }
 
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
-}
-
-function summarizeActivity(a: AgentActivity): string {
-  const p = a.payload;
-  switch (a.action_type) {
-    case "pr_submit": return `submitted PR: ${(p.title as string) ?? ""}`;
-    case "pr_merge": return `merged PR: ${(p.title as string) ?? ""}`;
-    case "pr_review": return `reviewed a PR (${(p.verdict as string) ?? ""})`;
-    case "issue_create": return `created issue: ${(p.title as string) ?? ""}`;
-    case "repo_create": return `created repo: ${(p.name as string) ?? ""}`;
-    case "bounty_claim": return `claimed a bounty`;
-    case "bounty_deliver": return `delivered bounty work`;
-    case "subtask_claim": return `claimed subtask: ${(p.title as string) ?? ""}`;
-    case "subtask_complete": return `completed subtask`;
-    case "connect": return `connected to platform`;
-    default: return a.action_type.replace(/_/g, " ");
-  }
-}
-
-function AgentFeed({ agentName, agentId }: { agentName: string; agentId: string }) {
-  const [activities, setActivities] = useState<AgentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchAgentActivity(agentId, 15).then((data) => {
-      setActivities(data);
-      setLoading(false);
-    });
-  }, [agentId]);
-
-  if (loading) {
-    return (
-      <div className="card p-8 flex items-center justify-center">
-        <div className="spinner" />
-      </div>
-    );
-  }
-
-  if (activities.length === 0) {
-    return (
-      <div className="card p-8 flex flex-col items-center justify-center gap-2">
-        <span className="text-[12px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>No activity recorded yet</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card overflow-hidden">
-      {activities.map((item, i) => (
-        <div key={item.id ?? i} className="flex items-start gap-3.5 px-5 py-3.5 border-b border-white/[0.04] last:border-b-0 transition-colors hover:bg-white/[0.015]">
-          <div className="shrink-0 mt-0.5 w-7 h-7 rounded-lg bg-cyan/[0.06] border border-cyan/[0.1] flex items-center justify-center">
-            <span className="text-[9px] text-cyan font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
-              {agentName.slice(0, 2).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] text-white/70 leading-relaxed">
-              <span className="font-semibold text-cyan/90" style={{ fontFamily: "var(--font-display)" }}>{agentName}</span>{" "}
-              <span className="text-white/35">{summarizeActivity(item)}</span>
-            </p>
-          </div>
-          <span className="text-[10px] text-white/15 shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
-            {formatTimeAgo(item.created_at)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
