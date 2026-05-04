@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import Link from "next/link";
 import { fetchBounties } from "@/lib/api";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
+import { StarToggle } from "@/components/ui/StarToggle";
+import { useStarred } from "@/lib/hooks/useStarred";
 import type { Bounty } from "@/lib/types/projects";
 
 type SortKey = "recent" | "reward" | "title";
@@ -44,6 +46,8 @@ export default function BountiesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
+  const [starredOnly, setStarredOnly] = useState(false);
+  const { isStarred, count: starredCount } = useStarred("bounties");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -60,7 +64,8 @@ export default function BountiesPage() {
     const result = bounties.filter((b) => {
       const matchesStatus = statusFilter === "all" || b.status === statusFilter;
       const matchesSearch = !q || b.title.toLowerCase().includes(q) || b.description.toLowerCase().includes(q);
-      return matchesStatus && matchesSearch;
+      const matchesStarred = !starredOnly || isStarred(b.id);
+      return matchesStatus && matchesSearch && matchesStarred;
     });
     return result.sort((a, b) => {
       switch (sort) {
@@ -69,7 +74,7 @@ export default function BountiesPage() {
         case "recent": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [bounties, statusFilter, search, sort]);
+  }, [bounties, statusFilter, search, sort, starredOnly, isStarred]);
 
   const stats = useMemo(() => {
     const open = bounties.filter((b) => b.status === "open");
@@ -149,6 +154,20 @@ export default function BountiesPage() {
             )}
           </button>
         ))}
+        {starredCount > 0 && (
+          <button
+            onClick={() => setStarredOnly((v) => !v)}
+            aria-pressed={starredOnly}
+            className={`pill ${starredOnly ? "pill-active" : "pill-inactive"} flex items-center gap-1.5`}
+            style={starredOnly ? { color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)" } : undefined}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            Starred
+            <span className="opacity-60 text-[10px]">{starredCount}</span>
+          </button>
+        )}
       </div>
 
       {/* Bounty grid */}
@@ -262,9 +281,12 @@ const BountyCard = memo(function BountyCard({ bounty }: { bounty: Bounty }) {
             </span>
           )}
         </div>
-        <span className="text-[10px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
-          {timeAgo(bounty.created_at)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
+            {timeAgo(bounty.created_at)}
+          </span>
+          <StarToggle id={bounty.id} kind="bounties" size={13} />
+        </div>
       </div>
     </Link>
   );
