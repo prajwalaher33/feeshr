@@ -4,7 +4,15 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchRepo, fetchRepoFiles, fetchRepoIssues, fetchRepoPRs, type RepoFile } from "@/lib/api";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { StarToggle } from "@/components/ui/StarToggle";
 import type { Repo } from "@/lib/types/repos";
+
+const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
+  passing: { color: "#28c840", title: "CI passing" },
+  failing: { color: "#ff6b6b", title: "CI failing" },
+  pending: { color: "#f7c948", title: "CI pending" },
+};
 
 const TABS = ["Code", "Issues", "Pull Requests", "Discussions", "Actions"];
 
@@ -94,22 +102,29 @@ export default function RepoDetailPage() {
 
       {/* Repo Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan/[0.06] border border-cyan/[0.12] flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-cyan/[0.06] border border-cyan/[0.12] flex items-center justify-center shrink-0">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-cyan">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
             </svg>
           </div>
-          <h1 className="text-[20px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
+          <span
+            className="shrink-0 w-2 h-2 rounded-full"
+            style={{ background: (CI_DOT[repo.ci_status] ?? CI_DOT.pending).color, boxShadow: `0 0 8px ${(CI_DOT[repo.ci_status] ?? CI_DOT.pending).color}66` }}
+            title={(CI_DOT[repo.ci_status] ?? CI_DOT.pending).title}
+            aria-label={(CI_DOT[repo.ci_status] ?? CI_DOT.pending).title}
+          />
+          <h1 className="text-[20px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
             {repoDisplayName}
           </h1>
           {repo.published_to && (
-            <span className="status-chip" style={{ color: "#8b5cf6", background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
+            <span className="status-chip shrink-0" style={{ color: "#8b5cf6", background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
               {repo.published_to}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <StarToggle id={repo.id} kind="repos" size={16} />
           <StatPill icon="star" value={repo.stars >= 1000 ? (repo.stars / 1000).toFixed(1) + "k" : String(repo.stars)} />
           <StatPill icon="fork" value={String(repo.forks)} />
           <StatPill icon="eye" value={String(repo.contributors)} />
@@ -289,11 +304,27 @@ export default function RepoDetailPage() {
             <p className="text-[12px] text-white/35 leading-[1.8] mb-3">
               {repo.description || "No description provided."}
             </p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap mb-4">
               {repo.languages.map((lang) => (
                 <span key={lang} className="tag">{lang}</span>
               ))}
             </div>
+            {repo.maintainer_name && (
+              <Link
+                href={`/agents/${repo.maintainer_name}`}
+                className="flex items-center gap-2.5 -mx-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.02] transition-colors group"
+              >
+                <AgentIdenticon agentId={repo.maintainer_name} size={28} rounded="lg" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-white/30 uppercase tracking-[0.1em]" style={{ fontFamily: "var(--font-mono)" }}>
+                    Maintainer
+                  </p>
+                  <p className="text-[12px] font-medium text-white/80 truncate group-hover:text-cyan transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+                    {repo.maintainer_name}
+                  </p>
+                </div>
+              </Link>
+            )}
           </div>
 
           {/* Stats */}
@@ -333,16 +364,25 @@ export default function RepoDetailPage() {
               <span className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>{repo.contributors}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {Array.from({ length: Math.min(repo.contributors, 8) }).map((_, i) => (
+              {Array.from({ length: Math.min(repo.contributors, 12) }).map((_, i) => (
                 <div
                   key={i}
-                  className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center"
+                  className="rounded-lg overflow-hidden"
+                  title={`Contributor #${i + 1}`}
                 >
-                  <span className="text-[9px] text-cyan/60 font-medium" style={{ fontFamily: "var(--font-mono)" }}>
-                    {String.fromCharCode(65 + i)}{String.fromCharCode(65 + i + 1)}
-                  </span>
+                  <AgentIdenticon agentId={`${repo.id}-contributor-${i}`} size={28} rounded="lg" />
                 </div>
               ))}
+              {repo.contributors > 12 && (
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.03] border border-white/[0.06]"
+                  title={`${repo.contributors - 12} more`}
+                >
+                  <span className="text-[10px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+                    +{repo.contributors - 12}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
