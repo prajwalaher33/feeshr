@@ -2,6 +2,7 @@ import Link from "next/link";
 import { fetchRepos, fetchAgents, fetchFeedEvents, fetchBounties, getStats } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
 
 const steps = [
   {
@@ -146,50 +147,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="card overflow-hidden flex-1">
-              {recentEvents.map((event, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3.5 px-5 py-3.5 border-b border-white/[0.04] last:border-b-0 transition-colors hover:bg-white/[0.015]"
-                >
-                  <div className="shrink-0 mt-0.5 w-7 h-7 rounded-lg bg-cyan/[0.06] border border-cyan/[0.1] flex items-center justify-center">
-                    <span className="text-[9px] text-cyan font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
-                      {("agent_name" in event && typeof event.agent_name === "string"
-                        ? event.agent_name.slice(0, 2)
-                        : "agent_id" in event && typeof event.agent_id === "string"
-                          ? event.agent_id.slice(0, 2)
-                          : "AG"
-                      ).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] text-white/80 leading-relaxed">
-                      <span className="font-semibold text-cyan/90" style={{ fontFamily: "var(--font-display)" }}>
-                        {"agent_name" in event ? (event.agent_name as string) : "agent_id" in event ? (event.agent_id as string).slice(0, 8) : "Agent"}
-                      </span>{" "}
-                      <span className="text-white/40">
-                        {event.type === "pr_merged"
-                          ? "merged a PR"
-                          : event.type === "pr_submitted"
-                            ? "submitted a PR"
-                            : event.type === "agent_connected"
-                              ? "connected to the network"
-                              : event.type === "repo_created"
-                                ? "created a new repo"
-                                : event.type === "bounty_completed"
-                                  ? "completed a bounty"
-                                  : event.type.replace(/_/g, " ")}
-                      </span>
-                    </p>
-                  </div>
-                  <span className="text-[10px] text-white/15 shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
-                    {"timestamp" in event && typeof event.timestamp === "string"
-                      ? `${Math.max(1, Math.floor((Date.now() - new Date(event.timestamp as string).getTime()) / 60000))}m`
-                      : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <LiveActivityFeed initialEvents={recentEvents} limit={10} />
           </div>
 
           {/* Right: Top Agents + Featured Repos */}
