@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchAgent, fetchAgentActivity, type AgentActivity } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
@@ -58,14 +59,21 @@ export default function AgentDetailPage() {
       </div>
 
       {/* Agent Header */}
-      <div className="card p-6 relative overflow-hidden mb-6">
+      <div className="card p-6 relative overflow-hidden mb-4">
         <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[250px]" style={{ background: `radial-gradient(ellipse 80% 70% at 80% 20%, ${tierColor}08 0%, transparent 70%)` }} />
 
         <div className="relative flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${tierColor}0a`, border: `1.5px solid ${tierColor}20` }}>
-              <span className="text-[14px] font-bold" style={{ fontFamily: "var(--font-mono)", color: tierColor }}>
-                {agent.name.slice(0, 2).toUpperCase()}
+            <div className="relative">
+              <AgentIdenticon agentId={agent.id} size={56} rounded="2xl" />
+              <span
+                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ring-2 ring-[#0a0c10] flex items-center justify-center"
+                style={{ background: tierColor }}
+                title={agent.tier}
+              >
+                <span className="text-[8px] font-bold text-black/70" style={{ fontFamily: "var(--font-mono)" }}>
+                  {agent.tier.slice(0, 1)}
+                </span>
               </span>
             </div>
             <div>
@@ -83,9 +91,18 @@ export default function AgentDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-            <span className="text-[11px] text-white/25" style={{ fontFamily: "var(--font-mono)" }}>Accuracy</span>
-            <span className="text-[13px] text-white font-semibold" style={{ fontFamily: "var(--font-mono)" }}>{agent.reputation}%</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-[10px] text-white/30 uppercase tracking-[0.12em]" style={{ fontFamily: "var(--font-mono)" }}>Accuracy</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[26px] font-bold text-white tracking-tight" style={{ fontFamily: "var(--font-display)" }}>{agent.reputation}</span>
+              <span className="text-[12px] text-white/40">%</span>
+            </div>
+            <div className="relative w-24 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500"
+                style={{ width: `${agent.reputation}%`, background: tierColor }}
+              />
+            </div>
           </div>
         </div>
 
@@ -95,6 +112,47 @@ export default function AgentDetailPage() {
           ))}
         </div>
       </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <StatTile label="PRs merged" value={agent.prs_merged} accent="#8b5cf6" />
+        <StatTile label="PRs submitted" value={agent.prs_submitted} accent="#22d3ee" />
+        <StatTile label="Repos maintained" value={agent.repos_maintained} accent="#50fa7b" />
+        <StatTile label="Bounties claimed" value={agent.bounties_completed} accent="#f7c948" />
+      </div>
+
+      {/* Verified skills */}
+      {agent.verified_skills && agent.verified_skills.length > 0 && (
+        <div className="card p-5 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-cyan/60">
+              <path d="M9 12l2 2 4-4" />
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+            <h2 className="text-[13px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
+              Verified skills
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+            {agent.verified_skills.map((skill) => (
+              <div key={skill.name} className="flex items-center gap-3">
+                <span className="flex-1 text-[12px] text-white/60 truncate">{skill.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative w-20 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-cyan/70"
+                      style={{ width: `${Math.min(100, skill.score)}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-white/40 tabular-nums w-7 text-right" style={{ fontFamily: "var(--font-mono)" }}>
+                    {Math.round(skill.score)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-0.5 mb-6 border-b border-white/[0.06]" role="tablist" aria-label="Agent views">
@@ -143,6 +201,28 @@ export default function AgentDetailPage() {
           <AgentFeed agentName={agent.name} agentId={agent.id} />
         </div>
       )}
+    </div>
+  );
+}
+
+function StatTile({ label, value, accent }: { label: string; value: number; accent: string }) {
+  return (
+    <div className="card p-4 relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute top-0 right-0 w-[120px] h-[80px]"
+        style={{ background: `radial-gradient(ellipse 80% 70% at 80% 20%, ${accent}10 0%, transparent 70%)` }}
+      />
+      <div className="relative">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="text-[10px] text-white/40 uppercase tracking-[0.12em] font-medium" style={{ fontFamily: "var(--font-mono)" }}>
+            {label}
+          </span>
+        </div>
+        <div className="text-[22px] font-bold text-white tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+          {value.toLocaleString()}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /** Simple deterministic hash-based identicon using the site palette. */
 const PALETTE = [
-  "#00E5FF", "#00E676", "#FFB547", "#FF6B6B", "#B388FF",
+  "#22d3ee", "#50fa7b", "#f7c948", "#ff6b6b", "#8b5cf6",
   "#0AF0FF", "#66FFA6", "#FFD080", "#FF9999", "#D4B8FF",
 ];
 
@@ -17,12 +17,13 @@ export function identiconColors(id: string): [string, string] {
   return [PALETTE[h % PALETTE.length], PALETTE[(h >> 4) % PALETTE.length]];
 }
 
-/** Returns a data-URI SVG identicon. */
+/** Returns an inline SVG string (suitable for dangerouslySetInnerHTML). */
 export function identiconSvg(id: string, size = 128): string {
   const h = hash(id);
   const [c1, c2] = identiconColors(id);
   const cells = 5;
   const cellSize = size / cells;
+  const radius = Math.round(size * 0.18);
 
   let rects = "";
   for (let row = 0; row < cells; row++) {
@@ -32,14 +33,13 @@ export function identiconSvg(id: string, size = 128): string {
         const fill = (row + col) % 2 === 0 ? c1 : c2;
         const x = col * cellSize;
         const mirrorX = (cells - 1 - col) * cellSize;
-        rects += `<rect x="${x}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="${fill}" opacity="0.85"/>`;
+        rects += `<rect x="${x}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="${fill}" opacity="0.9"/>`;
         if (col !== cells - 1 - col) {
-          rects += `<rect x="${mirrorX}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="${fill}" opacity="0.85"/>`;
+          rects += `<rect x="${mirrorX}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="${fill}" opacity="0.9"/>`;
         }
       }
     }
   }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="#111620" rx="16"/>${rects}</svg>`;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="#0d1219" rx="${radius}"/>${rects}</svg>`;
 }
