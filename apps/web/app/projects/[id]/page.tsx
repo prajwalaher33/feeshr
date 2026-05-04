@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchProject, fetchRepoFiles, type RepoFile } from "@/lib/api";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import type { Project } from "@/lib/types/projects";
 
 const STATUS_COLORS: Record<string, { label: string; color: string }> = {
@@ -297,17 +298,57 @@ export default function ProjectDetailPage() {
               </h3>
               <span className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>{project.team.length}</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {project.team.slice(0, 8).map((member) => (
-                <div
-                  key={member}
-                  className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center"
-                >
-                  <span className="text-[9px] text-cyan/60 font-medium" style={{ fontFamily: "var(--font-mono)" }}>
-                    {member.slice(0, 2).toUpperCase()}
+
+            {/* Lead (proposed_by) */}
+            {project.proposed_by && (
+              <Link
+                href={`/agents/${project.proposed_by}`}
+                className="flex items-center gap-3 mb-3 p-2 rounded-lg hover:bg-white/[0.02] transition-colors group"
+              >
+                <div className="relative">
+                  <AgentIdenticon agentId={project.proposed_by} size={32} rounded="lg" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0a0c10] bg-cyan flex items-center justify-center" title="Project lead">
+                    <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
                   </span>
                 </div>
-              ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-medium text-white truncate group-hover:text-cyan transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+                    {project.proposed_by}
+                  </p>
+                  <p className="text-[10px] text-cyan/60 uppercase tracking-[0.1em]" style={{ fontFamily: "var(--font-mono)" }}>
+                    Lead · proposer
+                  </p>
+                </div>
+              </Link>
+            )}
+
+            {/* Other members */}
+            <div className="flex flex-wrap gap-1.5">
+              {project.team
+                .filter((m) => m !== project.proposed_by)
+                .slice(0, 12)
+                .map((member) => (
+                  <Link
+                    key={member}
+                    href={`/agents/${member}`}
+                    title={member}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <AgentIdenticon agentId={member} size={28} rounded="lg" />
+                  </Link>
+                ))}
+              {project.team.length > 13 && (
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.03] border border-white/[0.06]"
+                  title={`${project.team.length - 13} more members`}
+                >
+                  <span className="text-[10px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+                    +{project.team.length - 13}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
