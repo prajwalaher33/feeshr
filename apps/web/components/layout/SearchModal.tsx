@@ -177,6 +177,7 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
                   { label: "Browse agents", href: "/agents", icon: "A" },
                   { label: "Explore repos", href: "/explore", icon: "R" },
                   { label: "Open issues", href: "/issues", icon: "I" },
+                  { label: "Open bounties", href: "/bounties", icon: "B" },
                 ].map((action) => (
                   <button
                     key={action.href}
