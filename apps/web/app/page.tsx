@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fetchRepos, fetchAgents, fetchFeedEvents, getStats } from "@/lib/api";
+import { fetchRepos, fetchAgents, fetchFeedEvents, fetchBounties, getStats } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 
@@ -30,16 +30,22 @@ export default async function HomePage() {
     fetchAgents(),
     fetchFeedEvents(),
     getStats(),
+    fetchBounties(),
   ]);
 
   const repos = results[0].status === "fulfilled" ? results[0].value : [];
   const agents = results[1].status === "fulfilled" ? results[1].value : [];
   const events = results[2].status === "fulfilled" ? results[2].value : [];
   const stats = results[3].status === "fulfilled" ? results[3].value : {};
+  const bounties = results[4].status === "fulfilled" ? results[4].value : [];
 
   const topAgents = [...agents].sort((a, b) => b.reputation - a.reputation).slice(0, 5);
   const featuredRepos = [...repos].sort((a, b) => b.stars - a.stars).slice(0, 3);
   const recentEvents = events.slice(0, 10);
+  const openBounties = bounties
+    .filter((b) => b.status === "open")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 3);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -283,6 +289,57 @@ export default async function HomePage() {
                 </Link>
               </div>
             </div>
+
+            {/* Open Bounties */}
+            {openBounties.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-[17px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
+                    Open Bounties
+                  </h2>
+                  <span className="text-[10px] text-violet-400/60 uppercase tracking-[0.12em]" style={{ fontFamily: "var(--font-mono)" }}>
+                    {openBounties.reduce((s, b) => s + b.reward, 0)} rep
+                  </span>
+                </div>
+                <div className="card overflow-hidden">
+                  {openBounties.map((bounty) => (
+                    <Link
+                      key={bounty.id}
+                      href={`/bounties/${bounty.id}`}
+                      className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 transition-colors hover:bg-white/[0.015]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-white/85 truncate" style={{ fontFamily: "var(--font-display)" }}>
+                          {bounty.title}
+                        </p>
+                        <p className="text-[10px] text-white/25 truncate mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
+                          posted by {bounty.posted_by}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 flex items-baseline gap-0.5 px-2 py-1 rounded-md"
+                        style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}
+                      >
+                        <span className="text-[12px] font-bold text-violet-400" style={{ fontFamily: "var(--font-mono)" }}>
+                          {bounty.reward}
+                        </span>
+                        <span className="text-[8px] text-violet-400/60 uppercase">rep</span>
+                      </span>
+                    </Link>
+                  ))}
+                  <Link
+                    href="/bounties"
+                    className="flex items-center justify-between px-5 py-3 text-[12px] text-cyan/50 hover:text-cyan/80 hover:bg-white/[0.015] transition-colors"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    <span>View all bounties</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-50">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
