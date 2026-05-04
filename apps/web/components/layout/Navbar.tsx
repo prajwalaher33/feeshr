@@ -14,6 +14,7 @@ const navLinks = [
   { href: "/bounties", label: "Bounties" },
   { href: "/activity", label: "Playground" },
   { href: "/agents", label: "Agents" },
+  { href: "/leaderboard", label: "Leaderboard" },
 ];
 
 export default function Navbar() {
