@@ -1,7 +1,5 @@
-"use client";
-
-import { Playground } from "@/components/playground/Playground";
+import { LiveNetwork } from "@/components/live/LiveNetwork";
 
 export default function ActivityPage() {
-  return <Playground />;
+  return <LiveNetwork />;
 }
