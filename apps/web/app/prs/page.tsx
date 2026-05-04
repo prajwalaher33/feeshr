@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchAllPRs, type PullRequestDetail } from "@/lib/api";
 import { SkeletonList } from "@/components/ui/Skeleton";
 
@@ -21,12 +21,24 @@ const CI_CONFIG: Record<string, { label: string; color: string }> = {
   failed: { label: "Failed", color: "#ff6b6b" },
 };
 
+type SortKey = "newest" | "oldest" | "biggest" | "reviews" | "title";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "newest", label: "Newest first" },
+  { key: "oldest", label: "Oldest first" },
+  { key: "biggest", label: "Biggest diff" },
+  { key: "reviews", label: "Most reviews" },
+  { key: "title", label: "Title (A-Z)" },
+];
+
 export default function PRsPage() {
   const [prs, setPrs] = useState<(PullRequestDetail & { repo_name?: string })[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [sort, setSort] = useState<SortKey>("newest");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -40,6 +52,22 @@ export default function PRsPage() {
   }, [statusFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  const visible = useMemo(() => {
+    const q = search.toLowerCase();
+    const filtered = q
+      ? prs.filter((p) => p.title.toLowerCase().includes(q) || (p.repo_name ?? "").toLowerCase().includes(q))
+      : prs;
+    return [...filtered].sort((a, b) => {
+      switch (sort) {
+        case "title": return a.title.localeCompare(b.title);
+        case "biggest": return (b.additions + b.deletions) - (a.additions + a.deletions);
+        case "reviews": return b.review_count - a.review_count;
+        case "oldest": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  }, [prs, search, sort]);
 
   return (
     <div className="page-container">
@@ -60,6 +88,37 @@ export default function PRsPage() {
         </select>
       </div>
 
+      {/* Search + Sort */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="relative flex-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+            <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search pull requests..."
+            aria-label="Search pull requests"
+            className="search-input"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] text-white/30 uppercase tracking-[0.1em] shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
+            Sort
+          </label>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label="Sort pull requests"
+            className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[12px] text-white/80 hover:border-white/[0.12] focus:border-cyan/40 focus:outline-none transition-colors cursor-pointer"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {SORT_OPTIONS.map((opt) => <option key={opt.key} value={opt.key} className="bg-[#0a0e15]">{opt.label}</option>)}
+          </select>
+        </div>
+      </div>
+
       {loading ? (
         <SkeletonList count={8} />
       ) : error ? (
@@ -74,7 +133,7 @@ export default function PRsPage() {
             Try again
           </button>
         </div>
-      ) : prs.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/15">
@@ -82,11 +141,22 @@ export default function PRsPage() {
               <path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M6 9v12" />
             </svg>
           </div>
-          <span className="empty-state-text">No pull requests found</span>
+          <span className="empty-state-text">
+            {search ? `No PRs match "${search}"` : "No pull requests found"}
+          </span>
+          {(search || statusFilter) && (
+            <button
+              onClick={() => { setSearch(""); setStatusFilter(""); }}
+              className="mt-3 text-[11px] text-cyan/60 hover:text-cyan transition-colors"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {prs.map((pr) => {
+          {visible.map((pr) => {
             const statusInfo = STATUS_CONFIG[pr.status] ?? STATUS_CONFIG.open;
             const ciInfo = CI_CONFIG[pr.ci_status] ?? CI_CONFIG.pending;
             return (
