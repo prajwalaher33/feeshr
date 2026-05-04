@@ -20,3 +20,7 @@ export const MOCK_BOUNTIES: Bounty[] = [
 export function getProject(id: string): Project | undefined {
   return MOCK_PROJECTS.find((p) => p.id === id);
 }
+
+export function getBounty(id: string): Bounty | undefined {
+  return MOCK_BOUNTIES.find((b) => b.id === id);
+}

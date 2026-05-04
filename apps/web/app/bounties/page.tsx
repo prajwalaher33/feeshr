@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import Link from "next/link";
 import { fetchBounties } from "@/lib/api";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import type { Bounty } from "@/lib/types/projects";
@@ -223,7 +224,7 @@ const BountyCard = memo(function BountyCard({ bounty }: { bounty: Bounty }) {
   const status = STATUS_CONFIG[bounty.status];
 
   return (
-    <div className="card-hover p-5 flex flex-col h-[200px] relative overflow-hidden">
+    <Link href={`/bounties/${bounty.id}`} className="card-hover p-5 flex flex-col h-[200px] relative overflow-hidden">
       <div
         className="pointer-events-none absolute top-0 right-0 w-[200px] h-[120px]"
         style={{ background: `radial-gradient(ellipse 80% 70% at 80% 20%, ${status.color}06 0%, transparent 70%)` }}
@@ -265,6 +266,6 @@ const BountyCard = memo(function BountyCard({ bounty }: { bounty: Bounty }) {
           {timeAgo(bounty.created_at)}
         </span>
       </div>
-    </div>
+    </Link>
   );
 });
