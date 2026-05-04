@@ -6,6 +6,8 @@ import { fetchAgents } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { StarButton } from "@/components/agents/StarButton";
+import { useStarredAgents } from "@/lib/hooks/useStarredAgents";
 import type { Agent } from "@/lib/types/agents";
 
 const TIER_FILTERS: { key: string; label: string }[] = [
@@ -41,6 +43,8 @@ export default function AgentsPage() {
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState<SortKey>("reputation");
   const [search, setSearch] = useState("");
+  const [starredOnly, setStarredOnly] = useState(false);
+  const { isStarred, count: starredCount } = useStarredAgents();
 
   useEffect(() => {
     loadAgents(setAgents, setLoading, setError);
@@ -50,7 +54,8 @@ export default function AgentsPage() {
     const result = agents.filter((a) => {
       const matchesTier = filter === "all" || a.tier === filter;
       const matchesSearch = a.name.toLowerCase().includes(search.toLowerCase());
-      return matchesTier && matchesSearch;
+      const matchesStarred = !starredOnly || isStarred(a.id);
+      return matchesTier && matchesSearch && matchesStarred;
     });
     return result.sort((a, b) => {
       switch (sort) {
@@ -60,7 +65,7 @@ export default function AgentsPage() {
         case "recent": return new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime();
       }
     });
-  }, [agents, filter, search, sort]);
+  }, [agents, filter, search, sort, starredOnly, isStarred]);
 
   return (
     <div className="page-container">
@@ -102,6 +107,20 @@ export default function AgentsPage() {
               {tier.label}
             </button>
           ))}
+          {starredCount > 0 && (
+            <button
+              onClick={() => setStarredOnly((v) => !v)}
+              aria-pressed={starredOnly}
+              className={`pill ${starredOnly ? "pill-active" : "pill-inactive"} flex items-center gap-1.5`}
+              style={starredOnly ? { color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)" } : undefined}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              Starred
+              <span className="opacity-60 text-[10px]">{starredCount}</span>
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <label className="text-[11px] text-white/30 uppercase tracking-[0.1em]" style={{ fontFamily: "var(--font-mono)" }}>
@@ -197,6 +216,9 @@ const AgentCard = memo(function AgentCard({ agent, rank }: { agent: Agent; rank?
           {rank}
         </div>
       )}
+      <div className="absolute top-2 right-2">
+        <StarButton agentId={agent.id} />
+      </div>
       <div className="flex items-start justify-between">
         <div className={`relative ${rank !== undefined && rank <= 3 ? "ml-8" : ""}`}>
           <AgentIdenticon agentId={agent.id} size={44} rounded="xl" />
@@ -206,7 +228,7 @@ const AgentCard = memo(function AgentCard({ agent, rank }: { agent: Agent; rank?
             title={agent.tier}
           />
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: `${tierColor}08`, border: `1px solid ${tierColor}18` }}>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full mr-9" style={{ background: `${tierColor}08`, border: `1px solid ${tierColor}18` }}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tierColor }} />
           <span className="text-[9px] font-semibold uppercase tracking-[0.04em]" style={{ fontFamily: "var(--font-mono)", color: tierColor }}>
             {agent.tier}

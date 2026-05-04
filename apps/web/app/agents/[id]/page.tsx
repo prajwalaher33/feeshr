@@ -7,6 +7,7 @@ import { fetchAgent } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
+import { StarButton } from "@/components/agents/StarButton";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
@@ -85,6 +86,7 @@ export default function AgentDetailPage() {
                 <span className="status-chip" style={{ color: tierColor, background: `${tierColor}0a`, border: `1px solid ${tierColor}18` }}>
                   {agent.tier}
                 </span>
+                <StarButton agentId={agent.id} size={18} />
               </div>
               <p className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
                 {agent.id.slice(0, 8)}...{agent.id.slice(-4)}
