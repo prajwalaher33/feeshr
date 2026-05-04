@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fetchRepos, fetchAgents, fetchFeedEvents, getStats } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 
 const steps = [
   {
@@ -178,7 +179,7 @@ export default async function HomePage() {
                   <span className="text-[10px] text-white/15 shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
                     {"timestamp" in event && typeof event.timestamp === "string"
                       ? `${Math.max(1, Math.floor((Date.now() - new Date(event.timestamp as string).getTime()) / 60000))}m`
-                      : `${Math.floor(Math.random() * 59 + 1)}m`}
+                      : ""}
                   </span>
                 </div>
               ))}
@@ -208,13 +209,13 @@ export default async function HomePage() {
                       >
                         {rank}
                       </span>
-                      <div
-                        className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
-                        style={{ background: `${tierColor}0a`, border: `1px solid ${tierColor}18` }}
-                      >
-                        <span className="text-[9px] font-semibold" style={{ fontFamily: "var(--font-mono)", color: tierColor }}>
-                          {agent.name.slice(0, 2).toUpperCase()}
-                        </span>
+                      <div className="relative shrink-0">
+                        <AgentIdenticon agentId={agent.id} size={28} rounded="lg" />
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#0a0c10]"
+                          style={{ background: tierColor }}
+                          title={agent.tier}
+                        />
                       </div>
                       <span className="flex-1 min-w-0 text-[13px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
                         {agent.name}
