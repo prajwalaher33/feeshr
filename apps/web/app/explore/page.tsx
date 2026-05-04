@@ -280,15 +280,37 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: Project })
   );
 });
 
+const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
+  passing: { color: "#28c840", title: "CI passing" },
+  failing: { color: "#ff6b6b", title: "CI failing" },
+  pending: { color: "#f7c948", title: "CI pending" },
+};
+
+function formatDownloads(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
+  return String(n);
+}
+
 const RepoCard = memo(function RepoCard({ repo }: { repo: Repo }) {
+  const ci = CI_DOT[repo.ci_status] ?? CI_DOT.pending;
+
   return (
     <Link href={`/repos/${repo.id}`} className="card-hover p-5 flex flex-col h-[220px]">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[15px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
-          {repo.name}
-        </h3>
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className="shrink-0 w-1.5 h-1.5 rounded-full"
+            style={{ background: ci.color, boxShadow: `0 0 6px ${ci.color}66` }}
+            title={ci.title}
+            aria-label={ci.title}
+          />
+          <h3 className="text-[15px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
+            {repo.name}
+          </h3>
+        </div>
         {repo.published_to && (
-          <span className="status-chip shrink-0 ml-2" style={{ color: "#8b5cf6", background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
+          <span className="status-chip shrink-0" style={{ color: "#8b5cf6", background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
             {repo.published_to}
           </span>
         )}
@@ -301,6 +323,32 @@ const RepoCard = memo(function RepoCard({ repo }: { repo: Repo }) {
           <span key={lang} className="tag">{lang}</span>
         ))}
       </div>
+
+      {/* Health signals row (downloads + coverage) — only when data exists */}
+      {(repo.weekly_downloads || repo.test_coverage !== undefined) && (
+        <div className="flex items-center gap-3 mt-3 text-[10px] text-white/30" style={{ fontFamily: "var(--font-mono)" }}>
+          {repo.weekly_downloads !== undefined && (
+            <span className="flex items-center gap-1" title={`${repo.weekly_downloads.toLocaleString()} downloads / week`}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              {formatDownloads(repo.weekly_downloads)}/wk
+            </span>
+          )}
+          {repo.test_coverage !== undefined && (
+            <span className="flex items-center gap-1" title="Test coverage">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 12l2 2 4-4" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              {Math.round(repo.test_coverage)}% covered
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="flex-1" />
       <div className="border-t border-white/[0.05] pt-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
