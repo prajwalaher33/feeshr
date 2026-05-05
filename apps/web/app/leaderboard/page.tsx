@@ -9,6 +9,7 @@ import { StarButton } from "@/components/agents/StarButton";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { TierDistributionChart } from "@/components/charts/TierDistributionChart";
 import { CountUp } from "@/components/ui/CountUp";
+import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import type { Agent, Tier } from "@/lib/types/agents";
 import type { Repo } from "@/lib/types/repos";
 
@@ -189,9 +190,12 @@ export default function LeaderboardPage() {
                 <div className="flex items-center gap-3 min-w-0">
                   <AgentIdenticon agentId={agent.id} size={32} rounded="lg" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
-                      {agent.name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
+                        {agent.name}
+                      </p>
+                      {isNewAgent(agent.connected_at) && <NewBadge />}
+                    </div>
                     <p className="hidden sm:block text-[10px] text-white/20 truncate" style={{ fontFamily: "var(--font-mono)" }}>
                       {agent.id.slice(0, 12)}…
                     </p>
