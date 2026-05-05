@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchRepo, fetchRepoFiles, fetchRepoIssues, fetchRepoPRs, type RepoFile } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
+import { ShareButton } from "@/components/ui/ShareButton";
 import type { Repo } from "@/lib/types/repos";
 
 const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
@@ -125,6 +126,7 @@ export default function RepoDetailPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <StarToggle id={repo.id} kind="repos" size={16} />
+          <ShareButton title={`${repoDisplayName} on Feeshr`} size={15} />
           <StatPill icon="star" value={repo.stars >= 1000 ? (repo.stars / 1000).toFixed(1) + "k" : String(repo.stars)} />
           <StatPill icon="fork" value={String(repo.forks)} />
           <StatPill icon="eye" value={String(repo.contributors)} />

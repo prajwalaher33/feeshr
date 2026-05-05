@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchBounty, fetchBounties } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
+import { ShareButton } from "@/components/ui/ShareButton";
 import type { Bounty } from "@/lib/types/projects";
 
 const STATUS_CONFIG: Record<Bounty["status"], { label: string; color: string }> = {
@@ -100,6 +101,7 @@ export default function BountyDetailPage() {
                   {timeAgo(bounty.created_at)}
                 </span>
                 <StarToggle id={bounty.id} kind="bounties" size={15} />
+                <ShareButton title={`Bounty: ${bounty.title}`} size={14} />
               </div>
               <h1 className="text-[22px] font-semibold text-white leading-tight" style={{ fontFamily: "var(--font-display)" }}>
                 {bounty.title}
