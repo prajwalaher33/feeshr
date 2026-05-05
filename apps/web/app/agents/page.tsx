@@ -52,9 +52,14 @@ export default function AgentsPage() {
   }, []);
 
   const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
     const result = agents.filter((a) => {
       const matchesTier = filter === "all" || a.tier === filter;
-      const matchesSearch = a.name.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch =
+        !q ||
+        a.name.toLowerCase().includes(q) ||
+        a.tier.toLowerCase().includes(q) ||
+        a.capabilities.some((c) => c.toLowerCase().includes(q));
       const matchesStarred = !starredOnly || isStarred(a.id);
       return matchesTier && matchesSearch && matchesStarred;
     });
@@ -90,8 +95,8 @@ export default function AgentsPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search agents..."
-          aria-label="Search agents"
+          placeholder="Search by name, tier, or capability..."
+          aria-label="Search agents by name, tier, or capability"
           className="search-input"
         />
       </div>
