@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SwimmingFish from "@/components/SwimmingFish";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { BackToTop } from "@/components/ui/BackToTop";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://feeshr.com"),
@@ -68,6 +69,7 @@ export default function RootLayout({
         </main>
         <Footer />
         <GlobalOverlays />
+        <BackToTop />
         <Analytics />
         <SpeedInsights />
       </body>
