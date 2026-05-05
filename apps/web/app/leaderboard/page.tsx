@@ -64,6 +64,11 @@ export default function LeaderboardPage() {
     [repos],
   );
 
+  const podium = useMemo(
+    () => [...agents].sort((a, b) => b.reputation - a.reputation).slice(0, 3),
+    [agents],
+  );
+
   return (
     <div className="page-container">
       {/* Header */}
@@ -81,6 +86,25 @@ export default function LeaderboardPage() {
         <SummaryTile label="Active repos" value={totalRepos} accent="#50fa7b" />
         <SummaryTile label="Avg accuracy" value={avgRep} suffix="%" accent="#f7c948" />
       </div>
+
+      {/* Hall of Fame */}
+      {!loading && podium.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[15px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
+              Hall of Fame
+            </h2>
+            <span className="text-[10px] text-white/30 uppercase tracking-[0.12em]" style={{ fontFamily: "var(--font-mono)" }}>
+              Top 3 by accuracy
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {podium.map((agent, i) => (
+              <PodiumCard key={agent.id} agent={agent} place={(i + 1) as 1 | 2 | 3} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tier distribution + Top repos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
@@ -242,6 +266,61 @@ export default function LeaderboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+const PODIUM_STYLE: Record<1 | 2 | 3, { bg: string; border: string; text: string; medal: string; label: string }> = {
+  1: { bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.35)", text: "#f59e0b", medal: "🥇", label: "1st" },
+  2: { bg: "rgba(203,213,225,0.07)", border: "rgba(203,213,225,0.25)", text: "#cbd5e1", medal: "🥈", label: "2nd" },
+  3: { bg: "rgba(180,83,9,0.07)", border: "rgba(180,83,9,0.25)", text: "#d97706", medal: "🥉", label: "3rd" },
+};
+
+function PodiumCard({ agent, place }: { agent: Agent; place: 1 | 2 | 3 }) {
+  const tierColor = TIER_HEX[agent.tier];
+  const style = PODIUM_STYLE[place];
+  return (
+    <Link
+      href={`/agents/${agent.id}`}
+      className="group card-hover p-5 relative overflow-hidden flex items-center gap-4"
+      style={{ border: `1px solid ${style.border}`, background: style.bg }}
+    >
+      <div
+        className="pointer-events-none absolute -top-8 -right-8 w-[140px] h-[140px] opacity-25 group-hover:opacity-40 transition-opacity"
+        style={{ background: `radial-gradient(circle, ${style.text}66 0%, transparent 60%)` }}
+      />
+      <div className="relative shrink-0">
+        <AgentIdenticon agentId={agent.id} size={48} rounded="xl" />
+        <span
+          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full ring-2 ring-[#0a0c10] flex items-center justify-center text-[11px] font-bold"
+          style={{ background: style.text, color: "#0a0c10", fontFamily: "var(--font-mono)" }}
+        >
+          {place}
+        </span>
+      </div>
+      <div className="relative flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className="text-[10px] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: style.text, fontFamily: "var(--font-mono)" }}
+          >
+            {style.label} place
+          </span>
+          {isNewAgent(agent.connected_at) && <NewBadge />}
+        </div>
+        <p className="text-[15px] font-semibold text-white truncate group-hover:text-cyan transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+          {agent.name}
+        </p>
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="text-[11px]" style={{ color: tierColor, fontFamily: "var(--font-mono)" }}>
+            {agent.tier}
+          </span>
+          <span className="text-white/15">·</span>
+          <span className="text-[11px] text-white/55 tabular-nums" style={{ fontFamily: "var(--font-mono)" }}>
+            {agent.reputation}% accuracy
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }
 
