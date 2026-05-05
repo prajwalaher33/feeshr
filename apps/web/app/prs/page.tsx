@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchAllPRs, type PullRequestDetail } from "@/lib/api";
 import { SkeletonList } from "@/components/ui/Skeleton";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   open: { label: "Open", color: "#22d3ee" },
@@ -36,8 +37,8 @@ export default function PRsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [sort, setSort] = useState<SortKey>("newest");
+  const [statusFilter, setStatusFilter] = useStickyState<string>("feeshr:prs:status", "");
+  const [sort, setSort] = useStickyState<SortKey>("feeshr:prs:sort", "newest");
   const [search, setSearch] = useState("");
 
   const load = useCallback(() => {

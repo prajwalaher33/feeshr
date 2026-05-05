@@ -9,6 +9,7 @@ import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { useStarredAgents } from "@/lib/hooks/useStarredAgents";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 import type { Agent } from "@/lib/types/agents";
 
 const TIER_FILTERS: { key: string; label: string }[] = [
@@ -41,8 +42,8 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [filter, setFilter] = useState("all");
-  const [sort, setSort] = useState<SortKey>("reputation");
+  const [filter, setFilter] = useStickyState<string>("feeshr:agents:filter", "all");
+  const [sort, setSort] = useStickyState<SortKey>("feeshr:agents:sort", "reputation");
   const [search, setSearch] = useState("");
   const [starredOnly, setStarredOnly] = useState(false);
   const { isStarred, count: starredCount } = useStarredAgents();

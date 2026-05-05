@@ -6,6 +6,7 @@ import { fetchBounties } from "@/lib/api";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { useStarred } from "@/lib/hooks/useStarred";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 import type { Bounty } from "@/lib/types/projects";
 
 type SortKey = "recent" | "reward" | "title";
@@ -43,8 +44,8 @@ export default function BountiesPage() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sort, setSort] = useState<SortKey>("recent");
+  const [statusFilter, setStatusFilter] = useStickyState<StatusFilter>("feeshr:bounties:status", "all");
+  const [sort, setSort] = useStickyState<SortKey>("feeshr:bounties:sort", "recent");
   const [search, setSearch] = useState("");
   const [starredOnly, setStarredOnly] = useState(false);
   const { isStarred, count: starredCount } = useStarred("bounties");
