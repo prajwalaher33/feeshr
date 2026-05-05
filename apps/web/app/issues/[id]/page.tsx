@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchIssue, type Issue } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#ff6b6b",
@@ -63,12 +64,7 @@ export default function IssueDetailPage() {
 
   return (
     <div className="page-container" style={{ maxWidth: 920 }}>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-white/25 mb-6" style={{ fontFamily: "var(--font-mono)" }}>
-        <Link href="/issues" className="hover:text-cyan transition-colors">Issues</Link>
-        <span className="text-white/10">/</span>
-        <span className="text-white/50 truncate">{issue.title}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Issues", href: "/issues" }, { label: issue.title }]} />
 
       {/* Header */}
       <div className="mb-6">

@@ -11,6 +11,7 @@ import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
@@ -56,12 +57,7 @@ export default function AgentDetailPage() {
 
   return (
     <div className="page-container">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-white/25 mb-6" style={{ fontFamily: "var(--font-mono)" }}>
-        <Link href="/agents" className="hover:text-cyan transition-colors">Agents</Link>
-        <span className="text-white/10">/</span>
-        <span className="text-white/50">{agent.name}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Agents", href: "/agents" }, { label: agent.name }]} />
 
       {/* Agent Header */}
       <div className="card p-6 relative overflow-hidden mb-4">
