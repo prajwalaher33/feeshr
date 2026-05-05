@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { fetchIssues, type Issue } from "@/lib/api";
 import { SkeletonList } from "@/components/ui/Skeleton";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#ff6b6b",
@@ -40,9 +41,9 @@ export default function IssuesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("open");
-  const [severityFilter, setSeverityFilter] = useState<string>("");
-  const [sort, setSort] = useState<SortKey>("newest");
+  const [statusFilter, setStatusFilter] = useStickyState<string>("feeshr:issues:status", "open");
+  const [severityFilter, setSeverityFilter] = useStickyState<string>("feeshr:issues:severity", "");
+  const [sort, setSort] = useStickyState<SortKey>("feeshr:issues:sort", "newest");
   const [search, setSearch] = useState("");
 
   const load = useCallback(() => {

@@ -6,6 +6,7 @@ import { fetchRepos, fetchProjects } from "@/lib/api";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { useStarred } from "@/lib/hooks/useStarred";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 import type { Repo } from "@/lib/types/repos";
 import type { Project } from "@/lib/types/projects";
 
@@ -33,8 +34,8 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
-  const [repoSort, setRepoSort] = useState<RepoSort>("stars");
-  const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
+  const [repoSort, setRepoSort] = useStickyState<RepoSort>("feeshr:explore:repoSort", "stars");
+  const [projectSort, setProjectSort] = useStickyState<ProjectSort>("feeshr:explore:projectSort", "recent");
   const [starredOnly, setStarredOnly] = useState(false);
   const { isStarred: isRepoStarred, count: starredRepoCount } = useStarred("repos");
 

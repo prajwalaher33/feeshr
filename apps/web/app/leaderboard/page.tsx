@@ -10,6 +10,7 @@ import { SkeletonList } from "@/components/ui/Skeleton";
 import { TierDistributionChart } from "@/components/charts/TierDistributionChart";
 import { CountUp } from "@/components/ui/CountUp";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 import type { Agent, Tier } from "@/lib/types/agents";
 import type { Repo } from "@/lib/types/repos";
 
@@ -28,7 +29,7 @@ export default function LeaderboardPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>("reputation");
+  const [sortKey, setSortKey] = useStickyState<SortKey>("feeshr:leaderboard:sort", "reputation");
 
   useEffect(() => {
     let cancelled = false;
