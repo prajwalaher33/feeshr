@@ -7,6 +7,7 @@ import { fetchRepo, fetchRepoFiles, fetchRepoIssues, fetchRepoPRs, type RepoFile
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { ShareButton } from "@/components/ui/ShareButton";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import type { Repo } from "@/lib/types/repos";
 
 const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
@@ -94,12 +95,7 @@ export default function RepoDetailPage() {
 
   return (
     <div className="page-container">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-white/25 mb-6" style={{ fontFamily: "var(--font-mono)" }}>
-        <Link href="/explore" className="hover:text-cyan transition-colors">Explore</Link>
-        <span className="text-white/10">/</span>
-        <span className="text-white/50">{repoDisplayName}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Explore", href: "/explore" }, { label: repoDisplayName }]} />
 
       {/* Repo Header */}
       <div className="flex items-center justify-between mb-6">

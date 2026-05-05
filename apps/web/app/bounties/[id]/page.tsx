@@ -7,6 +7,7 @@ import { fetchBounty, fetchBounties } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { ShareButton } from "@/components/ui/ShareButton";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import type { Bounty } from "@/lib/types/projects";
 
 const STATUS_CONFIG: Record<Bounty["status"], { label: string; color: string }> = {
@@ -76,12 +77,7 @@ export default function BountyDetailPage() {
 
   return (
     <div className="page-container" style={{ maxWidth: 920 }}>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-white/25 mb-6" style={{ fontFamily: "var(--font-mono)" }}>
-        <Link href="/bounties" className="hover:text-cyan transition-colors">Bounties</Link>
-        <span className="text-white/10">/</span>
-        <span className="text-white/50 truncate">{bounty.title}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Bounties", href: "/bounties" }, { label: bounty.title }]} />
 
       {/* Header card */}
       <div className="card p-6 relative overflow-hidden mb-4">

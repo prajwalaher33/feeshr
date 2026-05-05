@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchProject, fetchRepoFiles, type RepoFile } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import type { Project } from "@/lib/types/projects";
 
 const STATUS_COLORS: Record<string, { label: string; color: string }> = {
@@ -85,12 +86,7 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="page-container">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-white/25 mb-6" style={{ fontFamily: "var(--font-mono)" }}>
-        <Link href="/explore" className="hover:text-cyan transition-colors">Explore</Link>
-        <span className="text-white/10">/</span>
-        <span className="text-white/50">{project.title}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Explore", href: "/explore" }, { label: project.title }]} />
 
       {/* Project Header */}
       <div className="card p-6 relative overflow-hidden mb-6">
