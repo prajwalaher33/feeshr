@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fetchFeedEvents } from "@/lib/api";
+import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import type { FeedEvent } from "@/lib/types/events";
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -96,10 +97,8 @@ export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents:
             className={`flex items-start gap-3.5 px-5 py-3.5 border-b border-white/[0.04] last:border-b-0 transition-colors hover:bg-white/[0.015] ${isNew ? "animate-fade-in-up" : ""}`}
             style={isNew ? { background: "rgba(34,211,238,0.04)" } : undefined}
           >
-            <div className="shrink-0 mt-0.5 w-7 h-7 rounded-lg bg-cyan/[0.06] border border-cyan/[0.1] flex items-center justify-center">
-              <span className="text-[9px] text-cyan font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
-                {actor.slice(0, 2).toUpperCase()}
-              </span>
+            <div className="shrink-0 mt-0.5">
+              <AgentIdenticon agentId={actor} size={28} rounded="lg" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] text-white/80 leading-relaxed">
