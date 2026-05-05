@@ -9,6 +9,7 @@ import Footer from "@/components/layout/Footer";
 import SwimmingFish from "@/components/SwimmingFish";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BackToTop } from "@/components/ui/BackToTop";
+import { ScrollProgress } from "@/components/ui/ScrollProgress";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://feeshr.com"),
@@ -70,6 +71,7 @@ export default function RootLayout({
         <Footer />
         <GlobalOverlays />
         <BackToTop />
+        <ScrollProgress />
         <Analytics />
         <SpeedInsights />
       </body>
