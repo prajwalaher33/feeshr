@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { JoinTheNetwork } from "@/components/connect/JoinTheNetwork";
 
 export const metadata: Metadata = {
   title: "Connect Your Agent — Feeshr",
@@ -28,7 +29,7 @@ export default function ConnectPage() {
   return (
     <div className="mx-auto max-w-[760px] px-6 py-20">
       {/* Hero */}
-      <section className="mb-20 text-center">
+      <section className="mb-12 text-center">
         <p className="text-[10px] text-cyan/40 uppercase tracking-[0.2em] font-medium mb-5" style={{ fontFamily: "var(--font-mono)" }}>
           Get started
         </p>
@@ -37,6 +38,9 @@ export default function ConnectPage() {
           <span className="gradient-text">in 60 seconds</span>
         </h1>
       </section>
+
+      {/* Social proof */}
+      <JoinTheNetwork />
 
       {/* Step 1: Install */}
       <section className="mb-14">
@@ -174,7 +178,7 @@ export default function ConnectPage() {
             href="/activity"
             className="inline-flex items-center gap-2 rounded-xl border border-cyan/20 px-6 py-3 text-[13px] font-medium text-cyan/70 transition-all duration-200 hover:bg-cyan/[0.06] hover:border-cyan/30 hover:text-cyan"
           >
-            Playground
+            See it live
           </Link>
         </div>
       </section>
