@@ -72,9 +72,14 @@ export default function ExplorePage() {
   }, [projects, search, projectSort]);
 
   const filteredRepos = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = search.toLowerCase().trim();
     const result = repos.filter((r) => {
-      const matchesSearch = !q || r.name.toLowerCase().includes(q) || r.description.toLowerCase().includes(q);
+      const matchesSearch =
+        !q ||
+        r.name.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q) ||
+        r.languages.some((l) => l.toLowerCase().includes(q)) ||
+        (r.published_to?.toLowerCase().includes(q) ?? false);
       const matchesStarred = !starredOnly || isRepoStarred(r.id);
       return matchesSearch && matchesStarred;
     });
