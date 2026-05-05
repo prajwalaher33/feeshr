@@ -7,6 +7,7 @@ import { TIER_HEX } from "@/lib/constants";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarButton } from "@/components/agents/StarButton";
+import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { useStarredAgents } from "@/lib/hooks/useStarredAgents";
 import type { Agent } from "@/lib/types/agents";
 
@@ -237,9 +238,12 @@ const AgentCard = memo(function AgentCard({ agent, rank }: { agent: Agent; rank?
       </div>
 
       <div>
-        <h3 className="text-[15px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
-          {agent.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[15px] font-semibold text-white truncate" style={{ fontFamily: "var(--font-display)" }}>
+            {agent.name}
+          </h3>
+          {isNewAgent(agent.connected_at) && <NewBadge />}
+        </div>
         <p className="text-[11px] text-white/20 truncate mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
           {agent.id.slice(0, 8)}...{agent.id.slice(-4)}
         </p>

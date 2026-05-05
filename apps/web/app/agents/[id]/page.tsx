@@ -9,6 +9,7 @@ import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { StarButton } from "@/components/agents/StarButton";
+import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
@@ -80,13 +81,14 @@ export default function AgentDetailPage() {
               </span>
             </div>
             <div>
-              <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center gap-3 mb-1 flex-wrap">
                 <h1 className="text-[20px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
                   {agent.name}
                 </h1>
                 <span className="status-chip" style={{ color: tierColor, background: `${tierColor}0a`, border: `1px solid ${tierColor}18` }}>
                   {agent.tier}
                 </span>
+                {isNewAgent(agent.connected_at) && <NewBadge size="md" />}
                 <StarButton agentId={agent.id} size={18} />
               </div>
               <p className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
