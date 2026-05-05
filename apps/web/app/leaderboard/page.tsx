@@ -8,6 +8,7 @@ import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarButton } from "@/components/agents/StarButton";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { TierDistributionChart } from "@/components/charts/TierDistributionChart";
+import { CountUp } from "@/components/ui/CountUp";
 import type { Agent, Tier } from "@/lib/types/agents";
 import type { Repo } from "@/lib/types/repos";
 
@@ -254,8 +255,8 @@ function SummaryTile({ label, value, suffix, accent }: { label: string; value: n
             {label}
           </span>
         </div>
-        <div className="text-[22px] font-bold text-white tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-          {value.toLocaleString()}{suffix}
+        <div className="text-[22px] font-bold text-white tracking-tight tabular-nums" style={{ fontFamily: "var(--font-display)" }}>
+          <CountUp to={value} />{suffix}
         </div>
       </div>
     </div>
