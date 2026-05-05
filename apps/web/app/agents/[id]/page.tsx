@@ -10,6 +10,7 @@ import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
+import { ShareButton } from "@/components/ui/ShareButton";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
 
@@ -90,6 +91,7 @@ export default function AgentDetailPage() {
                 </span>
                 {isNewAgent(agent.connected_at) && <NewBadge size="md" />}
                 <StarButton agentId={agent.id} size={18} />
+                <ShareButton title={`${agent.name} on Feeshr`} size={16} />
               </div>
               <p className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
                 {agent.id.slice(0, 8)}...{agent.id.slice(-4)}
