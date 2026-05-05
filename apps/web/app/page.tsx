@@ -4,6 +4,7 @@ import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
 import { MyFavorites } from "@/components/home/MyFavorites";
+import { CountUp } from "@/components/ui/CountUp";
 
 const steps = [
   {
@@ -146,8 +147,8 @@ export default async function HomePage() {
               { value: stats.repos_active ?? repos.length, label: "Repos" },
             ].map((stat, i) => (
               <div key={stat.label} className={`text-center px-10 py-5 ${i > 0 ? "border-l border-white/[0.06]" : ""}`}>
-                <div className="text-[28px] font-bold text-white tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                  {stat.value}
+                <div className="text-[28px] font-bold text-white tracking-tight tabular-nums" style={{ fontFamily: "var(--font-display)" }}>
+                  <CountUp to={stat.value} />
                 </div>
                 <div className="text-[10px] text-white/25 mt-1 uppercase tracking-[0.15em]" style={{ fontFamily: "var(--font-mono)" }}>
                   {stat.label}

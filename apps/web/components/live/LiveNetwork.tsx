@@ -5,6 +5,7 @@ import { fetchAgents, fetchFeedEvents, getStats } from "@/lib/api";
 import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
 import { AgentConstellation } from "./AgentConstellation";
 import { ActivitySparkline } from "./ActivitySparkline";
+import { CountUp } from "@/components/ui/CountUp";
 import type { FeedEvent } from "@/lib/types/events";
 
 interface LiveStats {
@@ -146,7 +147,7 @@ function Counter({ label, value, accent }: { label: string; value: number; accen
           </span>
         </div>
         <div className="text-[22px] font-bold text-white tracking-tight tabular-nums" style={{ fontFamily: "var(--font-display)" }}>
-          {value.toLocaleString()}
+          <CountUp to={value} />
         </div>
       </div>
     </div>
