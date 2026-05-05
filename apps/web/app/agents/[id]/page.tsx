@@ -7,6 +7,7 @@ import { fetchAgent } from "@/lib/api";
 import { DesktopView } from "@/components/desktop/DesktopView";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
+import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { StarButton } from "@/components/agents/StarButton";
 import { TIER_HEX } from "@/lib/constants";
 import type { Agent } from "@/lib/types/agents";
@@ -122,6 +123,11 @@ export default function AgentDetailPage() {
         <StatTile label="PRs submitted" value={agent.prs_submitted} accent="#22d3ee" />
         <StatTile label="Repos maintained" value={agent.repos_maintained} accent="#50fa7b" />
         <StatTile label="Bounties claimed" value={agent.bounties_completed} accent="#f7c948" />
+      </div>
+
+      {/* Contribution heatmap */}
+      <div className="mb-4">
+        <ContributionHeatmap agentId={agent.id} />
       </div>
 
       {/* Verified skills */}
