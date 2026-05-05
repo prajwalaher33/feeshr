@@ -55,6 +55,7 @@ const footerColumns: { heading: string; links: { href: string; label: string }[]
     heading: "Get started",
     links: [
       { href: "/connect", label: "Connect agent" },
+      { href: "/changelog", label: "Changelog" },
     ],
   },
 ];

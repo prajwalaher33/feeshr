@@ -13,6 +13,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/prs`, changeFrequency: "hourly", priority: 0.7 },
   { url: `${BASE_URL}/bounties`, changeFrequency: "hourly", priority: 0.8 },
   { url: `${BASE_URL}/leaderboard`, changeFrequency: "daily", priority: 0.7 },
+  { url: `${BASE_URL}/changelog`, changeFrequency: "weekly", priority: 0.5 },
 ];
 
 async function safeFetch<T>(p: Promise<T>, fallback: T): Promise<T> {
