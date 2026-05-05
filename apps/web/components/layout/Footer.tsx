@@ -33,19 +33,38 @@ const socialLinks = [
   },
 ];
 
-const footerLinks = [
-  { href: "/explore", label: "Explore" },
-  { href: "/agents", label: "Agents" },
-  { href: "/activity", label: "Playground" },
-  { href: "/connect", label: "Connect" },
+const footerColumns: { heading: string; links: { href: string; label: string }[] }[] = [
+  {
+    heading: "Discover",
+    links: [
+      { href: "/activity", label: "Live network" },
+      { href: "/explore", label: "Explore" },
+      { href: "/leaderboard", label: "Leaderboard" },
+    ],
+  },
+  {
+    heading: "Work",
+    links: [
+      { href: "/agents", label: "Agents" },
+      { href: "/bounties", label: "Bounties" },
+      { href: "/issues", label: "Issues" },
+      { href: "/prs", label: "Pull Requests" },
+    ],
+  },
+  {
+    heading: "Get started",
+    links: [
+      { href: "/connect", label: "Connect agent" },
+    ],
+  },
 ];
 
 export default function Footer() {
   return (
     <footer className="border-t border-white/[0.05]">
-      <div className="mx-auto max-w-[1440px] px-6 py-10 lg:px-12">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          {/* Left: Logo + tagline */}
+      <div className="mx-auto max-w-[1440px] px-6 py-12 lg:px-12">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
+          {/* Brand column */}
           <div className="flex flex-col gap-3">
             <Link href="/" className="relative h-[44px] w-[82px] overflow-hidden block">
               <Image
@@ -56,44 +75,50 @@ export default function Footer() {
                 className="absolute h-[223%] left-[-41%] top-[-56%] w-[181%] max-w-none"
               />
             </Link>
-            <p className="text-[11px] tracking-[0.15em] uppercase text-white/25" style={{ fontFamily: "var(--font-mono)" }}>
+            <p className="text-[11px] tracking-[0.15em] uppercase text-white/25 max-w-[260px]" style={{ fontFamily: "var(--font-mono)" }}>
               Operating engine for AI agents
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              {socialLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={link.label}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/30 transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white/60"
+                >
+                  {link.icon}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          {/* Center: Navigation */}
-          <div className="flex items-center gap-6">
-            {footerLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[13px] text-white/35 transition-colors hover:text-white/70"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Right: Social */}
-          <div className="flex items-center gap-3">
-            {socialLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={link.label}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/30 transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white/60"
-              >
-                {link.icon}
-              </Link>
-            ))}
-          </div>
+          {/* Link columns */}
+          {footerColumns.map((col) => (
+            <div key={col.heading} className="flex flex-col gap-3">
+              <h3 className="text-[10px] uppercase tracking-[0.16em] text-white/35 font-semibold" style={{ fontFamily: "var(--font-mono)" }}>
+                {col.heading}
+              </h3>
+              <ul className="flex flex-col gap-2">
+                {col.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-[13px] text-white/55 transition-colors hover:text-cyan"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Bottom */}
-        <div className="mt-8 border-t border-white/[0.04] pt-6 flex items-center justify-between">
+        <div className="mt-10 border-t border-white/[0.04] pt-6 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
             &copy; {new Date().getFullYear()} Feeshr
           </p>
