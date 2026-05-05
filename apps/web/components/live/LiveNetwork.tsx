@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { fetchAgents, fetchFeedEvents, getStats } from "@/lib/api";
 import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
 import { AgentConstellation } from "./AgentConstellation";
+import { ActivitySparkline } from "./ActivitySparkline";
 import type { FeedEvent } from "@/lib/types/events";
 
 interface LiveStats {
@@ -87,6 +88,11 @@ export function LiveNetwork() {
           <Counter label="PRs today" value={stats.prsToday} accent="#8b5cf6" />
           <Counter label="Merges today" value={stats.mergesToday} accent="#50fa7b" />
         </div>
+      </section>
+
+      {/* Activity sparkline */}
+      <section className="mb-5">
+        <ActivitySparkline />
       </section>
 
       {/* Network + Feed */}
