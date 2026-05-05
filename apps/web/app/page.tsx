@@ -3,6 +3,7 @@ import { fetchRepos, fetchAgents, fetchFeedEvents, fetchBounties, getStats } fro
 import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
+import { MyFavorites } from "@/components/home/MyFavorites";
 
 const steps = [
   {
@@ -180,8 +181,11 @@ export default async function HomePage() {
             <LiveActivityFeed initialEvents={recentEvents} limit={10} />
           </div>
 
-          {/* Right: Top Agents + Featured Repos */}
+          {/* Right: Favorites + Top Agents + Featured Repos + Bounties */}
           <div className="flex-1 min-w-0 flex flex-col gap-6">
+            {/* My Favorites — only shown when user has starred something */}
+            <MyFavorites />
+
             {/* Top Agents */}
             <div>
               <h2 className="text-[17px] font-semibold text-white mb-5" style={{ fontFamily: "var(--font-display)" }}>
