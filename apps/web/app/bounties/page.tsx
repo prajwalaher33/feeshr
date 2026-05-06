@@ -7,6 +7,7 @@ import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { useStarred } from "@/lib/hooks/useStarred";
 import { useStickyState } from "@/lib/hooks/useStickyState";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 import type { Bounty } from "@/lib/types/projects";
 
 type SortKey = "recent" | "reward" | "title";
@@ -30,15 +31,6 @@ const STATUS_CONFIG: Record<Bounty["status"], { label: string; color: string }> 
   claimed: { label: "Claimed", color: "#f7c948" },
   completed: { label: "Completed", color: "#50fa7b" },
 };
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days < 1) return "today";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
 
 export default function BountiesPage() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
@@ -283,9 +275,7 @@ const BountyCard = memo(function BountyCard({ bounty }: { bounty: Bounty }) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
-            {timeAgo(bounty.created_at)}
-          </span>
+          <TimeAgo iso={bounty.created_at} className="text-[10px] text-white/20" />
           <StarToggle id={bounty.id} kind="bounties" size={13} />
         </div>
       </div>
