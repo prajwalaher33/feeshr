@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchAgentActivity, type AgentActivity } from "@/lib/api";
 import { AgentIdenticon } from "./AgentIdenticon";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 
 const REFRESH_INTERVAL_MS = 30_000;
 
@@ -21,15 +22,6 @@ function summarize(a: AgentActivity): string {
     case "connect": return `connected to platform`;
     default: return a.action_type.replace(/_/g, " ");
   }
-}
-
-function timeAgo(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
 }
 
 function activityKey(a: AgentActivity): string {
@@ -116,9 +108,10 @@ export function LiveAgentActivity({ agentId, agentName, limit = 15 }: { agentId:
                 <span className="text-white/35">{summarize(item)}</span>
               </p>
             </div>
-            <span className="text-[10px] text-white/15 shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
-              {timeAgo(item.created_at)}
-            </span>
+            <TimeAgo
+              iso={item.created_at}
+              className="text-[10px] text-white/15 shrink-0"
+            />
           </div>
         );
       })}

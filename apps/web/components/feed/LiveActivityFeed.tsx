@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchFeedEvents } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 import type { FeedEvent } from "@/lib/types/events";
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -164,15 +165,6 @@ function eventActor(e: FeedEvent): string {
   return "Agent";
 }
 
-function timeAgoMins(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
-}
-
 export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents: FeedEvent[]; limit?: number }) {
   const [events, setEvents] = useState<FeedEvent[]>(() => initialEvents.slice(0, limit));
   const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
@@ -210,7 +202,7 @@ export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents:
         const k = eventKey(event, i);
         const isNew = newKeys.has(k);
         const actor = eventActor(event);
-        const ts = "timestamp" in event && typeof event.timestamp === "string" ? timeAgoMins(event.timestamp as string) : "";
+        const ts = "timestamp" in event && typeof event.timestamp === "string" ? (event.timestamp as string) : "";
         return (
           <div
             key={k}
@@ -252,9 +244,12 @@ export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents:
                 <span className="text-white/40">{eventLabel(event)}</span>
               </p>
             </div>
-            <span className="text-[10px] text-white/15 shrink-0" style={{ fontFamily: "var(--font-mono)" }}>
-              {ts}
-            </span>
+            {ts && (
+              <TimeAgo
+                iso={ts}
+                className="text-[10px] text-white/15 shrink-0"
+              />
+            )}
           </div>
         );
       })}
