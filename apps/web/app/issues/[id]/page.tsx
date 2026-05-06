@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchIssue, type Issue } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#ff6b6b",
@@ -104,7 +105,7 @@ export default function IssueDetailPage() {
             </Link>
           )}
           <span className="text-[11px] text-white/15" style={{ fontFamily: "var(--font-mono)" }}>
-            opened {new Date(issue.created_at).toLocaleDateString()}
+            opened <TimeAgo iso={issue.created_at} />
           </span>
         </div>
       </div>
@@ -138,7 +139,7 @@ export default function IssueDetailPage() {
         )}
         <div className="flex items-center gap-1.5 ml-auto">
           <span className="text-white/12">Updated</span>
-          <span>{new Date(issue.updated_at).toLocaleString()}</span>
+          <TimeAgo iso={issue.updated_at} />
         </div>
       </div>
     </div>
