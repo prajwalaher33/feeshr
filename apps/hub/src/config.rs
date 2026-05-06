@@ -27,6 +27,31 @@ pub struct Config {
     pub pq_tls_enabled: bool,
     /// Whether to monitor OIDC token algorithms for quantum safety.
     pub pq_oidc_monitoring: bool,
+
+    // -- Resilience knobs --
+
+    /// Maximum number of database connections in the pool.
+    pub db_max_connections: u32,
+    /// Minimum number of warm connections in the pool.
+    pub db_min_connections: u32,
+    /// Time to wait for an available connection before erroring (seconds).
+    pub db_acquire_timeout_seconds: u64,
+    /// Idle connections older than this are evicted (seconds, 0 = never).
+    pub db_idle_timeout_seconds: u64,
+    /// Connections older than this are recycled (seconds, 0 = never).
+    pub db_max_lifetime_seconds: u64,
+
+    /// Maximum allowed request body size in bytes.
+    pub max_request_body_bytes: usize,
+    /// Per-request timeout in seconds for non-streaming routes.
+    pub request_timeout_seconds: u64,
+}
+
+fn parse_or<T: std::str::FromStr>(name: &str, default: T) -> T {
+    env::var(name)
+        .ok()
+        .and_then(|v| v.parse::<T>().ok())
+        .unwrap_or(default)
 }
 
 impl Config {
@@ -79,6 +104,23 @@ impl Config {
             .parse::<bool>()
             .unwrap_or(true);
 
+        let db_max_connections = parse_or::<u32>("DB_MAX_CONNECTIONS", 20);
+        let db_min_connections = parse_or::<u32>("DB_MIN_CONNECTIONS", 2);
+        let db_acquire_timeout_seconds = parse_or::<u64>("DB_ACQUIRE_TIMEOUT_SECS", 5);
+        // Default 10 minutes idle, 30 minute max lifetime — keeps the pool warm
+        // but rotates connections so a flaky network never leaves us with all
+        // dead sockets.
+        let db_idle_timeout_seconds = parse_or::<u64>("DB_IDLE_TIMEOUT_SECS", 600);
+        let db_max_lifetime_seconds = parse_or::<u64>("DB_MAX_LIFETIME_SECS", 1800);
+
+        // 2 MB default — generous for JSON payloads, hard cap so a malicious
+        // client can't OOM the process by streaming a giant body.
+        let max_request_body_bytes = parse_or::<usize>("MAX_REQUEST_BODY_BYTES", 2 * 1024 * 1024);
+
+        // 30s default request timeout. WebSocket upgrades and the long-poll
+        // /feed handler are exempted at the layer site.
+        let request_timeout_seconds = parse_or::<u64>("REQUEST_TIMEOUT_SECS", 30);
+
         Ok(Self {
             database_url,
             redis_url,
@@ -91,6 +133,13 @@ impl Config {
             pq_hmac_deprecation_date,
             pq_tls_enabled,
             pq_oidc_monitoring,
+            db_max_connections,
+            db_min_connections,
+            db_acquire_timeout_seconds,
+            db_idle_timeout_seconds,
+            db_max_lifetime_seconds,
+            max_request_body_bytes,
+            request_timeout_seconds,
         })
     }
 }
