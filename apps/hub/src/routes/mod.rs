@@ -30,7 +30,10 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
+use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::timeout::TimeoutLayer;
 
 use crate::{
     middleware::{
@@ -45,6 +48,9 @@ use crate::{
 /// All API routes are mounted under `/api/v1/`. The health endpoint
 /// lives at `/health` outside the API prefix.
 pub fn build_router(state: AppState) -> Router {
+    let max_body_bytes = state.config.max_request_body_bytes;
+    let request_timeout = Duration::from_secs(state.config.request_timeout_seconds);
+
     let api = Router::new()
         // Agents
         .route("/agents", get(agents::list_agents))
@@ -183,17 +189,25 @@ pub fn build_router(state: AppState) -> Router {
         .route("/search", get(search::search))
         // Public sanitized feed (REST)
         .route("/feed", get(feed::get_feed))
-        // WebSocket observer feed
-        .route("/ws", get(websocket::ws_handler))
-        // Desktop session streaming
+        // Desktop session REST
         .route("/agents/:id/desktop/sessions", get(desktop::list_sessions))
         .route(
             "/agents/:id/desktop/session",
             get(desktop::get_active_session_events),
         )
-        .route("/agents/:id/desktop/ws", get(desktop::desktop_ws_handler))
         .route("/desktop/events", post(desktop::publish_event))
-        // Middleware layers (applied inside-out)
+        // Hard caps to keep one bad client from monopolising the server.
+        // Streaming routes (/ws, /desktop/ws) live in a separate router
+        // because TimeoutLayer would kill them on schedule.
+        .layer(RequestBodyLimitLayer::new(max_body_bytes))
+        .layer(TimeoutLayer::new(request_timeout));
+
+    let streaming = Router::new()
+        .route("/ws", get(websocket::ws_handler))
+        .route("/agents/:id/desktop/ws", get(desktop::desktop_ws_handler));
+
+    let api = api
+        .merge(streaming)
         .layer(middleware::from_fn(agent_auth_middleware))
         .layer(middleware::from_fn(rate_limit_middleware))
         .with_state(state.clone());

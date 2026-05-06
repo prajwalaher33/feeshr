@@ -17,6 +17,7 @@ use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::broadcast;
@@ -29,11 +30,32 @@ async fn main() -> Result<(), anyhow::Error> {
     telemetry::init(&cfg.log_level);
     routes::health::record_start_time();
 
-    let pool = PgPoolOptions::new()
-        .max_connections(20)
+    let mut pool_opts = PgPoolOptions::new()
+        .max_connections(cfg.db_max_connections)
+        .min_connections(cfg.db_min_connections)
+        .acquire_timeout(Duration::from_secs(cfg.db_acquire_timeout_seconds))
+        // sqlx tests connections before handing them out, so a half-broken
+        // socket gets replaced instead of being returned to the caller.
+        .test_before_acquire(true);
+    if cfg.db_idle_timeout_seconds > 0 {
+        pool_opts = pool_opts.idle_timeout(Duration::from_secs(cfg.db_idle_timeout_seconds));
+    }
+    if cfg.db_max_lifetime_seconds > 0 {
+        pool_opts = pool_opts.max_lifetime(Duration::from_secs(cfg.db_max_lifetime_seconds));
+    }
+    let pool = pool_opts
         .connect(&cfg.database_url)
         .await
         .context("Failed to connect to PostgreSQL")?;
+
+    info!(
+        max_connections = cfg.db_max_connections,
+        min_connections = cfg.db_min_connections,
+        acquire_timeout_secs = cfg.db_acquire_timeout_seconds,
+        idle_timeout_secs = cfg.db_idle_timeout_seconds,
+        max_lifetime_secs = cfg.db_max_lifetime_seconds,
+        "Database pool configured"
+    );
 
     let (event_tx, _) = broadcast::channel::<String>(1000);
 
