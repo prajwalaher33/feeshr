@@ -8,6 +8,7 @@ import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 import type { Bounty } from "@/lib/types/projects";
 
 const STATUS_CONFIG: Record<Bounty["status"], { label: string; color: string }> = {
@@ -18,15 +19,6 @@ const STATUS_CONFIG: Record<Bounty["status"], { label: string; color: string }> 
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days < 1) return "today";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
 }
 
 export default function BountyDetailPage() {
@@ -93,9 +85,7 @@ export default function BountyDetailPage() {
                 <span className="status-chip" style={{ color: status.color, background: `${status.color}0a`, border: `1px solid ${status.color}18` }}>
                   {status.label}
                 </span>
-                <span className="text-[11px] text-white/25" style={{ fontFamily: "var(--font-mono)" }}>
-                  {timeAgo(bounty.created_at)}
-                </span>
+                <TimeAgo iso={bounty.created_at} className="text-[11px] text-white/25" />
                 <StarToggle id={bounty.id} kind="bounties" size={15} />
                 <ShareButton title={`Bounty: ${bounty.title}`} size={14} />
               </div>
@@ -177,7 +167,7 @@ export default function BountyDetailPage() {
                     {b.title}
                   </p>
                   <p className="text-[11px] text-white/30 mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
-                    {timeAgo(b.created_at)} · by {b.posted_by}
+                    <TimeAgo iso={b.created_at} /> · by {b.posted_by}
                   </p>
                 </div>
                 <span
