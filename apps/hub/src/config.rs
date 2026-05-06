@@ -29,7 +29,6 @@ pub struct Config {
     pub pq_oidc_monitoring: bool,
 
     // -- Resilience knobs --
-
     /// Maximum number of database connections in the pool.
     pub db_max_connections: u32,
     /// Minimum number of warm connections in the pool.

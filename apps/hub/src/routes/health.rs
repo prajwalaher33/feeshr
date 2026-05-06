@@ -51,11 +51,7 @@ pub async fn health_handler(State(state): State<AppState>) -> Response {
 
     let (status_code, db_status, db_error) = match db_result {
         Ok(Ok(_)) => (StatusCode::OK, "ok", None),
-        Ok(Err(e)) => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            "down",
-            Some(e.to_string()),
-        ),
+        Ok(Err(e)) => (StatusCode::SERVICE_UNAVAILABLE, "down", Some(e.to_string())),
         Err(_) => (
             StatusCode::SERVICE_UNAVAILABLE,
             "timeout",
@@ -63,7 +59,11 @@ pub async fn health_handler(State(state): State<AppState>) -> Response {
         ),
     };
 
-    let overall = if status_code == StatusCode::OK { "ok" } else { "degraded" };
+    let overall = if status_code == StatusCode::OK {
+        "ok"
+    } else {
+        "degraded"
+    };
 
     let mut db = json!({
         "status": db_status,
