@@ -24,14 +24,61 @@ mod trace_similarity;
 
 use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
+use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::signal;
-use tokio::time::{self, Duration};
+use tokio::time::{self, Duration, MissedTickBehavior};
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+fn parse_env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.parse::<T>().ok())
+        .unwrap_or(default)
+}
+
+/// Build a tokio interval that skips missed ticks instead of bursting.
+/// Default tokio behaviour is "burst", which means after a slow tick the
+/// worker would fire the same task back-to-back. Skip keeps cadence honest
+/// at the cost of dropping missed firings.
+fn job_interval(period: Duration) -> time::Interval {
+    let mut iv = time::interval(period);
+    iv.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    iv
+}
+
+/// Run a job with a hard deadline so a hung query can't stall the whole
+/// worker forever. Generic over the success type so jobs that return
+/// `Result<u64, _>` (e.g. row counts) work without extra wrapping.
+async fn run_job<F, T>(name: &str, deadline: Duration, fut: F)
+where
+    F: Future<Output = Result<T, anyhow::Error>>,
+{
+    let started = std::time::Instant::now();
+    match tokio::time::timeout(deadline, fut).await {
+        Ok(Ok(_)) => {
+            tracing::debug!(
+                job = name,
+                elapsed_ms = started.elapsed().as_millis() as u64,
+                "Job done"
+            );
+        }
+        Ok(Err(e)) => {
+            tracing::error!(job = name, error = %e, elapsed_ms = started.elapsed().as_millis() as u64, "Job failed");
+        }
+        Err(_) => {
+            tracing::error!(
+                job = name,
+                deadline_secs = deadline.as_secs(),
+                "Job timed out"
+            );
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -45,34 +92,61 @@ async fn main() -> Result<(), anyhow::Error> {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://feeshr:feeshr@localhost:5432/feeshr".into());
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
+    let max_conns = parse_env_or::<u32>("WORKER_DB_MAX_CONNECTIONS", 5);
+    let min_conns = parse_env_or::<u32>("WORKER_DB_MIN_CONNECTIONS", 1);
+    let acquire_secs = parse_env_or::<u64>("WORKER_DB_ACQUIRE_TIMEOUT_SECS", 5);
+    let idle_secs = parse_env_or::<u64>("WORKER_DB_IDLE_TIMEOUT_SECS", 600);
+    let lifetime_secs = parse_env_or::<u64>("WORKER_DB_MAX_LIFETIME_SECS", 1800);
+    // Per-job hard deadline. Most jobs finish in seconds; the cap exists so a
+    // pathological query can't keep the loop occupied indefinitely.
+    let job_deadline = Duration::from_secs(parse_env_or::<u64>("WORKER_JOB_DEADLINE_SECS", 600));
+
+    let mut pool_opts = PgPoolOptions::new()
+        .max_connections(max_conns)
+        .min_connections(min_conns)
+        .acquire_timeout(Duration::from_secs(acquire_secs))
+        .test_before_acquire(true);
+    if idle_secs > 0 {
+        pool_opts = pool_opts.idle_timeout(Duration::from_secs(idle_secs));
+    }
+    if lifetime_secs > 0 {
+        pool_opts = pool_opts.max_lifetime(Duration::from_secs(lifetime_secs));
+    }
+    let pool = pool_opts
         .connect(&database_url)
         .await
         .context("Failed to connect to PostgreSQL")?;
 
-    info!("Connected to database");
+    info!(
+        max_connections = max_conns,
+        min_connections = min_conns,
+        acquire_timeout_secs = acquire_secs,
+        idle_timeout_secs = idle_secs,
+        max_lifetime_secs = lifetime_secs,
+        job_deadline_secs = job_deadline.as_secs(),
+        "Connected to database"
+    );
 
     // Interval timers for each task.
-    let mut reputation_interval = time::interval(Duration::from_secs(300)); // 5 min
-    let mut quality_interval = time::interval(Duration::from_secs(3600)); // 1 hour
-    let mut pattern_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut ecosystem_interval = time::interval(Duration::from_secs(21600)); // 6 hours
-    let mut cleanup_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut publish_interval = time::interval(Duration::from_secs(300)); // 5 min
-    let mut lock_expiry_interval = time::interval(Duration::from_secs(300)); // 5 min
-    let mut decision_interval = time::interval(Duration::from_secs(300)); // 5 min
-    let mut trust_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut collusion_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut cat_rep_interval = time::interval(Duration::from_secs(300)); // 5 min
-    let mut decay_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut trace_eval_interval = time::interval(Duration::from_secs(3600)); // 1 hour
-    let mut trace_cost_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut trace_sim_interval = time::interval(Duration::from_secs(604800)); // 7 days
-    let mut bench_gen_interval = time::interval(Duration::from_secs(86400)); // 24 hours (checks monthly)
-    let mut bench_expiry_interval = time::interval(Duration::from_secs(86400)); // 24 hours
-    let mut bench_timeout_interval = time::interval(Duration::from_secs(60)); // 1 min
-    let mut quantum_interval = time::interval(Duration::from_secs(86400)); // 24 hours
+    let mut reputation_interval = job_interval(Duration::from_secs(300)); // 5 min
+    let mut quality_interval = job_interval(Duration::from_secs(3600)); // 1 hour
+    let mut pattern_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut ecosystem_interval = job_interval(Duration::from_secs(21600)); // 6 hours
+    let mut cleanup_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut publish_interval = job_interval(Duration::from_secs(300)); // 5 min
+    let mut lock_expiry_interval = job_interval(Duration::from_secs(300)); // 5 min
+    let mut decision_interval = job_interval(Duration::from_secs(300)); // 5 min
+    let mut trust_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut collusion_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut cat_rep_interval = job_interval(Duration::from_secs(300)); // 5 min
+    let mut decay_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut trace_eval_interval = job_interval(Duration::from_secs(3600)); // 1 hour
+    let mut trace_cost_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut trace_sim_interval = job_interval(Duration::from_secs(604800)); // 7 days
+    let mut bench_gen_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut bench_expiry_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut bench_timeout_interval = job_interval(Duration::from_secs(60)); // 1 min
+    let mut quantum_interval = job_interval(Duration::from_secs(86400)); // 24 hours
 
     // Health check counter — incremented on each tick so health server can report liveness.
     let tick_count = Arc::new(AtomicU64::new(0));
@@ -112,117 +186,80 @@ async fn main() -> Result<(), anyhow::Error> {
         tokio::select! {
             _ = reputation_interval.tick() => {
                 tick_count.fetch_add(1, Ordering::Relaxed);
-                info!("Running reputation recomputation...");
-                if let Err(e) = reputation_engine::run_reputation_recompute(&pool).await {
-                    tracing::error!(error = %e, "Reputation recomputation failed");
-                }
+                run_job("reputation_recompute", job_deadline, reputation_engine::run_reputation_recompute(&pool)).await;
             }
             _ = quality_interval.tick() => {
-                info!("Running quality tracking...");
-                if let Err(e) = quality_tracker::run_quality_tracking(&pool).await {
-                    tracing::error!(error = %e, "Quality tracking failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("quality_tracking", job_deadline, quality_tracker::run_quality_tracking(&pool)).await;
             }
             _ = pattern_interval.tick() => {
-                info!("Running pattern detection...");
-                if let Err(e) = pattern_detector::run_pattern_detection(&pool).await {
-                    tracing::error!(error = %e, "Pattern detection failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("pattern_detection", job_deadline, pattern_detector::run_pattern_detection(&pool)).await;
             }
             _ = ecosystem_interval.tick() => {
-                info!("Running ecosystem analysis...");
-                if let Err(e) = ecosystem_analyzer::run_ecosystem_analysis(&pool).await {
-                    tracing::error!(error = %e, "Ecosystem analysis failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("ecosystem_analysis", job_deadline, ecosystem_analyzer::run_ecosystem_analysis(&pool)).await;
             }
             _ = cleanup_interval.tick() => {
-                info!("Running nightly cleanup...");
-                if let Err(e) = cleanup::run_cleanup(&pool).await {
-                    tracing::error!(error = %e, "Cleanup failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("cleanup", job_deadline, cleanup::run_cleanup(&pool)).await;
             }
             _ = publish_interval.tick() => {
-                info!("Checking for packages to publish...");
-                if let Err(e) = package_publisher::run_publish_check(&pool).await {
-                    tracing::error!(error = %e, "Publish check failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("publish_check", job_deadline, package_publisher::run_publish_check(&pool)).await;
             }
             _ = lock_expiry_interval.tick() => {
-                if let Err(e) = cleanup::expire_work_locks(&pool).await {
-                    tracing::error!(error = %e, "Lock expiry failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("lock_expiry", job_deadline, cleanup::expire_work_locks(&pool)).await;
             }
             _ = decision_interval.tick() => {
-                if let Err(e) = decision_resolver::run_decision_resolution(&pool).await {
-                    tracing::error!(error = %e, "Decision resolution failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("decision_resolution", job_deadline, decision_resolver::run_decision_resolution(&pool)).await;
             }
             _ = trust_interval.tick() => {
-                info!("Running reviewer trust update...");
-                if let Err(e) = reviewer_trust::run_reviewer_trust_update(&pool).await {
-                    tracing::error!(error = %e, "Reviewer trust update failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("reviewer_trust_update", job_deadline, reviewer_trust::run_reviewer_trust_update(&pool)).await;
             }
             _ = collusion_interval.tick() => {
-                info!("Running collusion detection...");
-                if let Err(e) = collusion_detector::run_collusion_detection(&pool).await {
-                    tracing::error!(error = %e, "Collusion detection failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("collusion_detection", job_deadline, collusion_detector::run_collusion_detection(&pool)).await;
             }
             _ = cat_rep_interval.tick() => {
-                if let Err(e) = reputation_engine::run_categorical_recompute(&pool).await {
-                    tracing::error!(error = %e, "Categorical reputation recompute failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("categorical_reputation", job_deadline, reputation_engine::run_categorical_recompute(&pool)).await;
             }
             _ = decay_interval.tick() => {
-                info!("Running smart decay...");
-                if let Err(e) = reputation_engine::run_smart_decay(&pool).await {
-                    tracing::error!(error = %e, "Smart decay failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("smart_decay", job_deadline, reputation_engine::run_smart_decay(&pool)).await;
             }
             _ = trace_eval_interval.tick() => {
-                info!("Running trace outcome evaluation...");
-                if let Err(e) = trace_evaluator::run_trace_outcome_evaluation(&pool).await {
-                    tracing::error!(error = %e, "Trace outcome evaluation failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("trace_outcome_eval", job_deadline, trace_evaluator::run_trace_outcome_evaluation(&pool)).await;
             }
             _ = trace_cost_interval.tick() => {
-                info!("Running daily trace cost aggregation...");
-                if let Err(e) = trace_cost_aggregator::run_daily_cost_aggregation(&pool).await {
-                    tracing::error!(error = %e, "Trace cost aggregation failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("trace_cost_aggregation", job_deadline, trace_cost_aggregator::run_daily_cost_aggregation(&pool)).await;
             }
             _ = trace_sim_interval.tick() => {
-                info!("Running trace similarity analysis...");
-                if let Err(e) = trace_similarity::run_trace_similarity_analysis(&pool).await {
-                    tracing::error!(error = %e, "Trace similarity analysis failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("trace_similarity", job_deadline, trace_similarity::run_trace_similarity_analysis(&pool)).await;
             }
             _ = bench_gen_interval.tick() => {
-                info!("Checking benchmark challenge pool...");
-                if let Err(e) = benchmark_generator::run_challenge_generation(&pool).await {
-                    tracing::error!(error = %e, "Benchmark challenge generation failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("benchmark_generation", job_deadline, benchmark_generator::run_challenge_generation(&pool)).await;
             }
             _ = bench_expiry_interval.tick() => {
-                info!("Running benchmark expiry check...");
-                if let Err(e) = benchmark_expiry::run_benchmark_expiry(&pool).await {
-                    tracing::error!(error = %e, "Benchmark expiry check failed");
-                }
-                if let Err(e) = benchmark_expiry::run_benchmark_expiry_warnings(&pool).await {
-                    tracing::error!(error = %e, "Benchmark expiry warnings failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("benchmark_expiry", job_deadline, benchmark_expiry::run_benchmark_expiry(&pool)).await;
+                run_job("benchmark_expiry_warnings", job_deadline, benchmark_expiry::run_benchmark_expiry_warnings(&pool)).await;
             }
             _ = bench_timeout_interval.tick() => {
-                if let Err(e) = benchmark_expiry::run_session_timeout_check(&pool).await {
-                    tracing::error!(error = %e, "Benchmark session timeout check failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("benchmark_session_timeout", job_deadline, benchmark_expiry::run_session_timeout_check(&pool)).await;
             }
             _ = quantum_interval.tick() => {
-                info!("Running quantum readiness check...");
-                if let Err(e) = quantum_readiness::run_quantum_readiness_check(&pool).await {
-                    tracing::error!(error = %e, "Quantum readiness check failed");
-                }
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("quantum_readiness", job_deadline, quantum_readiness::run_quantum_readiness_check(&pool)).await;
             }
             _ = shutdown_signal() => {
                 info!("Worker shutting down");
@@ -231,6 +268,7 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     }
 
+    info!("Worker stopped cleanly");
     Ok(())
 }
 
