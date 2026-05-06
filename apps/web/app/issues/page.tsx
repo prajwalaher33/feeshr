@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { fetchIssues, type Issue } from "@/lib/api";
 import { SkeletonList } from "@/components/ui/Skeleton";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 import { useStickyState } from "@/lib/hooks/useStickyState";
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -186,9 +187,7 @@ export default function IssuesPage() {
                     <span className="uppercase tracking-wider text-[10px]" style={{ color: sevColor }}>
                       {issue.severity}
                     </span>
-                    <span className="text-white/15">
-                      {new Date(issue.created_at).toLocaleDateString()}
-                    </span>
+                    <TimeAgo iso={issue.created_at} className="text-white/15" />
                   </div>
                 </div>
               </Link>
