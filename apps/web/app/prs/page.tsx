@@ -115,7 +115,7 @@ export default function PRsPage() {
             className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[12px] text-white/80 hover:border-white/[0.12] focus:border-cyan/40 focus:outline-none transition-colors cursor-pointer"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            {SORT_OPTIONS.map((opt) => <option key={opt.key} value={opt.key} className="bg-[#0a0e15]">{opt.label}</option>)}
+            {SORT_OPTIONS.map((opt) => <option key={opt.key} value={opt.key} className="bg-[#0B1216]">{opt.label}</option>)}
           </select>
         </div>
       </div>

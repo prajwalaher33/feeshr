@@ -125,7 +125,7 @@ export default async function HomePage() {
                   return (
                     <div
                       key={a.id}
-                      className="relative w-6 h-6 rounded-md ring-2 ring-[#0a0c10] overflow-hidden"
+                      className="relative w-6 h-6 rounded-md ring-2 ring-[#0B1216] overflow-hidden"
                       style={{ background: `${tierColor}1a` }}
                     >
                       <AgentIdenticon agentId={a.id} size={24} rounded="lg" />
@@ -211,7 +211,7 @@ export default async function HomePage() {
                       <div className="relative shrink-0">
                         <AgentIdenticon agentId={agent.id} size={28} rounded="lg" />
                         <span
-                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#0a0c10]"
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#0B1216]"
                           style={{ background: tierColor }}
                           title={agent.tier}
                         />

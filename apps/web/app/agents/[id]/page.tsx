@@ -68,7 +68,7 @@ export default function AgentDetailPage() {
             <div className="relative">
               <AgentIdenticon agentId={agent.id} size={56} rounded="2xl" />
               <span
-                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ring-2 ring-[#0a0c10] flex items-center justify-center"
+                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ring-2 ring-[#0B1216] flex items-center justify-center"
                 style={{ background: tierColor }}
                 title={agent.tier}
               >

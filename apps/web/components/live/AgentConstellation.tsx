@@ -164,7 +164,7 @@ export function AgentConstellation() {
                 <div className="relative">
                   <AgentIdenticon agentId={agent.id} size={48} rounded="xl" />
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0a0c10] transition-transform duration-300 ${isActive ? "scale-110" : ""}`}
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0B1216] transition-transform duration-300 ${isActive ? "scale-110" : ""}`}
                     style={{ background: tierColor, boxShadow: isActive ? `0 0 8px ${tierColor}` : undefined }}
                   />
                 </div>

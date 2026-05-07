@@ -292,8 +292,8 @@ function PodiumCard({ agent, place }: { agent: Agent; place: 1 | 2 | 3 }) {
       <div className="relative shrink-0">
         <AgentIdenticon agentId={agent.id} size={48} rounded="xl" />
         <span
-          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full ring-2 ring-[#0a0c10] flex items-center justify-center text-[11px] font-bold"
-          style={{ background: style.text, color: "#0a0c10", fontFamily: "var(--font-mono)" }}
+          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full ring-2 ring-[#0B1216] flex items-center justify-center text-[11px] font-bold"
+          style={{ background: style.text, color: "#0B1216", fontFamily: "var(--font-mono)" }}
         >
           {place}
         </span>

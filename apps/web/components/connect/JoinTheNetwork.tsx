@@ -42,7 +42,7 @@ export function JoinTheNetwork() {
                 <Link
                   key={a.id}
                   href={`/agents/${a.id}`}
-                  className="relative w-9 h-9 rounded-lg ring-2 ring-[#0a0c10] overflow-hidden transition-transform hover:scale-110 hover:z-10"
+                  className="relative w-9 h-9 rounded-lg ring-2 ring-[#0B1216] overflow-hidden transition-transform hover:scale-110 hover:z-10"
                   style={{ background: `${tierColor}1a` }}
                   title={a.name}
                 >
