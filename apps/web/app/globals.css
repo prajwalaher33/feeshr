@@ -7,12 +7,15 @@
   --color-muted: #64748b;
   --color-body: #8891a5;
 
-  --color-bg: #030506;
-  --color-surface: #0c1017;
-  --color-raised: #10141e;
-  --color-border: rgba(255, 255, 255, 0.07);
+  /* Deep blue-black palette — the page itself paints the gradient on body. */
+  --color-bg: #0B1216;
+  --color-bg-mid: #0E1A20;
+  --color-bg-far: #0F2027;
+  --color-surface: #111C22;
+  --color-raised: #162831;
+  --color-border: rgba(255, 255, 255, 0.08);
   --color-border-hover: rgba(255, 255, 255, 0.15);
-  --color-border-subtle: rgba(255, 255, 255, 0.04);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
 
   --color-cyan: #22d3ee;
   --color-cyan-light: #67e8f9;
@@ -24,16 +27,16 @@
   --color-violet: #8b5cf6;
   --color-indigo: #6366f1;
 
-  --color-nav-bg: rgba(3, 5, 6, 0.72);
-  --color-nav-border: rgba(255, 255, 255, 0.06);
-  --color-card-bg: #0c1017;
-  --color-card-border: rgba(255, 255, 255, 0.06);
+  --color-nav-bg: rgba(11, 18, 22, 0.72);
+  --color-nav-border: rgba(255, 255, 255, 0.08);
+  --color-card-bg: #111C22;
+  --color-card-border: rgba(255, 255, 255, 0.08);
   --color-pill-bg: rgba(255, 255, 255, 0.03);
   --color-pill-border: rgba(255, 255, 255, 0.08);
   --color-tag-bg: rgba(255, 255, 255, 0.04);
-  --color-tag-border: rgba(255, 255, 255, 0.06);
-  --color-divider: rgba(255, 255, 255, 0.06);
-  --color-footer-border: rgba(255, 255, 255, 0.05);
+  --color-tag-border: rgba(255, 255, 255, 0.08);
+  --color-divider: rgba(255, 255, 255, 0.08);
+  --color-footer-border: rgba(255, 255, 255, 0.08);
 
   --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -46,7 +49,11 @@ html { scroll-behavior: smooth; }
 body {
   font-family: var(--font-body);
   color: var(--color-primary);
-  background: var(--color-bg);
+  /* Deep blue-black gradient — fixed so it paints once and doesn't tile on scroll. */
+  background-color: var(--color-bg);
+  background-image: linear-gradient(180deg, #0B1216 0%, #0E1A20 50%, #0F2027 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -73,14 +80,13 @@ body {
   color: #fff;
 }
 
-/* ===== CARD ===== */
+/* ===== CARD =====
+   Glass panel: #111C22 at ~85% opacity + backdrop blur, with a subtle
+   white border glow per the brand spec. */
 .card {
-  background:
-    linear-gradient(180deg,
-      rgba(16,20,30,0.96) 0%,
-      rgba(12,16,23,0.97) 40%,
-      rgba(10,14,21,0.98) 100%
-    );
+  background-color: rgba(17, 28, 34, 0.85);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   border: 1px solid var(--color-card-border);
   border-radius: 14px;
   position: relative;
@@ -107,12 +113,9 @@ body {
 }
 
 .card-hover {
-  background:
-    linear-gradient(180deg,
-      rgba(16,20,30,0.96) 0%,
-      rgba(12,16,23,0.97) 40%,
-      rgba(10,14,21,0.98) 100%
-    );
+  background-color: rgba(17, 28, 34, 0.85);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   border: 1px solid var(--color-card-border);
   border-radius: 14px;
   transition:
@@ -160,14 +163,14 @@ body {
 .nav-top {
   backdrop-filter: blur(48px) saturate(1.8);
   -webkit-backdrop-filter: blur(48px) saturate(1.8);
-  background: linear-gradient(180deg, rgba(3,5,6,0.65) 0%, rgba(3,5,6,0.55) 100%);
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(11,18,22,0.65) 0%, rgba(14,26,32,0.55) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .nav-scrolled {
   backdrop-filter: blur(48px) saturate(1.8);
   -webkit-backdrop-filter: blur(48px) saturate(1.8);
-  background: linear-gradient(180deg, rgba(6,10,18,0.92) 0%, rgba(3,5,6,0.88) 100%);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: linear-gradient(180deg, rgba(17,28,34,0.92) 0%, rgba(14,26,32,0.88) 100%);
+  border-bottom: 1px solid var(--color-card-border);
   box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.02) inset;
 }
 .nav-link {

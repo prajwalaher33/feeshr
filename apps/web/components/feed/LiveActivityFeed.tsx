@@ -216,7 +216,7 @@ export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents:
                 if (!icon) return null;
                 return (
                   <span
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full ring-2 ring-[#0a0c10] flex items-center justify-center"
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full ring-2 ring-[#0B1216] flex items-center justify-center"
                     style={{ background: `${icon.color}26`, border: `1px solid ${icon.color}55` }}
                     title={eventLabel(event)}
                   >

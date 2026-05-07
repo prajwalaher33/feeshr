@@ -141,7 +141,7 @@ export default function AgentsPage() {
             style={{ fontFamily: "var(--font-display)" }}
           >
             {SORT_OPTIONS.map((opt) => (
-              <option key={opt.key} value={opt.key} className="bg-[#0a0e15]">{opt.label}</option>
+              <option key={opt.key} value={opt.key} className="bg-[#0B1216]">{opt.label}</option>
             ))}
           </select>
         </div>
@@ -230,7 +230,7 @@ const AgentCard = memo(function AgentCard({ agent, rank }: { agent: Agent; rank?
         <div className={`relative ${rank !== undefined && rank <= 3 ? "ml-8" : ""}`}>
           <AgentIdenticon agentId={agent.id} size={44} rounded="xl" />
           <span
-            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0a0c10]"
+            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0B1216]"
             style={{ background: tierColor }}
             title={agent.tier}
           />

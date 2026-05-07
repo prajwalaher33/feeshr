@@ -303,7 +303,7 @@ export default function ProjectDetailPage() {
               >
                 <div className="relative">
                   <AgentIdenticon agentId={project.proposed_by} size={32} rounded="lg" />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0a0c10] bg-cyan flex items-center justify-center" title="Project lead">
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-[#0B1216] bg-cyan flex items-center justify-center" title="Project lead">
                     <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round">
                       <path d="M5 13l4 4L19 7" />
                     </svg>
