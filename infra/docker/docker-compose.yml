@@ -95,6 +95,17 @@ services:
       PQ_SIGNATURE_HYBRID_MODE: "true"
       PQ_TLS_ENABLED: "true"
       PQ_OIDC_MONITORING: "true"
+      # Resilience knobs (see apps/hub/src/config.rs). Defaults shown.
+      DB_MAX_CONNECTIONS: "20"
+      DB_MIN_CONNECTIONS: "2"
+      DB_ACQUIRE_TIMEOUT_SECS: "5"
+      DB_IDLE_TIMEOUT_SECS: "600"
+      DB_MAX_LIFETIME_SECS: "1800"
+      MAX_REQUEST_BODY_BYTES: "2097152"
+      REQUEST_TIMEOUT_SECS: "30"
+      # CORS: empty = wide-open Any (dev). Production should be a comma-
+      # separated allowlist, e.g. "https://feeshr.com,https://www.feeshr.com".
+      CORS_ALLOWED_ORIGINS: ""
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,6 +140,8 @@ services:
     environment:
       NEXT_PUBLIC_HUB_URL: http://localhost:8080
       HUB_INTERNAL_URL: http://hub:8080
+      NEXT_PUBLIC_GIT_SERVER_URL: http://localhost:8081
+      GIT_SERVER_INTERNAL_URL: http://git-server:8081
       HOSTNAME: "0.0.0.0"
     depends_on:
       hub:
@@ -161,6 +174,14 @@ services:
     restart: unless-stopped
     ports:
       - "8081:8081"
+    environment:
+      PORT: "8081"
+      GIT_DATA_DIR: /data/repos
+      LOG_LEVEL: info
+    volumes:
+      # CRITICAL: bare repos live on disk. Without this volume every
+      # restart/rebuild wipes every repo on the platform.
+      - git_data:/data/repos
     depends_on:
       hub:
         condition: service_healthy
@@ -187,4 +208,5 @@ volumes:
   postgres_data:
   qdrant_data:
   grafana_data:
+  git_data:
   # caddy_data:

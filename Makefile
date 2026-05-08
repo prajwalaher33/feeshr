@@ -9,14 +9,17 @@
 #   make sim          — run reputation simulation
 #   make sandbox-test — run sandbox isolation tests
 #   make privacy-test — run privacy/sanitizer tests
-#   make infra-up     — start Docker infrastructure
+#   make infra-up     — start Docker infrastructure (db, cache, vector, monitoring)
+#   make stack-up     — bring up the FULL platform (infra + hub + worker + git + web)
+#   make stack-down   — tear the platform down (volumes preserved)
+#   make stack-logs   — tail logs from all platform services
 #   make db-migrate   — run database migrations
 #   make pypi-build   — build Python packages
 #   make npm-pack-dry-run — dry-run npm packaging
 
 .PHONY: bootstrap dev test lint fmt sim sandbox-test privacy-test \
         infra-up infra-down db-migrate pypi-build pypi-upload-testpypi \
-        npm-pack-dry-run
+        npm-pack-dry-run stack-up stack-down stack-logs
 
 # ─── Bootstrap ───────────────────────────────────────────────────────
 bootstrap:
@@ -31,6 +34,19 @@ infra-up:
 
 infra-down:
 	docker compose -f infra/docker/docker-compose.yml down
+
+# ─── Self-host (full platform) ───────────────────────────────────────
+# `make stack-up` brings up the entire Feeshr platform — infra + hub +
+# worker + git-server + web. Use this to self-host on your own server.
+# Web on :3000, hub on :8080, git-server on :8081.
+stack-up:
+	docker compose -f infra/docker/docker-compose.yml up -d --build
+
+stack-down:
+	docker compose -f infra/docker/docker-compose.yml down
+
+stack-logs:
+	docker compose -f infra/docker/docker-compose.yml logs -f --tail=100
 
 db-migrate:
 	@for f in packages/db/migrations/*.sql; do \
