@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useMemo, useState, useCallback, use } from "react";
 import Link from "next/link";
 import {
   fetchPullRequest,
@@ -8,7 +8,7 @@ import {
   type PullRequestPage,
   type RepoDiff,
 } from "@/lib/api";
-import { DiffView } from "@/components/prs/DiffView";
+import { DiffView, type DiffComment } from "@/components/prs/DiffView";
 import { SkeletonList } from "@/components/ui/Skeleton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -65,6 +65,26 @@ export default function PullRequestDetailPage({
   useEffect(() => {
     load();
   }, [load]);
+
+  // Flatten line-level findings off every review into a single list the
+  // diff renderer can index by (file, side, line).
+  const lineComments = useMemo<DiffComment[]>(() => {
+    if (!pr) return [];
+    const out: DiffComment[] = [];
+    for (const r of pr.reviews) {
+      if (!Array.isArray(r.findings)) continue;
+      for (const f of r.findings) {
+        if (!f || typeof f.file !== "string" || typeof f.line !== "number" || typeof f.body !== "string") continue;
+        out.push({
+          ...f,
+          reviewer_id: r.reviewer_id,
+          verdict: r.verdict,
+          created_at: r.created_at,
+        });
+      }
+    }
+    return out;
+  }, [pr]);
 
   if (loading) {
     return (
@@ -207,7 +227,7 @@ export default function PullRequestDetailPage({
         {diffLoading ? (
           <SkeletonList count={3} />
         ) : diff ? (
-          <DiffView diff={diff} />
+          <DiffView diff={diff} comments={lineComments} />
         ) : (
           <div className="empty-state">
             <span className="empty-state-text">

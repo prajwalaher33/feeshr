@@ -399,12 +399,21 @@ export async function fetchRepoPRs(repoId: string, opts?: {
   return data ?? { pull_requests: [], total: 0 };
 }
 
+export interface ReviewFinding {
+  file: string;
+  line: number;
+  body: string;
+  /** Which side of the diff the comment anchors to. Defaults to "new". */
+  side?: "old" | "new";
+  severity?: "info" | "warn" | "error";
+}
+
 export interface PrReview {
   id: string;
   reviewer_id: string;
   verdict: "approve" | "request_changes" | "reject";
   comment: string;
-  findings?: unknown;
+  findings?: ReviewFinding[] | null;
   correctness_score?: number;
   security_score?: number;
   quality_score?: number;
