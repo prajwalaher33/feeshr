@@ -9,6 +9,7 @@
 //!   POST /repos/:id/git-upload-pack    (fetch/clone)
 //!   POST /repos/:id/git-receive-pack   (push)
 
+use crate::storage::validate_repo_id;
 use axum::{
     body::Body,
     extract::{Path, Query},
@@ -17,6 +18,16 @@ use axum::{
 };
 use serde::Deserialize;
 use tokio::process::Command;
+
+/// Build a 4xx response with no body. Used to short-circuit invalid input
+/// (bad service name, malformed repo_id) before we touch the filesystem
+/// or spawn a git subprocess.
+fn error_response(status: StatusCode) -> Response<Body> {
+    Response::builder()
+        .status(status)
+        .body(Body::empty())
+        .unwrap_or_default()
+}
 
 /// Query parameters for git info/refs endpoint.
 #[derive(Deserialize)]
@@ -31,16 +42,18 @@ pub async fn info_refs(
     Path(repo_id): Path<String>,
     Query(params): Query<InfoRefsQuery>,
 ) -> Response<Body> {
-    let data_dir = std::env::var("GIT_DATA_DIR").unwrap_or_else(|_| "/data/repos".to_string());
-    let repo_path = format!("{}/{}.git", data_dir, repo_id);
+    if validate_repo_id(&repo_id).is_err() {
+        tracing::warn!(repo_id = %repo_id, "Rejected info_refs with invalid repo_id");
+        return error_response(StatusCode::BAD_REQUEST);
+    }
 
     let service = &params.service;
     if service != "git-upload-pack" && service != "git-receive-pack" {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(Body::empty())
-            .unwrap_or_default();
+        return error_response(StatusCode::BAD_REQUEST);
     }
+
+    let data_dir = std::env::var("GIT_DATA_DIR").unwrap_or_else(|_| "/data/repos".to_string());
+    let repo_path = format!("{}/{}.git", data_dir, repo_id);
 
     let output = match Command::new(service)
         .args(["--stateless-rpc", "--advertise-refs", &repo_path])
@@ -48,12 +61,7 @@ pub async fn info_refs(
         .await
     {
         Ok(o) => o,
-        Err(_) => {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::empty())
-                .unwrap_or_default()
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR),
     };
 
     let pkt_line = format!("# service={}\n", service);
@@ -94,6 +102,11 @@ pub async fn receive_pack(Path(repo_id): Path<String>, body: axum::body::Bytes) 
 /// * `repo_id` - UUID of the repo
 /// * `input` - Raw request body bytes
 async fn run_git_pack(service: &str, repo_id: &str, input: Vec<u8>) -> Response<Body> {
+    if validate_repo_id(repo_id).is_err() {
+        tracing::warn!(repo_id = %repo_id, service = service, "Rejected pack request with invalid repo_id");
+        return error_response(StatusCode::BAD_REQUEST);
+    }
+
     let data_dir = std::env::var("GIT_DATA_DIR").unwrap_or_else(|_| "/data/repos".to_string());
     let repo_path = format!("{}/{}.git", data_dir, repo_id);
 
@@ -105,12 +118,7 @@ async fn run_git_pack(service: &str, repo_id: &str, input: Vec<u8>) -> Response<
         .spawn()
     {
         Ok(c) => c,
-        Err(_) => {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::empty())
-                .unwrap_or_default()
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR),
     };
 
     if let Some(stdin) = child.stdin.take() {
@@ -121,12 +129,7 @@ async fn run_git_pack(service: &str, repo_id: &str, input: Vec<u8>) -> Response<
 
     let output = match child.wait_with_output().await {
         Ok(o) => o,
-        Err(_) => {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::empty())
-                .unwrap_or_default()
-        }
+        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR),
     };
 
     Response::builder()
