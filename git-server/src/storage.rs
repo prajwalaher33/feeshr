@@ -26,8 +26,41 @@ pub enum StorageError {
     #[error("Invalid repo id {repo_id:?}: {reason}")]
     InvalidRepoId { repo_id: String, reason: String },
 
+    #[error("Invalid git ref {name:?}")]
+    InvalidRef { name: String },
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+}
+
+/// 5 MB cap on a single diff response. A focused PR is well under this;
+/// a 100-file refactor still fits. Past this we mark the response truncated
+/// and the UI offers a "view raw" link instead of trying to render.
+pub const MAX_DIFF_BYTES: usize = 5 * 1024 * 1024;
+
+/// Validate a git ref name we're about to feed to `git diff`. Refs come from
+/// PR records or query strings and must not start with `-` (would be parsed
+/// as a flag) or contain shell/command-injection-shaped characters. Git's own
+/// ref naming rules are stricter than this; we just block the dangerous shapes.
+pub fn validate_ref(name: &str) -> Result<(), StorageError> {
+    let bad_chars = [
+        ' ', '\t', '\n', '\r', '\0', '~', '^', ':', '?', '*', '[', '\\',
+    ];
+    let ok = !name.is_empty()
+        && name.len() <= 256
+        && !name.starts_with('-')
+        && !name.contains("..")
+        && !name.contains("@{")
+        && !name
+            .chars()
+            .any(|c| bad_chars.contains(&c) || c.is_control());
+    if ok {
+        Ok(())
+    } else {
+        Err(StorageError::InvalidRef {
+            name: name.to_string(),
+        })
+    }
 }
 
 /// Allowed character class for repo IDs: ASCII letters, digits, dash,
@@ -239,6 +272,112 @@ impl RepoStorage {
         Ok(output.stdout)
     }
 
+    /// Compute the unified diff between two refs (base...head merge-base diff).
+    ///
+    /// # Arguments
+    /// * `repo_id` - UUID of the repo
+    /// * `base` - The "from" ref (typically the PR target branch, e.g. "main")
+    /// * `head` - The "to" ref (typically the PR source branch)
+    ///
+    /// # Returns
+    /// A `DiffResult` with the unified-diff text and a per-file stat list.
+    /// The diff is bounded by `MAX_DIFF_BYTES` to keep one giant PR from
+    /// streaming hundreds of MB into the response.
+    pub async fn get_diff(
+        &self,
+        repo_id: &str,
+        base: &str,
+        head: &str,
+    ) -> Result<DiffResult, StorageError> {
+        validate_repo_id(repo_id)?;
+        validate_ref(base)?;
+        validate_ref(head)?;
+
+        let repo_path = self.repo_path(repo_id);
+        if !repo_path.exists() {
+            return Err(StorageError::RepoNotFound {
+                repo_id: repo_id.to_string(),
+                path: repo_path.display().to_string(),
+            });
+        }
+        let repo_path_str = repo_path.to_str().unwrap_or_default().to_string();
+        let range = format!("{}...{}", base, head);
+
+        // Per-file numstat first — tiny output, drives the file list.
+        let stat_output = Command::new("git")
+            .args(["--git-dir", &repo_path_str])
+            .args(["diff", "--numstat", &range])
+            .output()
+            .await
+            .map_err(StorageError::Io)?;
+
+        if !stat_output.status.success() {
+            let exit_code = stat_output.status.code().unwrap_or(-1);
+            let stderr = String::from_utf8_lossy(&stat_output.stderr).to_string();
+            return Err(StorageError::GitCommandFailed {
+                repo_id: repo_id.to_string(),
+                exit_code,
+                stderr,
+            });
+        }
+
+        let mut files = Vec::new();
+        for line in String::from_utf8_lossy(&stat_output.stdout).lines() {
+            // Format: "<additions>\t<deletions>\t<path>"
+            // Binary files report "-" instead of a number for both columns.
+            let mut parts = line.splitn(3, '\t');
+            let add_s = parts.next().unwrap_or("");
+            let del_s = parts.next().unwrap_or("");
+            let path = parts.next().unwrap_or("").to_string();
+            if path.is_empty() {
+                continue;
+            }
+            let additions = add_s.parse::<i32>().ok();
+            let deletions = del_s.parse::<i32>().ok();
+            files.push(DiffFileStat {
+                path,
+                additions,
+                deletions,
+                binary: additions.is_none() || deletions.is_none(),
+            });
+        }
+
+        // Patch body, capped to keep responses sane.
+        let patch_output = Command::new("git")
+            .args(["--git-dir", &repo_path_str])
+            .args(["diff", "--no-color", &range])
+            .output()
+            .await
+            .map_err(StorageError::Io)?;
+
+        if !patch_output.status.success() {
+            let exit_code = patch_output.status.code().unwrap_or(-1);
+            let stderr = String::from_utf8_lossy(&patch_output.stderr).to_string();
+            return Err(StorageError::GitCommandFailed {
+                repo_id: repo_id.to_string(),
+                exit_code,
+                stderr,
+            });
+        }
+
+        let raw = patch_output.stdout;
+        let truncated = raw.len() > MAX_DIFF_BYTES;
+        let diff_bytes = if truncated {
+            raw[..MAX_DIFF_BYTES].to_vec()
+        } else {
+            raw
+        };
+        let diff = String::from_utf8_lossy(&diff_bytes).to_string();
+
+        Ok(DiffResult {
+            base: base.to_string(),
+            head: head.to_string(),
+            files,
+            diff,
+            truncated,
+        })
+    }
+
     /// Get recent commit history for a repo.
     ///
     /// # Arguments
@@ -288,6 +427,29 @@ impl RepoStorage {
             .collect();
         Ok(commits)
     }
+}
+
+/// Per-file numstat entry from a diff.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct DiffFileStat {
+    pub path: String,
+    /// Lines added; `None` means git reported "-" (binary file).
+    pub additions: Option<i32>,
+    /// Lines deleted; `None` for binary files.
+    pub deletions: Option<i32>,
+    pub binary: bool,
+}
+
+/// Result of computing a unified diff between two refs.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct DiffResult {
+    pub base: String,
+    pub head: String,
+    pub files: Vec<DiffFileStat>,
+    /// Unified-diff body. May be truncated at `MAX_DIFF_BYTES`.
+    pub diff: String,
+    /// True when the body was clipped to `MAX_DIFF_BYTES`.
+    pub truncated: bool,
 }
 
 /// Summary of a git commit.

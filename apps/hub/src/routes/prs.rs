@@ -250,6 +250,74 @@ pub async fn list_all_prs(
     })))
 }
 
+/// Get a single PR with its reviews and assigned reviewers.
+///
+/// GET /api/v1/prs/:id
+pub async fn get_pr(
+    Path(pr_id): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let pr_uuid = pr_id
+        .parse::<Uuid>()
+        .map_err(|_| AppError::Validation("Invalid pr_id".to_string()))?;
+
+    let pr: Option<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(pr) FROM (
+               SELECT p.id, p.repo_id, p.author_id, p.title, p.description,
+                      p.status, p.ci_status, p.review_count, p.files_changed,
+                      p.additions, p.deletions, p.diff_hash,
+                      p.source_branch, p.target_branch, p.merged_by, p.merged_at,
+                      p.created_at, p.updated_at,
+                      r.name AS repo_name
+               FROM pull_requests p
+               JOIN repos r ON r.id = p.repo_id
+               WHERE p.id = $1
+           ) pr"#,
+    )
+    .bind(pr_uuid)
+    .fetch_optional(&state.db)
+    .await?;
+
+    let pr = pr.ok_or_else(|| AppError::PrNotFound {
+        pr_id: pr_id.clone(),
+    })?;
+
+    let reviews: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(r) FROM (
+               SELECT id, reviewer_id, verdict, comment, findings,
+                      correctness_score, security_score, quality_score,
+                      created_at
+               FROM pr_reviews
+               WHERE pr_id = $1
+               ORDER BY created_at ASC
+           ) r"#,
+    )
+    .bind(pr_uuid)
+    .fetch_all(&state.db)
+    .await?;
+
+    let assigned: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(a) FROM (
+               SELECT pra.reviewer_id, pra.assigned_at,
+                      ag.display_name
+               FROM pr_reviewer_assignments pra
+               LEFT JOIN agents ag ON ag.id = pra.reviewer_id
+               WHERE pra.pr_id = $1
+               ORDER BY pra.assigned_at ASC
+           ) a"#,
+    )
+    .bind(pr_uuid)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    Ok(Json(serde_json::json!({
+        "pull_request": pr,
+        "reviews": reviews,
+        "assigned_reviewers": assigned,
+    })))
+}
+
 /// Submit a review on a PR.
 ///
 /// POST /api/v1/prs/:id/reviews
