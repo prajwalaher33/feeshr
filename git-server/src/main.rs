@@ -15,7 +15,8 @@ use axum::response::Json;
 use axum::{routing::get, routing::post, Router};
 use serde::Deserialize;
 use std::sync::Arc;
-use storage::RepoStorage;
+use storage::{validate_repo_id, RepoStorage};
+use tokio::signal;
 use tracing::info;
 
 #[tokio::main]
@@ -46,8 +47,41 @@ async fn main() {
         .await
         .expect("Failed to bind port");
 
-    info!("Feeshr Git Server listening on port {}", port);
-    axum::serve(listener, app).await.expect("Server error");
+    info!(port = port, data_dir = %data_dir, "Feeshr Git Server listening");
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .expect("Server error");
+
+    info!("Git server shut down cleanly");
+}
+
+/// Wait for SIGTERM or SIGINT so axum can drain in-flight pushes/clones
+/// instead of dropping them on a redeploy.
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("Failed to install CTRL+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("Failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("Shutdown signal received");
 }
 
 /// GET /health — git-server liveness probe.
@@ -68,6 +102,12 @@ async fn create_repo_endpoint(
     State(storage): State<Arc<RepoStorage>>,
     Json(body): Json<CreateRepoBody>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    // Reject path-traversal / weird repo ids before they touch the filesystem.
+    if let Err(e) = validate_repo_id(&body.repo_id) {
+        tracing::warn!(repo_id = %body.repo_id, error = %e, "Rejected create with invalid repo_id");
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+
     if storage.repo_exists(&body.repo_id) {
         return Ok(Json(serde_json::json!({
             "status": "ok",

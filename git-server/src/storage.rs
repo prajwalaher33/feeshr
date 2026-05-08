@@ -23,8 +23,35 @@ pub enum StorageError {
         stderr: String,
     },
 
+    #[error("Invalid repo id {repo_id:?}: {reason}")]
+    InvalidRepoId { repo_id: String, reason: String },
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+}
+
+/// Allowed character class for repo IDs: ASCII letters, digits, dash,
+/// underscore. Path separators, dots, slashes, NUL — explicitly out.
+fn is_safe_repo_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 128
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+/// Validate a repo id and return a typed error on rejection. Used at every
+/// entry point that takes a repo_id from a request body or URL parameter
+/// so a malicious caller can't request `../etc/passwd` as a "repo".
+pub fn validate_repo_id(repo_id: &str) -> Result<(), StorageError> {
+    if is_safe_repo_id(repo_id) {
+        Ok(())
+    } else {
+        Err(StorageError::InvalidRepoId {
+            repo_id: repo_id.to_string(),
+            reason: "must be 1-128 chars of [A-Za-z0-9_-]".to_string(),
+        })
+    }
 }
 
 /// Manages bare git repositories on the local filesystem.
@@ -43,16 +70,24 @@ impl RepoStorage {
         }
     }
 
-    /// Get the filesystem path for a repo.
+    /// Get the filesystem path for a repo. Returns an empty path for invalid
+    /// IDs so callers can't accidentally land outside `data_dir`.
     ///
     /// # Arguments
     /// * `repo_id` - The repo's UUID (used as directory name)
     pub fn repo_path(&self, repo_id: &str) -> PathBuf {
+        if !is_safe_repo_id(repo_id) {
+            return PathBuf::new();
+        }
         self.data_dir.join(format!("{}.git", repo_id))
     }
 
-    /// Check if a repo exists on disk.
+    /// Check if a repo exists on disk. Invalid IDs are reported as
+    /// non-existent rather than triggering filesystem traversal.
     pub fn repo_exists(&self, repo_id: &str) -> bool {
+        if !is_safe_repo_id(repo_id) {
+            return false;
+        }
         self.repo_path(repo_id).exists()
     }
 
@@ -64,6 +99,7 @@ impl RepoStorage {
     /// # Errors
     /// Returns `StorageError::CreateFailed` if the git init fails.
     pub async fn create_repo(&self, repo_id: &str) -> Result<PathBuf, StorageError> {
+        validate_repo_id(repo_id)?;
         let path = self.repo_path(repo_id);
         let path_str = path.to_str().unwrap_or_default().to_string();
         let output = Command::new("git")
@@ -93,6 +129,7 @@ impl RepoStorage {
     /// Returns `StorageError::RepoNotFound` if the repo does not exist.
     #[allow(dead_code)]
     pub async fn delete_repo(&self, repo_id: &str) -> Result<(), StorageError> {
+        validate_repo_id(repo_id)?;
         let path = self.repo_path(repo_id);
         if !path.exists() {
             return Err(StorageError::RepoNotFound {
@@ -123,6 +160,7 @@ impl RepoStorage {
         ref_name: &str,
         path: &str,
     ) -> Result<Vec<String>, StorageError> {
+        validate_repo_id(repo_id)?;
         let repo_path = self.repo_path(repo_id);
         if !repo_path.exists() {
             return Err(StorageError::RepoNotFound {
@@ -177,6 +215,7 @@ impl RepoStorage {
         ref_name: &str,
         file_path: &str,
     ) -> Result<Vec<u8>, StorageError> {
+        validate_repo_id(repo_id)?;
         let repo_path = self.repo_path(repo_id);
         let object = format!("{}:{}", ref_name, file_path);
         let repo_path_str = repo_path.to_str().unwrap_or_default().to_string();
@@ -213,6 +252,7 @@ impl RepoStorage {
         repo_id: &str,
         limit: usize,
     ) -> Result<Vec<CommitSummary>, StorageError> {
+        validate_repo_id(repo_id)?;
         let repo_path = self.repo_path(repo_id);
         let format = "--pretty=format:%H|%ae|%s|%ci";
         let limit_str = format!("-{}", limit);
