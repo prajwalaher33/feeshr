@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchRepo, fetchRepoFiles, fetchRepoIssues, fetchRepoPRs, type RepoFile } from "@/lib/api";
+import {
+  fetchRepo,
+  fetchRepoTree,
+  fetchRepoIssues,
+  fetchRepoPRs,
+  fetchRepoFileContent,
+  fetchRepoCommits,
+  type TreeEntry,
+  type RepoFileContent,
+  type RepoCommit,
+} from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -16,58 +26,114 @@ const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
   pending: { color: "#f7c948", title: "CI pending" },
 };
 
-const TABS = ["Code", "Issues", "Pull Requests", "Discussions", "Actions"];
+const TABS = ["Code", "Commits", "Issues", "Pull Requests"];
 
-const FALLBACK_FILES: { name: string; type: string; lastCommit: string; time: string }[] = [
-  { name: "src", type: "folder", lastCommit: "feat: implement hierarchical task allocation for swarm nod...", time: "2 days ago" },
-  { name: "tests", type: "folder", lastCommit: "test: add stress tests for p2p message propagation", time: "5 days ago" },
-  { name: "Cargo.toml", type: "file", lastCommit: "chore: bump dependencies to v1.4.2", time: "2 days ago" },
-  { name: "README.md", type: "file", lastCommit: "docs: update architecture diagram and installation guide", time: "1 week ago" },
-];
+function sortEntries(entries: TreeEntry[]): TreeEntry[] {
+  return [...entries].sort((a, b) => {
+    if (a.kind === b.kind) return a.name.localeCompare(b.name);
+    return a.kind === "dir" ? -1 : 1;
+  });
+}
+
+function joinPath(base: string, name: string) {
+  if (!base) return name;
+  return `${base.replace(/\/$/, "")}/${name}`;
+}
 
 export default function RepoDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const [repo, setRepo] = useState<Repo | null>(null);
-  const [files, setFiles] = useState<{ name: string; type: string; lastCommit: string; time: string }[]>([]);
-  const [isDemo, setIsDemo] = useState(false);
   const [issueCount, setIssueCount] = useState(0);
   const [prCount, setPrCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Code");
 
+  // File browser state
+  const [cwd, setCwd] = useState("");
+  const [tree, setTree] = useState<TreeEntry[]>([]);
+  const [treeLoading, setTreeLoading] = useState(false);
+  const [treeError, setTreeError] = useState(false);
+  const [openFile, setOpenFile] = useState<{ path: string; content: RepoFileContent | null; loading: boolean } | null>(null);
+  const [readme, setReadme] = useState<RepoFileContent | null>(null);
+  const [commits, setCommits] = useState<RepoCommit[]>([]);
+
+  // Initial repo metadata + counts.
   useEffect(() => {
-    const load = async () => {
-      const [repoData, repoFiles, issuesData, prsData] = await Promise.all([
-        fetchRepo(id),
-        fetchRepoFiles(id),
-        fetchRepoIssues(id, { limit: 1 }),
-        fetchRepoPRs(id, { limit: 1 }),
-      ]);
+    if (!id) return;
+    Promise.all([
+      fetchRepo(id),
+      fetchRepoIssues(id, { limit: 1 }),
+      fetchRepoPRs(id, { limit: 1 }),
+    ]).then(([repoData, issuesData, prsData]) => {
       setRepo(repoData);
       setIssueCount(issuesData.total);
       setPrCount(prsData.total);
-      if (repoFiles.length > 0) {
-        const mapped = repoFiles.map((f: RepoFile) => ({
-          name: f.name,
-          type: f.type === "folder" ? "folder" : "file",
-          lastCommit: "",
-          time: "",
-        }));
-        mapped.sort((a, b) => {
-          if (a.type === b.type) return a.name.localeCompare(b.name);
-          return a.type === "folder" ? -1 : 1;
-        });
-        setFiles(mapped);
-        setIsDemo(false);
-      } else {
-        setFiles(FALLBACK_FILES);
-        setIsDemo(true);
-      }
       setLoading(false);
-    };
-    load();
+    });
   }, [id]);
+
+  // Reload the directory listing whenever cwd changes. A failed fetch
+  // (no bare repo, empty repo, missing path) leaves treeError set so
+  // we can render an honest empty state instead of a fake one.
+  const loadTree = useCallback(async () => {
+    if (!id) return;
+    setTreeLoading(true);
+    setTreeError(false);
+    setOpenFile(null);
+    const entries = await fetchRepoTree(id, { path: cwd });
+    setTreeLoading(false);
+    if (entries.length === 0 && cwd === "") {
+      setTreeError(true);
+      setTree([]);
+      return;
+    }
+    setTree(sortEntries(entries));
+  }, [id, cwd]);
+
+  useEffect(() => {
+    loadTree();
+  }, [loadTree]);
+
+  // Best-effort README fetch — only at the repo root.
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      for (const candidate of ["README.md", "README", "readme.md"]) {
+        const c = await fetchRepoFileContent(id, candidate);
+        if (cancelled) return;
+        if (c) {
+          setReadme(c);
+          return;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // Lazy-load commits when the tab opens.
+  useEffect(() => {
+    if (activeTab !== "Commits" || !id || commits.length > 0) return;
+    fetchRepoCommits(id, 50).then(setCommits);
+  }, [activeTab, id, commits.length]);
+
+  const openFilePath = useCallback(
+    async (path: string) => {
+      setOpenFile({ path, content: null, loading: true });
+      const content = await fetchRepoFileContent(id, path);
+      setOpenFile({ path, content, loading: false });
+    },
+    [id],
+  );
+
+  const navigateUp = () => {
+    const parts = cwd.split("/").filter(Boolean);
+    parts.pop();
+    setCwd(parts.join("/"));
+  };
 
   if (loading) {
     return (
@@ -165,19 +231,6 @@ export default function RepoDetailPage() {
             </svg>
             <span className="text-white/60">main</span>
           </span>
-          <span className="text-white/20">3 branches</span>
-          <span className="text-white/20">12 tags</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[12px] text-white/40 hover:border-white/[0.12] hover:text-white/60 transition-colors" style={{ fontFamily: "var(--font-mono)" }}>
-            Go to file
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan/[0.06] border border-cyan/[0.15] text-[12px] text-cyan hover:bg-cyan/[0.1] transition-colors" style={{ fontFamily: "var(--font-mono)" }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-            </svg>
-            Code
-          </button>
         </div>
       </div>
 
@@ -185,111 +238,152 @@ export default function RepoDetailPage() {
       <div className="flex gap-6 max-[1024px]:flex-col">
         {/* Left column */}
         <div className="flex-[1.5] min-w-0 flex flex-col gap-5">
-          {/* File browser */}
-          <div className="card overflow-hidden relative">
-            {isDemo && (
-              <div className="absolute top-3 right-3 status-chip" style={{ color: "#f7c948", background: "rgba(247,201,72,0.06)", border: "1px solid rgba(247,201,72,0.12)" }}>
-                Demo
-              </div>
-            )}
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/[0.04]">
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-white/25" style={{ fontFamily: "var(--font-mono)" }}>Name</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-white/25" style={{ fontFamily: "var(--font-mono)" }}>Last Commit</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium text-white/25" style={{ fontFamily: "var(--font-mono)" }}>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {files.map((file) => (
-                  <tr key={file.name} className="border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.015] transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        {file.type === "folder" ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-cyan/70">
-                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white/20">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.5" />
-                            <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
-                        )}
-                        <span className="text-[13px] text-white/70" style={{ fontFamily: "var(--font-mono)" }}>
-                          {file.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-[12px] text-white/25 truncate max-w-[300px]">{file.lastCommit}</td>
-                    <td className="px-4 py-3 text-[11px] text-white/15 text-right whitespace-nowrap" style={{ fontFamily: "var(--font-mono)" }}>{file.time}</td>
-                  </tr>
+          {/* File browser / file viewer */}
+          {activeTab === "Code" && (
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.04] text-[11px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+                <button
+                  type="button"
+                  onClick={() => { setCwd(""); setOpenFile(null); }}
+                  className="hover:text-cyan transition-colors"
+                >
+                  /
+                </button>
+                {cwd.split("/").filter(Boolean).map((seg, i, arr) => (
+                  <span key={i} className="flex items-center gap-2">
+                    <span className="text-white/15">›</span>
+                    <button
+                      type="button"
+                      onClick={() => { setCwd(arr.slice(0, i + 1).join("/")); setOpenFile(null); }}
+                      className="hover:text-cyan transition-colors"
+                    >
+                      {seg}
+                    </button>
+                  </span>
                 ))}
-              </tbody>
-            </table>
-          </div>
+                {openFile && (
+                  <span className="flex items-center gap-2">
+                    <span className="text-white/15">›</span>
+                    <span className="text-cyan/80">{openFile.path.split("/").pop()}</span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFile(null)}
+                      className="ml-auto text-white/30 hover:text-white/70"
+                      title="Close file"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
 
-          {/* README */}
-          <div className="card p-6">
-            <div className="flex items-center gap-2 mb-5 pb-3 border-b border-white/[0.04]">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white/20">
-                <path d="M4 6h16M4 10h16M4 14h10M4 18h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              <span className="text-[11px] text-white/30 font-medium" style={{ fontFamily: "var(--font-mono)" }}>README.md</span>
+              {openFile ? (
+                <FileViewer file={openFile} />
+              ) : treeError ? (
+                <div className="p-6 text-center">
+                  <p className="text-[12px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+                    No tree available — repo is empty or not yet pushed
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/[0.04]">
+                      <th className="px-4 py-3 text-left text-[11px] font-medium text-white/25" style={{ fontFamily: "var(--font-mono)" }}>Name</th>
+                      <th className="px-4 py-3 text-right text-[11px] font-medium text-white/25" style={{ fontFamily: "var(--font-mono)" }}>Size</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cwd && (
+                      <tr className="border-b border-white/[0.03] hover:bg-white/[0.015] transition-colors">
+                        <td className="px-4 py-3" colSpan={2}>
+                          <button
+                            type="button"
+                            onClick={navigateUp}
+                            className="text-[13px] text-white/60 hover:text-cyan transition-colors"
+                            style={{ fontFamily: "var(--font-mono)" }}
+                          >
+                            ..
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                    {treeLoading ? (
+                      <tr><td className="px-4 py-3 text-[12px] text-white/30" style={{ fontFamily: "var(--font-mono)" }} colSpan={2}>Loading…</td></tr>
+                    ) : tree.length === 0 ? (
+                      <tr><td className="px-4 py-3 text-[12px] text-white/30" style={{ fontFamily: "var(--font-mono)" }} colSpan={2}>Empty directory</td></tr>
+                    ) : tree.map((entry) => (
+                      <tr key={entry.name} className="border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.015] transition-colors">
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => entry.kind === "dir" ? setCwd(joinPath(cwd, entry.name)) : openFilePath(joinPath(cwd, entry.name))}
+                            className="flex items-center gap-2.5 text-left w-full"
+                          >
+                            {entry.kind === "dir" ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-cyan/70">
+                                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white/20">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.5" />
+                                <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                            )}
+                            <span className="text-[13px] text-white/70 hover:text-cyan transition-colors" style={{ fontFamily: "var(--font-mono)" }}>
+                              {entry.name}
+                            </span>
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 text-[11px] text-white/30 text-right whitespace-nowrap" style={{ fontFamily: "var(--font-mono)" }}>
+                          {entry.kind === "dir" ? "—" : formatBytes(entry.size ?? 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
+          )}
 
-            <div className="space-y-5">
-              <h2 className="text-[20px] font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
-                Swarm v2
-              </h2>
-              <p className="text-[13px] text-white/40 leading-[1.8]">
-                High-performance orchestration engine for autonomous AI swarms. Built with Rust for safety and Python for developer experience.
-              </p>
+          {activeTab === "Commits" && (
+            <CommitsPanel commits={commits} loading={commits.length === 0} />
+          )}
 
-              <h3 className="text-[15px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
-                Key Features
-              </h3>
-              <div className="space-y-2">
-                <p className="text-[13px] text-white/35 leading-relaxed">
-                  <span className="font-semibold text-white/70">Decentralized P2P:</span> Gossip protocol based communication between nodes.
-                </p>
-                <p className="text-[13px] text-white/35 leading-relaxed">
-                  <span className="font-semibold text-white/70">Wasm Sandbox:</span> Secure execution of agent logic across different platforms.
-                </p>
-                <p className="text-[13px] text-white/35 leading-relaxed">
-                  <span className="font-semibold text-white/70">Recursive Sharding:</span> Scale to thousands of agents with sub-millisecond sync.
-                </p>
-              </div>
+          {activeTab === "Issues" && (
+            <TabRedirect href={`/repos/${id}/issues`} label="Issues" count={issueCount} />
+          )}
 
-              <h3 className="text-[15px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
-                Quick Start
-              </h3>
-              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-5 space-y-1" style={{ fontFamily: "var(--font-mono)" }}>
-                <p className="text-[12px]">
-                  <span className="text-cyan/60">#</span> <span className="text-white/20">Install dependencies</span>
-                </p>
-                <p className="text-[12px] text-white/60">pip install swarm-v2</p>
-                <p className="text-[12px] mt-3">
-                  <span className="text-cyan/60">#</span> <span className="text-white/20">Initialize a local node</span>
-                </p>
-                <p className="text-[12px] text-white/60">swarm init --config ./default.yaml</p>
-                <p className="text-[12px] text-white/60">swarm run</p>
-              </div>
+          {activeTab === "Pull Requests" && (
+            <TabRedirect href="/prs" label="Pull Requests" count={prCount} />
+          )}
 
-              <h3 className="text-[15px] font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
-                Architecture
-              </h3>
-              <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-8 flex flex-col items-center justify-center gap-3">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="text-cyan/30">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="1.5" />
+          {/* README — only shown on the Code tab and only if we found one. */}
+          {activeTab === "Code" && readme && (
+            <div className="card p-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/[0.04]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white/20">
+                  <path d="M4 6h16M4 10h16M4 14h10M4 18h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
-                <p className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
-                  Interactive Architecture Visualizer coming soon...
-                </p>
+                <span className="text-[11px] text-white/30 font-medium" style={{ fontFamily: "var(--font-mono)" }}>README.md</span>
+                <span className="ml-auto text-[10px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
+                  {formatBytes(readme.size_bytes)}
+                </span>
               </div>
+              {readme.encoding === "utf-8" ? (
+                <pre
+                  className="text-[13px] text-white/70 leading-[1.7] whitespace-pre-wrap m-0 max-h-[600px] overflow-auto"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {readme.content}
+                </pre>
+              ) : (
+                <p className="text-[12px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+                  Binary README — open in the file browser to view.
+                </p>
+              )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right sidebar */}
@@ -333,24 +427,6 @@ export default function RepoDetailPage() {
               <StatCell label="Issues" value={String(issueCount)} border="top" />
               <StatCell label="PRs" value={String(prCount)} border="both" />
             </div>
-          </div>
-
-          {/* Releases */}
-          <div className="card p-5">
-            <h3 className="text-[13px] font-semibold text-white mb-3" style={{ fontFamily: "var(--font-display)" }}>
-              Releases
-            </h3>
-            <div className="flex items-start gap-3 mb-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#28c840]/60 mt-0.5 shrink-0">
-                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" />
-                <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              <div>
-                <p className="text-[13px] font-medium text-white/70" style={{ fontFamily: "var(--font-mono)" }}>v1.4.2-alpha</p>
-                <p className="text-[11px] text-white/20 mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>2 days ago</p>
-              </div>
-            </div>
-            <p className="text-[11px] text-white/15" style={{ fontFamily: "var(--font-mono)" }}>+ 14 more releases</p>
           </div>
 
           {/* Contributors */}
@@ -409,6 +485,115 @@ function StatPill({ icon, value }: { icon: string; value: string }) {
         </svg>
       )}
       {value}
+    </div>
+  );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function FileViewer({
+  file,
+}: {
+  file: { path: string; content: RepoFileContent | null; loading: boolean };
+}) {
+  if (file.loading) {
+    return (
+      <div className="px-4 py-6 text-[12px] text-white/30" style={{ fontFamily: "var(--font-mono)" }}>
+        Loading {file.path}…
+      </div>
+    );
+  }
+  if (!file.content) {
+    return (
+      <div className="px-4 py-6 text-[12px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+        Failed to load {file.path}
+      </div>
+    );
+  }
+  if (file.content.encoding !== "utf-8") {
+    return (
+      <div className="px-4 py-6 text-[12px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+        Binary file ({formatBytes(file.content.size_bytes)}) — preview unavailable
+      </div>
+    );
+  }
+  return (
+    <pre
+      className="m-0 px-4 py-3 text-[12px] leading-[1.6] text-white/85 overflow-auto max-h-[700px]"
+      style={{ fontFamily: "var(--font-mono)" }}
+    >
+      {file.content.content}
+    </pre>
+  );
+}
+
+function CommitsPanel({ commits, loading }: { commits: RepoCommit[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="card px-4 py-6 text-[12px] text-white/30" style={{ fontFamily: "var(--font-mono)" }}>
+        Loading commit history…
+      </div>
+    );
+  }
+  if (commits.length === 0) {
+    return (
+      <div className="card px-4 py-6 text-[12px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+        No commits yet
+      </div>
+    );
+  }
+  return (
+    <div className="card overflow-hidden">
+      {commits.map((c) => (
+        <div key={c.hash} className="px-4 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.015] transition-colors">
+          <div className="flex items-start gap-3">
+            <span
+              className="shrink-0 mt-1 text-[10px] px-1.5 py-0.5 rounded text-white/40"
+              style={{
+                background: "rgba(203,213,225,0.05)",
+                border: "1px solid rgba(203,213,225,0.10)",
+                fontFamily: "var(--font-mono)",
+              }}
+              title={c.hash}
+            >
+              {c.hash.slice(0, 7)}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] text-white/80 truncate">{c.subject}</p>
+              <div className="mt-1 flex items-center gap-3 text-[11px] text-white/30" style={{ fontFamily: "var(--font-mono)" }}>
+                <span>{c.author_email}</span>
+                <span>{new Date(c.date).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TabRedirect({ href, label, count }: { href: string; label: string; count: number }) {
+  return (
+    <div className="card px-4 py-6 flex items-center justify-between">
+      <div>
+        <p className="text-[13px] text-white/80" style={{ fontFamily: "var(--font-display)" }}>
+          {count} {label.toLowerCase()}
+        </p>
+        <p className="text-[11px] text-white/30 mt-1" style={{ fontFamily: "var(--font-mono)" }}>
+          Open the dedicated {label.toLowerCase()} view to see them all
+        </p>
+      </div>
+      <Link
+        href={href}
+        className="px-3 py-1.5 rounded-lg text-[12px] text-cyan border border-cyan/30 hover:bg-cyan/10 transition-colors"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
+        Open →
+      </Link>
     </div>
   );
 }

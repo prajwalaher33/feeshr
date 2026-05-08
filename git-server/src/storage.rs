@@ -175,7 +175,7 @@ impl RepoStorage {
             .map_err(StorageError::Io)
     }
 
-    /// List files in a repo at a given ref (defaults to HEAD).
+    /// List entries in a repo directory at a given ref.
     ///
     /// # Arguments
     /// * `repo_id` - UUID of the repo
@@ -183,7 +183,8 @@ impl RepoStorage {
     /// * `path` - Subdirectory path within the repo (empty = root)
     ///
     /// # Returns
-    /// Vec of filenames in the given directory at the given ref.
+    /// Vec of `TreeEntry` records — name, kind (file/dir/symlink/submodule),
+    /// and size in bytes for blobs.
     ///
     /// # Errors
     /// Returns an error if the repo or ref does not exist.
@@ -192,8 +193,9 @@ impl RepoStorage {
         repo_id: &str,
         ref_name: &str,
         path: &str,
-    ) -> Result<Vec<String>, StorageError> {
+    ) -> Result<Vec<TreeEntry>, StorageError> {
         validate_repo_id(repo_id)?;
+        validate_ref(ref_name)?;
         let repo_path = self.repo_path(repo_id);
         if !repo_path.exists() {
             return Err(StorageError::RepoNotFound {
@@ -209,9 +211,11 @@ impl RepoStorage {
         };
 
         let repo_path_str = repo_path.to_str().unwrap_or_default().to_string();
+        // -l adds size for blobs. Output is `<mode> <type> <object> <size>\t<name>`
+        // (size is "-" for trees and submodules).
         let output = Command::new("git")
             .args(["--git-dir", &repo_path_str])
-            .args(["ls-tree", "--name-only", &tree_path])
+            .args(["ls-tree", "-l", &tree_path])
             .output()
             .await
             .map_err(StorageError::Io)?;
@@ -226,11 +230,11 @@ impl RepoStorage {
             });
         }
 
-        let files = String::from_utf8_lossy(&output.stdout)
+        let entries: Vec<TreeEntry> = String::from_utf8_lossy(&output.stdout)
             .lines()
-            .map(String::from)
+            .filter_map(parse_ls_tree_line)
             .collect();
-        Ok(files)
+        Ok(entries)
     }
 
     /// Get the contents of a file at a given ref.
@@ -427,6 +431,49 @@ impl RepoStorage {
             .collect();
         Ok(commits)
     }
+}
+
+/// One entry in a directory listing — file, sub-directory, symlink, or
+/// submodule. The web file browser uses `kind` to decide whether to drill
+/// in or open a viewer.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct TreeEntry {
+    pub name: String,
+    /// One of: "file", "dir", "symlink", "submodule".
+    pub kind: String,
+    /// Size in bytes for blobs; null for trees/submodules.
+    pub size: Option<u64>,
+}
+
+/// Parse a single line of `git ls-tree -l` output. Returns None for
+/// unparseable lines so we silently skip rather than fail the listing.
+///
+/// Format: `<mode> SP <type> SP <hash> SP* <size>\t<name>`
+/// Example: `100644 blob abc123     1234\tREADME.md`
+fn parse_ls_tree_line(line: &str) -> Option<TreeEntry> {
+    let (meta, name) = line.split_once('\t')?;
+    let mut parts = meta.split_whitespace();
+    let _mode = parts.next()?;
+    let typ = parts.next()?;
+    let _hash = parts.next()?;
+    let size_str = parts.next().unwrap_or("-");
+    let kind = match typ {
+        "blob" => {
+            // Mode 120000 = symlink. We already consumed mode above so we
+            // don't have it; the type alone tells file-vs-dir which is
+            // what the UI cares about. Symlinks are rare; treat as file.
+            "file"
+        }
+        "tree" => "dir",
+        "commit" => "submodule",
+        _ => "file",
+    };
+    let size = size_str.parse::<u64>().ok();
+    Some(TreeEntry {
+        name: name.to_string(),
+        kind: kind.to_string(),
+        size,
+    })
 }
 
 /// Per-file numstat entry from a diff.

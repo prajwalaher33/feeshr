@@ -16,10 +16,12 @@ const HUB_URL =
 
 const API_BASE = `${HUB_URL}/api/v1`;
 
+// Git-server runs on 8081 by default (see git-server/src/main.rs and
+// docker-compose). The previous fallback of 9090 collided with Prometheus.
 const GIT_SERVER_URL =
   typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_GIT_SERVER_URL ?? "http://localhost:9090")
-    : (process.env.GIT_SERVER_INTERNAL_URL ?? process.env.NEXT_PUBLIC_GIT_SERVER_URL ?? "http://git-server:9090");
+    ? (process.env.NEXT_PUBLIC_GIT_SERVER_URL ?? "http://localhost:8081")
+    : (process.env.GIT_SERVER_INTERNAL_URL ?? process.env.NEXT_PUBLIC_GIT_SERVER_URL ?? "http://git-server:8081");
 
 // ---------------------------------------------------------------------------
 // Fetch helper with timeout and retry
@@ -525,17 +527,127 @@ export async function fetchAgentActivity(agentId: string, limit = 20): Promise<A
 // Git Server — file listings
 // ---------------------------------------------------------------------------
 
-export async function fetchRepoFiles(repoId: string): Promise<RepoFile[]> {
+export interface TreeEntry {
+  name: string;
+  kind: "file" | "dir" | "symlink" | "submodule";
+  size?: number | null;
+}
+
+/**
+ * List entries in a repo directory at a given ref.
+ * Returns the new typed shape; callers that just need names can map to
+ * the legacy `RepoFile` shape locally.
+ */
+export async function fetchRepoFiles(
+  repoId: string,
+  opts?: { path?: string; ref?: string },
+): Promise<RepoFile[]> {
   try {
+    const params = new URLSearchParams();
+    if (opts?.path) params.set("path", opts.path);
+    if (opts?.ref) params.set("git_ref", opts.ref);
+    const qs = params.toString();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${GIT_SERVER_URL}/repos/${repoId}/files`, {
-      signal: controller.signal,
-    });
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(
+      `${GIT_SERVER_URL}/repos/${repoId}/files${qs ? `?${qs}` : ""}`,
+      { signal: controller.signal },
+    );
     clearTimeout(timeout);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.files ?? []) as RepoFile[];
+    const raw = (data.files ?? []) as Array<TreeEntry | string>;
+    // Bridge the legacy {name,type,path} consumers to the new
+    // {name, kind, size} shape — preserves callers in projects/page.tsx.
+    return raw.map((e) => {
+      if (typeof e === "string") {
+        return { name: e, type: "file" as const, path: e };
+      }
+      return {
+        name: e.name,
+        type: e.kind === "dir" ? "folder" : "file",
+        path: opts?.path ? `${opts.path.replace(/\/$/, "")}/${e.name}` : e.name,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRepoTree(
+  repoId: string,
+  opts?: { path?: string; ref?: string },
+): Promise<TreeEntry[]> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.path) params.set("path", opts.path);
+    if (opts?.ref) params.set("git_ref", opts.ref);
+    const qs = params.toString();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(
+      `${GIT_SERVER_URL}/repos/${repoId}/files${qs ? `?${qs}` : ""}`,
+      { signal: controller.signal },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.files ?? []) as TreeEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export interface RepoFileContent {
+  content: string;
+  size_bytes: number;
+  /** "utf-8" or "hex" — git-server returns hex when bytes don't decode. */
+  encoding: "utf-8" | "hex";
+}
+
+export async function fetchRepoFileContent(
+  repoId: string,
+  path: string,
+  ref = "HEAD",
+): Promise<RepoFileContent | null> {
+  try {
+    const params = new URLSearchParams({ path, git_ref: ref });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(
+      `${GIT_SERVER_URL}/repos/${repoId}/file?${params.toString()}`,
+      { signal: controller.signal },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    return (await res.json()) as RepoFileContent;
+  } catch {
+    return null;
+  }
+}
+
+export interface RepoCommit {
+  hash: string;
+  author_email: string;
+  subject: string;
+  date: string;
+}
+
+export async function fetchRepoCommits(
+  repoId: string,
+  limit = 30,
+): Promise<RepoCommit[]> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(
+      `${GIT_SERVER_URL}/repos/${repoId}/commits?limit=${limit}`,
+      { signal: controller.signal },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.commits ?? []) as RepoCommit[];
   } catch {
     return [];
   }
