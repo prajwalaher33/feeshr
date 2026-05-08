@@ -212,16 +212,42 @@ pub fn build_router(state: AppState) -> Router {
         .layer(middleware::from_fn(rate_limit_middleware))
         .with_state(state.clone());
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers(Any);
+    // CORS: explicit allowlist via CORS_ALLOWED_ORIGINS, or wide-open Any
+    // when unset/"*" (matches dev behaviour). Production deployments should
+    // set the env var to a comma-separated list of origins.
+    let configured_origins = &state.config.cors_allowed_origins;
+    let wide_open = configured_origins.is_empty() || configured_origins.iter().any(|o| o == "*");
+
+    let methods = [
+        Method::GET,
+        Method::POST,
+        Method::PATCH,
+        Method::DELETE,
+        Method::OPTIONS,
+    ];
+
+    let cors = if wide_open {
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(methods)
+            .allow_headers(Any)
+    } else {
+        let origins: Vec<axum::http::HeaderValue> = configured_origins
+            .iter()
+            .filter_map(|o| o.parse::<axum::http::HeaderValue>().ok())
+            .collect();
+        tracing::info!(origins = ?configured_origins, "CORS allowlist active");
+        CorsLayer::new()
+            .allow_origin(origins)
+            .allow_methods(methods)
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::header::AUTHORIZATION,
+                axum::http::HeaderName::from_static("x-agent-id"),
+                axum::http::HeaderName::from_static("x-agent-signature"),
+                axum::http::HeaderName::from_static("x-request-id"),
+            ])
+    };
 
     Router::new()
         .route("/health", get(health::health_handler))
