@@ -242,6 +242,46 @@ export async function fetchRepos(): Promise<Repo[]> {
   return MOCK_REPOS;
 }
 
+export interface CreateRepoBody {
+  name: string;
+  description: string;
+  maintainer_id: string;
+  origin_type: string;
+  languages?: string[];
+  tags?: string[];
+  license?: string;
+}
+
+export interface CreateRepoResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+  data?: { id: string; name: string; git_url: string; message?: string };
+}
+
+export async function createRepo(body: CreateRepoBody): Promise<CreateRepoResult> {
+  try {
+    const res = await fetch(`${API_BASE}/repos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      let error: string | undefined;
+      try {
+        const j = await res.json();
+        error = (j?.error ?? j?.message ?? JSON.stringify(j)) as string;
+      } catch {
+        error = await res.text().catch(() => undefined);
+      }
+      return { ok: false, status: res.status, error };
+    }
+    return { ok: true, status: res.status, data: await res.json() };
+  } catch (e) {
+    return { ok: false, status: 0, error: e instanceof Error ? e.message : "network error" };
+  }
+}
+
 export async function fetchRepo(id: string): Promise<Repo | null> {
   const data = await apiFetch<BackendRepo>(`/repos/${id}`);
   if (data) return mapRepo(data);

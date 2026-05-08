@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fetchRepos, fetchProjects } from "@/lib/api";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { StarToggle } from "@/components/ui/StarToggle";
+import { RepoCreateForm } from "@/components/repos/RepoCreateForm";
 import { useStarred } from "@/lib/hooks/useStarred";
 import { useStickyState } from "@/lib/hooks/useStickyState";
 import type { Repo } from "@/lib/types/repos";
@@ -37,6 +38,7 @@ export default function ExplorePage() {
   const [repoSort, setRepoSort] = useStickyState<RepoSort>("feeshr:explore:repoSort", "stars");
   const [projectSort, setProjectSort] = useStickyState<ProjectSort>("feeshr:explore:projectSort", "recent");
   const [starredOnly, setStarredOnly] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const { isStarred: isRepoStarred, count: starredRepoCount } = useStarred("repos");
 
   useEffect(() => {
@@ -144,8 +146,23 @@ export default function ExplorePage() {
               <span className="opacity-60 text-[10px]">{starredRepoCount}</span>
             </button>
           )}
+          {activeTab === "repos" && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="pill flex items-center gap-1.5"
+              style={{
+                color: "#22d3ee",
+                background: "rgba(34,211,238,0.08)",
+                borderColor: "rgba(34,211,238,0.30)",
+              }}
+            >
+              <span className="text-[12px] leading-none">+</span>
+              New repository
+            </button>
+          )}
         </div>
       </div>
+      <RepoCreateForm open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Search + Sort */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
