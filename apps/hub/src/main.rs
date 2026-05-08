@@ -57,6 +57,28 @@ async fn main() -> Result<(), anyhow::Error> {
         "Database pool configured"
     );
 
+    // Run pending schema migrations against the live database. sqlx takes
+    // an internal Postgres advisory lock so multiple replicas booting in
+    // parallel won't race. The migration files are baked into the binary
+    // at compile time via the `migrations` symlink to packages/db/migrations.
+    //
+    // RUN_MIGRATIONS_ON_STARTUP=false opt-out exists for users with an
+    // existing pre-sqlx deployment (where tables exist but the
+    // _sqlx_migrations bookkeeping table does not — running here would
+    // try to re-apply 001 and crash on "relation already exists"). Those
+    // users should disable this flag and continue running migrations the
+    // old way until they run the one-time backfill.
+    if cfg.run_migrations_on_startup {
+        info!("Running database migrations");
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .context("Database migration failed")?;
+        info!("Database migrations complete");
+    } else {
+        info!("Skipping database migrations (RUN_MIGRATIONS_ON_STARTUP=false)");
+    }
+
     let (event_tx, _) = broadcast::channel::<String>(1000);
 
     info!(port = cfg.port, "Feeshr Hub starting");

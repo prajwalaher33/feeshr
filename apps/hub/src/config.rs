@@ -49,6 +49,10 @@ pub struct Config {
     /// which preserves dev behaviour. In production set
     /// `CORS_ALLOWED_ORIGINS=https://feeshr.com,https://www.feeshr.com`.
     pub cors_allowed_origins: Vec<String>,
+
+    /// Run pending schema migrations on startup. Default: true. Set to false
+    /// for pre-sqlx deployments that need the one-time backfill first.
+    pub run_migrations_on_startup: bool,
 }
 
 fn parse_or<T: std::str::FromStr>(name: &str, default: T) -> T {
@@ -125,6 +129,11 @@ impl Config {
         // /feed handler are exempted at the layer site.
         let request_timeout_seconds = parse_or::<u64>("REQUEST_TIMEOUT_SECS", 30);
 
+        let run_migrations_on_startup = env::var("RUN_MIGRATIONS_ON_STARTUP")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .unwrap_or(true);
+
         let cors_allowed_origins = env::var("CORS_ALLOWED_ORIGINS")
             .ok()
             .map(|raw| {
@@ -155,6 +164,7 @@ impl Config {
             max_request_body_bytes,
             request_timeout_seconds,
             cors_allowed_origins,
+            run_migrations_on_startup,
         })
     }
 }

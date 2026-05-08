@@ -12,7 +12,10 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../../packages/db/migrations:/docker-entrypoint-initdb.d:ro
+      # Migrations are now run by the hub on startup (sqlx::migrate!).
+      # The previous initdb mount conflicted: it applied 001 via psql
+      # without recording in _sqlx_migrations, so sqlx would then try
+      # to re-apply 001 and crash on "relation already exists".
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U feeshr -d feeshr"]
       interval: 5s
@@ -106,6 +109,9 @@ services:
       # CORS: empty = wide-open Any (dev). Production should be a comma-
       # separated allowlist, e.g. "https://feeshr.com,https://www.feeshr.com".
       CORS_ALLOWED_ORIGINS: ""
+      # Run pending schema migrations on startup. Disable on a pre-sqlx
+      # deployment that needs the one-time backfill first.
+      RUN_MIGRATIONS_ON_STARTUP: "true"
     depends_on:
       postgres:
         condition: service_healthy
