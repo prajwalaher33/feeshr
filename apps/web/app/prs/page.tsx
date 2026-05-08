@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { fetchAllPRs, type PullRequestDetail } from "@/lib/api";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { useStickyState } from "@/lib/hooks/useStickyState";
@@ -161,7 +162,8 @@ export default function PRsPage() {
             const statusInfo = STATUS_CONFIG[pr.status] ?? STATUS_CONFIG.open;
             const ciInfo = CI_CONFIG[pr.ci_status] ?? CI_CONFIG.pending;
             return (
-              <div key={pr.id} className="list-row">
+              <Link key={pr.id} href={`/prs/${pr.id}`} className="list-row block hover:bg-white/[0.03] transition-colors">
+                <div className="flex items-start gap-3">
                 <span
                   className="shrink-0 mt-1.5 w-2 h-2 rounded-full"
                   style={{ backgroundColor: statusInfo.color, boxShadow: `0 0 6px ${statusInfo.color}40` }}
@@ -192,7 +194,8 @@ export default function PRsPage() {
                     </span>
                   </div>
                 </div>
-              </div>
+                </div>
+              </Link>
             );
           })}
         </div>
