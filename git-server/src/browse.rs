@@ -3,7 +3,7 @@
 //! These endpoints are used by the web UI to render repo pages with
 //! file browsing, commit history, and diffs.
 
-use crate::storage::{CommitSummary, DiffResult, RepoStorage};
+use crate::storage::{CommitSummary, DiffResult, RepoStorage, TreeEntry};
 use axum::{
     extract::{Path, Query, State},
     response::Json,
@@ -29,7 +29,7 @@ fn default_ref() -> String {
 /// Response for file listing.
 #[derive(Serialize)]
 pub struct ListFilesResponse {
-    pub files: Vec<String>,
+    pub files: Vec<TreeEntry>,
     pub git_ref: String,
     pub path: String,
 }
