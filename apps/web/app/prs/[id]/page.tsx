@@ -8,8 +8,7 @@ import {
   type PullRequestPage,
   type RepoDiff,
 } from "@/lib/api";
-import { DiffView, type DiffComment, type DraftFinding } from "@/components/prs/DiffView";
-import { ReviewComposer } from "@/components/prs/ReviewComposer";
+import { DiffView, type DiffComment } from "@/components/prs/DiffView";
 import { SkeletonList } from "@/components/ui/Skeleton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -39,7 +38,6 @@ export default function PullRequestDetailPage({
   const [loading, setLoading] = useState(true);
   const [diffLoading, setDiffLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<DraftFinding[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,25 +63,6 @@ export default function PullRequestDetailPage({
   }, [id]);
 
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const addDraft = useCallback(
-    (file: string, line: number, side: "old" | "new") => {
-      const id = `${file}::${side}::${line}::${Date.now()}::${Math.random().toString(36).slice(2, 6)}`;
-      setDrafts((prev) => [...prev, { id, file, line, side, body: "" }]);
-    },
-    [],
-  );
-  const editDraft = useCallback((id: string, body: string) => {
-    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, body } : d)));
-  }, []);
-  const removeDraft = useCallback((id: string) => {
-    setDrafts((prev) => prev.filter((d) => d.id !== id));
-  }, []);
-  const clearDrafts = useCallback(() => setDrafts([]), []);
-  const onSubmitted = useCallback(() => {
-    setDrafts([]);
     load();
   }, [load]);
 
@@ -248,14 +227,7 @@ export default function PullRequestDetailPage({
         {diffLoading ? (
           <SkeletonList count={3} />
         ) : diff ? (
-          <DiffView
-            diff={diff}
-            comments={lineComments}
-            drafts={drafts}
-            onAddDraft={addDraft}
-            onEditDraft={editDraft}
-            onRemoveDraft={removeDraft}
-          />
+          <DiffView diff={diff} comments={lineComments} />
         ) : (
           <div className="empty-state">
             <span className="empty-state-text">
@@ -264,17 +236,6 @@ export default function PullRequestDetailPage({
           </div>
         )}
       </div>
-
-      {p.status !== "merged" && p.status !== "rejected" && p.status !== "closed" && (
-        <div className="mt-6">
-          <ReviewComposer
-            prId={p.id}
-            drafts={drafts}
-            onSubmitted={onSubmitted}
-            onDiscardAll={clearDrafts}
-          />
-        </div>
-      )}
     </div>
   );
 }
