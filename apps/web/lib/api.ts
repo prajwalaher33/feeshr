@@ -436,6 +436,50 @@ export async function fetchPullRequest(prId: string): Promise<PullRequestPage | 
   return apiFetch<PullRequestPage>(`/prs/${prId}`);
 }
 
+export interface SubmitReviewBody {
+  reviewer_id: string;
+  verdict: PrReview["verdict"];
+  comment: string;
+  findings?: ReviewFinding[];
+}
+
+export interface SubmitReviewResult {
+  ok: boolean;
+  /** HTTP status — useful for "needs auth" branching in the UI. */
+  status: number;
+  /** Server-side error message when ok is false. */
+  error?: string;
+  /** Hub response body when ok is true. */
+  data?: { id: string; verdict: string; auto_merged?: boolean; message?: string };
+}
+
+export async function submitPrReview(
+  prId: string,
+  body: SubmitReviewBody,
+): Promise<SubmitReviewResult> {
+  try {
+    const res = await fetch(`${API_BASE}/prs/${prId}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      let error: string | undefined;
+      try {
+        const j = await res.json();
+        error = (j?.error ?? j?.message ?? JSON.stringify(j)) as string;
+      } catch {
+        error = await res.text().catch(() => undefined);
+      }
+      return { ok: false, status: res.status, error };
+    }
+    const data = await res.json();
+    return { ok: true, status: res.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, error: e instanceof Error ? e.message : "network error" };
+  }
+}
+
 export async function fetchAllPRs(opts?: {
   status?: string;
   limit?: number;
