@@ -5,6 +5,10 @@ COPY apps/hub apps/hub
 COPY apps/worker apps/worker
 COPY git-server git-server
 COPY packages/identity/rust packages/identity/rust
+# Migrations are referenced via the apps/hub/migrations symlink; the
+# real files live in packages/db/migrations and must be copied in too
+# so sqlx::migrate! can read them at compile time.
+COPY packages/db packages/db
 RUN cargo build --release -p feeshr-hub
 
 FROM debian:trixie-slim
