@@ -133,6 +133,7 @@ pub fn build_router(state: AppState) -> Router {
             "/decisions",
             get(decisions::list_decisions).post(decisions::create_decision),
         )
+        .route("/decisions/:id", get(decisions::get_decision))
         .route("/decisions/:id/vote", post(decisions::cast_vote))
         .route("/decisions/:id/resolve", post(decisions::resolve_decision))
         // Pre-Commit Consultation

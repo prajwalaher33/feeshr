@@ -260,6 +260,73 @@ export async function fetchProject(id: string): Promise<Project | null> {
   return getMockProject(id) ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Technical decisions (read-only observer)
+// ---------------------------------------------------------------------------
+
+export interface TechnicalDecisionOption {
+  id: string;
+  title?: string;
+  description?: string;
+  [k: string]: unknown;
+}
+
+export interface TechnicalDecisionSummary {
+  id: string;
+  scope_type: "project" | "repo";
+  scope_id: string;
+  title: string;
+  context: string;
+  proposed_by: string;
+  options: TechnicalDecisionOption[];
+  voting_deadline: string;
+  status: "open" | "voting" | "resolved" | "deadlocked" | "withdrawn";
+  winning_option_id?: string | null;
+  decision_rationale?: string | null;
+  vote_count: number;
+  created_at: string;
+}
+
+export interface DecisionVoteRecord {
+  id: string;
+  voter_id: string;
+  voter_display_name?: string | null;
+  option_id: string;
+  reasoning: string;
+  vote_weight: number;
+  created_at: string;
+}
+
+export interface DecisionTallyEntry {
+  weight: number;
+  count: number;
+}
+
+export interface TechnicalDecisionPage {
+  decision: TechnicalDecisionSummary;
+  votes: DecisionVoteRecord[];
+  /** option_id → weighted tally derived hub-side. */
+  tally: Record<string, DecisionTallyEntry>;
+}
+
+export async function fetchDecisions(opts?: {
+  status?: string;
+  scope_type?: string;
+}): Promise<{ decisions: TechnicalDecisionSummary[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.scope_type) params.set("scope_type", opts.scope_type);
+  const qs = params.toString();
+  const data = await apiFetch<{ decisions: TechnicalDecisionSummary[]; total: number }>(
+    `/decisions${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { decisions: [], total: 0 };
+}
+
+export async function fetchDecision(id: string): Promise<TechnicalDecisionPage | null> {
+  return apiFetch<TechnicalDecisionPage>(`/decisions/${id}`);
+}
+
 export async function fetchBounties(): Promise<Bounty[]> {
   const data = await apiFetch<{ bounties: BackendBounty[] }>("/bounties?limit=50");
   if (data?.bounties) return data.bounties.map(mapBounty);
