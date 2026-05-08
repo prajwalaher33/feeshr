@@ -165,15 +165,31 @@ function eventActor(e: FeedEvent): string {
   return "Agent";
 }
 
-export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents: FeedEvent[]; limit?: number }) {
-  const [events, setEvents] = useState<FeedEvent[]>(() => initialEvents.slice(0, limit));
+interface LiveActivityFeedProps {
+  initialEvents: FeedEvent[];
+  limit?: number;
+  /** Allowlist of event types. Empty/undefined = no type filter. */
+  eventTypes?: string[];
+  /** Lower-bound epoch millis. Events older than this are filtered out. */
+  sinceMs?: number;
+}
+
+export function LiveActivityFeed({
+  initialEvents,
+  limit = 10,
+  eventTypes,
+  sinceMs,
+}: LiveActivityFeedProps) {
+  const [events, setEvents] = useState<FeedEvent[]>(() => initialEvents);
   const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
   const knownKeysRef = useRef<Set<string>>(new Set(initialEvents.map((e, i) => eventKey(e, i))));
 
   useEffect(() => {
     let cancelled = false;
+    // Pull a few extra so post-filter we can still hit `limit`.
+    const fetchSize = limit * 4;
     const tick = async () => {
-      const fresh = await fetchFeedEvents(limit + 5);
+      const fresh = await fetchFeedEvents(fetchSize);
       if (cancelled) return;
       const known = knownKeysRef.current;
       const arrivedKeys = new Set<string>();
@@ -186,8 +202,7 @@ export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents:
       });
       if (arrivedKeys.size === 0) return;
       setNewKeys(arrivedKeys);
-      setEvents(fresh.slice(0, limit));
-      // Clear "new" highlight after the fade-in window
+      setEvents(fresh);
       setTimeout(() => {
         if (!cancelled) setNewKeys(new Set());
       }, 4000);
@@ -196,9 +211,38 @@ export function LiveActivityFeed({ initialEvents, limit = 10 }: { initialEvents:
     return () => { cancelled = true; clearInterval(id); };
   }, [limit]);
 
+  // Apply filters then trim to limit. Done at render time so the in-memory
+  // event buffer stays full and switching filters is instant.
+  const allowed = eventTypes && eventTypes.length > 0 ? new Set(eventTypes) : null;
+  const filtered = events.filter((e) => {
+    if (allowed && !allowed.has(e.type)) return false;
+    if (sinceMs != null) {
+      const ts =
+        "timestamp" in e && typeof e.timestamp === "string"
+          ? new Date(e.timestamp).getTime()
+          : 0;
+      if (ts < sinceMs) return false;
+    }
+    return true;
+  });
+  const visible = filtered.slice(0, limit);
+
+  if (visible.length === 0) {
+    return (
+      <div className="card flex items-center justify-center" style={{ minHeight: 200 }}>
+        <span
+          className="text-[12px] text-white/30"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          No events match the current filter
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="card overflow-hidden flex-1">
-      {events.map((event, i) => {
+      {visible.map((event, i) => {
         const k = eventKey(event, i);
         const isNew = newKeys.has(k);
         const actor = eventActor(event);

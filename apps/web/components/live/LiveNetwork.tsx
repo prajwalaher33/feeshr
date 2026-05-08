@@ -1,12 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchAgents, fetchFeedEvents, getStats } from "@/lib/api";
 import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
 import { AgentConstellation } from "./AgentConstellation";
 import { ActivitySparkline } from "./ActivitySparkline";
 import { CountUp } from "@/components/ui/CountUp";
+import { useStickyState } from "@/lib/hooks/useStickyState";
 import type { FeedEvent } from "@/lib/types/events";
+
+type TimeWindow = "1h" | "24h" | "7d" | "all";
+
+const TIME_WINDOWS: { key: TimeWindow; label: string; ms: number | null }[] = [
+  { key: "1h", label: "1h", ms: 60 * 60_000 },
+  { key: "24h", label: "24h", ms: 24 * 60 * 60_000 },
+  { key: "7d", label: "7d", ms: 7 * 24 * 60 * 60_000 },
+  { key: "all", label: "all", ms: null },
+];
+
+const TYPE_FILTERS: { key: string; label: string; types: string[] }[] = [
+  { key: "all", label: "All", types: [] },
+  { key: "prs", label: "PRs", types: ["pr_submitted", "pr_reviewed", "pr_merged"] },
+  { key: "repos", label: "Repos", types: ["repo_created", "package_published"] },
+  { key: "issues", label: "Issues", types: ["issue_opened", "security_finding"] },
+  { key: "bounties", label: "Bounties", types: ["bounty_posted", "bounty_completed"] },
+  { key: "agents", label: "Agents", types: ["agent_connected", "reputation_milestone", "reputation_updated"] },
+];
 
 interface LiveStats {
   agentsTotal: number;
@@ -32,6 +51,18 @@ export function LiveNetwork() {
   const [stats, setStats] = useState<LiveStats>({ agentsTotal: 0, prsToday: 0, mergesToday: 0 });
   const [initialEvents, setInitialEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeWindow, setTimeWindow] = useStickyState<TimeWindow>("feeshr:activity:window", "all");
+  const [typeFilter, setTypeFilter] = useStickyState<string>("feeshr:activity:types", "all");
+
+  const sinceMs = useMemo(() => {
+    const w = TIME_WINDOWS.find((t) => t.key === timeWindow);
+    return w?.ms != null ? Date.now() - w.ms : undefined;
+  }, [timeWindow]);
+
+  const eventTypes = useMemo(() => {
+    const f = TYPE_FILTERS.find((t) => t.key === typeFilter);
+    return f && f.types.length > 0 ? f.types : undefined;
+  }, [typeFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,12 +150,60 @@ export function LiveNetwork() {
               In plain English
             </span>
           </div>
+
+          {/* Filter pills — type and time window. */}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {TYPE_FILTERS.map((f) => {
+                const active = typeFilter === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setTypeFilter(f.key)}
+                    className={active ? "pill pill-active" : "pill pill-inactive"}
+                    aria-pressed={active}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span
+                className="text-[10px] text-white/30 uppercase tracking-[0.12em] mr-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Window
+              </span>
+              {TIME_WINDOWS.map((w) => {
+                const active = timeWindow === w.key;
+                return (
+                  <button
+                    key={w.key}
+                    type="button"
+                    onClick={() => setTimeWindow(w.key)}
+                    className={active ? "pill pill-active" : "pill pill-inactive"}
+                    aria-pressed={active}
+                  >
+                    {w.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {loading ? (
             <div className="card p-6 flex items-center justify-center" style={{ minHeight: 320 }}>
               <div className="spinner" />
             </div>
           ) : (
-            <LiveActivityFeed initialEvents={initialEvents} limit={12} />
+            <LiveActivityFeed
+              initialEvents={initialEvents}
+              limit={12}
+              eventTypes={eventTypes}
+              sinceMs={sinceMs}
+            />
           )}
         </div>
       </section>
