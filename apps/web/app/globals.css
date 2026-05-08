@@ -7,15 +7,14 @@
   --color-muted: #64748b;
   --color-body: #8891a5;
 
-  /* Deep blue-black palette — the page itself paints the gradient on body. */
-  --color-bg: #0B1216;
-  --color-bg-mid: #0E1A20;
-  --color-bg-far: #0F2027;
-  --color-surface: #111C22;
-  --color-raised: #162831;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-hover: rgba(255, 255, 255, 0.15);
-  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  /* Pure black background; surfaces are silver-grey glass on top.
+     Reference: the "2nd place" Hall-of-Fame podium card on /leaderboard. */
+  --color-bg: #000000;
+  --color-surface: rgba(203, 213, 225, 0.07);
+  --color-raised: rgba(203, 213, 225, 0.10);
+  --color-border: rgba(203, 213, 225, 0.25);
+  --color-border-hover: rgba(203, 213, 225, 0.40);
+  --color-border-subtle: rgba(203, 213, 225, 0.12);
 
   --color-cyan: #22d3ee;
   --color-cyan-light: #67e8f9;
@@ -27,16 +26,16 @@
   --color-violet: #8b5cf6;
   --color-indigo: #6366f1;
 
-  --color-nav-bg: rgba(11, 18, 22, 0.72);
-  --color-nav-border: rgba(255, 255, 255, 0.08);
-  --color-card-bg: #111C22;
-  --color-card-border: rgba(255, 255, 255, 0.08);
-  --color-pill-bg: rgba(255, 255, 255, 0.03);
-  --color-pill-border: rgba(255, 255, 255, 0.08);
-  --color-tag-bg: rgba(255, 255, 255, 0.04);
-  --color-tag-border: rgba(255, 255, 255, 0.08);
-  --color-divider: rgba(255, 255, 255, 0.08);
-  --color-footer-border: rgba(255, 255, 255, 0.08);
+  --color-nav-bg: rgba(0, 0, 0, 0.72);
+  --color-nav-border: rgba(203, 213, 225, 0.18);
+  --color-card-bg: rgba(203, 213, 225, 0.07);
+  --color-card-border: rgba(203, 213, 225, 0.25);
+  --color-pill-bg: rgba(203, 213, 225, 0.05);
+  --color-pill-border: rgba(203, 213, 225, 0.18);
+  --color-tag-bg: rgba(203, 213, 225, 0.06);
+  --color-tag-border: rgba(203, 213, 225, 0.18);
+  --color-divider: rgba(203, 213, 225, 0.12);
+  --color-footer-border: rgba(203, 213, 225, 0.18);
 
   --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -49,11 +48,8 @@ html { scroll-behavior: smooth; }
 body {
   font-family: var(--font-body);
   color: var(--color-primary);
-  /* Deep blue-black gradient — fixed so it paints once and doesn't tile on scroll. */
-  background-color: var(--color-bg);
-  background-image: linear-gradient(180deg, #0B1216 0%, #0E1A20 50%, #0F2027 100%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  /* Pure black canvas — every surface is a glass pane on top. */
+  background-color: #000000;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -81,22 +77,22 @@ body {
 }
 
 /* ===== CARD =====
-   Glass panel: #111C22 at ~85% opacity + backdrop blur, with a subtle
-   white border glow per the brand spec. */
+   Silver-grey glass over the black page, modeled on the "2nd place"
+   Hall-of-Fame podium card. Soft blur + low-alpha silver fill + a
+   visible silver-grey border. */
 .card {
-  background-color: rgba(17, 28, 34, 0.85);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  background-color: rgba(203, 213, 225, 0.07);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid var(--color-card-border);
   border-radius: 14px;
   position: relative;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.02),
-    0 1px 2px rgba(0,0,0,0.4),
-    0 4px 12px rgba(0,0,0,0.2),
-    0 12px 40px rgba(0,0,0,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.04),
-    inset 0 -1px 0 rgba(0,0,0,0.2);
+    0 1px 2px rgba(0,0,0,0.5),
+    0 6px 20px rgba(0,0,0,0.35),
+    0 16px 48px rgba(0,0,0,0.18),
+    inset 0 1px 0 rgba(203,213,225,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.25);
 }
 .card::before {
   content: '';
@@ -113,22 +109,33 @@ body {
 }
 
 .card-hover {
-  background-color: rgba(17, 28, 34, 0.85);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  background-color: rgba(203, 213, 225, 0.07);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid var(--color-card-border);
   border-radius: 14px;
   transition:
     border-color 0.35s cubic-bezier(0.4,0,0.2,1),
     box-shadow 0.35s cubic-bezier(0.4,0,0.2,1),
-    transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    transform 0.35s cubic-bezier(0.4,0,0.2,1),
+    background-color 0.35s cubic-bezier(0.4,0,0.2,1);
   position: relative;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.02),
-    0 1px 2px rgba(0,0,0,0.4),
-    0 4px 12px rgba(0,0,0,0.2),
-    0 12px 40px rgba(0,0,0,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 1px 2px rgba(0,0,0,0.5),
+    0 6px 20px rgba(0,0,0,0.35),
+    0 16px 48px rgba(0,0,0,0.18),
+    inset 0 1px 0 rgba(203,213,225,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.25);
+}
+.card-hover:hover {
+  background-color: rgba(203, 213, 225, 0.10);
+  border-color: rgba(203, 213, 225, 0.40);
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.55),
+    0 12px 30px rgba(0,0,0,0.4),
+    0 24px 60px rgba(0,0,0,0.22),
+    inset 0 1px 0 rgba(203,213,225,0.14),
     inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 .card-hover::before {
@@ -145,31 +152,17 @@ body {
   pointer-events: none;
   transition: opacity 0.35s cubic-bezier(0.4,0,0.2,1);
 }
-.card-hover:hover {
-  border-color: rgba(34, 211, 238, 0.15);
-  box-shadow:
-    0 0 0 1px rgba(34,211,238,0.06),
-    0 0 20px rgba(34, 211, 238, 0.04),
-    0 0 60px rgba(34, 211, 238, 0.025),
-    0 2px 4px rgba(0,0,0,0.5),
-    0 8px 24px rgba(0,0,0,0.3),
-    0 20px 60px rgba(0,0,0,0.2),
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    inset 0 -1px 0 rgba(0,0,0,0.15);
-  transform: translateY(-2px);
-}
-
 /* ===== NAVBAR ===== */
 .nav-top {
   backdrop-filter: blur(48px) saturate(1.8);
   -webkit-backdrop-filter: blur(48px) saturate(1.8);
-  background: linear-gradient(180deg, rgba(11,18,22,0.65) 0%, rgba(14,26,32,0.55) 100%);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  background: rgba(0, 0, 0, 0.55);
+  border-bottom: 1px solid rgba(203, 213, 225, 0.12);
 }
 .nav-scrolled {
   backdrop-filter: blur(48px) saturate(1.8);
   -webkit-backdrop-filter: blur(48px) saturate(1.8);
-  background: linear-gradient(180deg, rgba(17,28,34,0.92) 0%, rgba(14,26,32,0.88) 100%);
+  background: rgba(0, 0, 0, 0.85);
   border-bottom: 1px solid var(--color-card-border);
   box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.02) inset;
 }

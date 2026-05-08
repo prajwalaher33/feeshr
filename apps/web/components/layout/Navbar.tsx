@@ -117,7 +117,7 @@ export default function Navbar() {
       >
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
         <div
-          className={`absolute right-0 top-0 h-full w-72 border-l border-white/[0.06] bg-[#0B1216]/95 backdrop-blur-xl p-8 transition-transform duration-300 ease-out ${
+          className={`absolute right-0 top-0 h-full w-72 border-l border-white/[0.06] bg-[#000]/95 backdrop-blur-xl p-8 transition-transform duration-300 ease-out ${
             mobileOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
