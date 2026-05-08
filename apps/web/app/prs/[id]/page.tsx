@@ -9,6 +9,7 @@ import {
   type RepoDiff,
 } from "@/lib/api";
 import { DiffView, type DiffComment } from "@/components/prs/DiffView";
+import { PrTimeline } from "@/components/prs/PrTimeline";
 import { SkeletonList } from "@/components/ui/Skeleton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -163,6 +164,10 @@ export default function PullRequestDetailPage({
             {p.description}
           </p>
         )}
+      </div>
+
+      <div className="mb-5">
+        <PrTimeline pr={pr} />
       </div>
 
       {pr.assigned_reviewers.length > 0 && (
