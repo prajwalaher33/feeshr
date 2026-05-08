@@ -1,10 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { RepoDiff, DiffFileStat } from "@/lib/api";
+import type { RepoDiff, DiffFileStat, ReviewFinding, PrReview } from "@/lib/api";
+
+/** A line-level review comment with reviewer metadata for inline display. */
+export interface DiffComment extends ReviewFinding {
+  reviewer_id: string;
+  reviewer_display_name?: string;
+  verdict: PrReview["verdict"];
+  created_at: string;
+}
 
 interface DiffViewProps {
   diff: RepoDiff;
+  /** Line-anchored review comments to render in-thread under matching rows. */
+  comments?: DiffComment[];
 }
 
 interface ParsedFile {
@@ -125,11 +135,78 @@ const KIND_PREFIX: Record<HunkLine["kind"], string> = {
   meta: " ",
 };
 
-export function DiffView({ diff }: DiffViewProps) {
+function CommentThread({ comments }: { comments: DiffComment[] }) {
+  return (
+    <div
+      className="px-3 py-2 border-y"
+      style={{
+        background: "rgba(34,211,238,0.04)",
+        borderColor: "rgba(34,211,238,0.12)",
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        {comments.map((c, i) => {
+          const sevColor = c.severity ? SEVERITY_DOT[c.severity] : VERDICT_DOT[c.verdict];
+          return (
+            <div key={i} className="flex items-start gap-2">
+              <span
+                className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: sevColor, boxShadow: `0 0 4px ${sevColor}66` }}
+              />
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[10px] text-white/40 mb-0.5 flex items-center gap-2"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  <span>{c.reviewer_display_name ?? c.reviewer_id.slice(0, 12)}</span>
+                  {c.severity && (
+                    <span style={{ color: sevColor }}>· {c.severity}</span>
+                  )}
+                  <span className="ml-auto">{new Date(c.created_at).toLocaleString()}</span>
+                </div>
+                <p className="text-[12px] text-white/85 leading-relaxed whitespace-pre-wrap m-0">
+                  {c.body}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Build "file::side::line" → comments lookup so lookup per row is O(1). */
+function indexComments(comments: DiffComment[] | undefined): Map<string, DiffComment[]> {
+  const out = new Map<string, DiffComment[]>();
+  for (const c of comments ?? []) {
+    const side = c.side ?? "new";
+    const key = `${c.file}::${side}::${c.line}`;
+    const arr = out.get(key);
+    if (arr) arr.push(c);
+    else out.set(key, [c]);
+  }
+  return out;
+}
+
+const VERDICT_DOT: Record<DiffComment["verdict"], string> = {
+  approve: "#28c840",
+  request_changes: "#f7c948",
+  reject: "#ff6b6b",
+};
+
+const SEVERITY_DOT: Record<NonNullable<DiffComment["severity"]>, string> = {
+  info: "#22d3ee",
+  warn: "#f7c948",
+  error: "#ff6b6b",
+};
+
+export function DiffView({ diff, comments }: DiffViewProps) {
   const files = useMemo(
     () => parseUnifiedDiff(diff.diff ?? "", diff.files ?? []),
     [diff.diff, diff.files],
   );
+  const commentIndex = useMemo(() => indexComments(comments), [comments]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const toggle = (key: string) =>
@@ -166,6 +243,9 @@ export function DiffView({ diff }: DiffViewProps) {
       {files.map((f) => {
         const key = f.newPath || f.oldPath;
         const isCollapsed = collapsed.has(key);
+        const fileComments = (comments ?? []).filter(
+          (c) => c.file === f.newPath || c.file === f.oldPath,
+        );
         return (
           <div key={key} className="card overflow-hidden">
             <button
@@ -180,6 +260,20 @@ export function DiffView({ diff }: DiffViewProps) {
               <span className="flex-1 truncate text-[13px] text-white/85" style={{ fontFamily: "var(--font-mono)" }}>
                 {f.newPath !== f.oldPath && f.oldPath ? `${f.oldPath} → ${f.newPath}` : f.newPath || f.oldPath}
               </span>
+              {fileComments.length > 0 && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{
+                    color: "#22d3ee",
+                    background: "rgba(34,211,238,0.08)",
+                    border: "1px solid rgba(34,211,238,0.18)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                  title={`${fileComments.length} review comment${fileComments.length !== 1 ? "s" : ""}`}
+                >
+                  {fileComments.length}
+                </span>
+              )}
               {f.stat && (
                 <span className="flex items-center gap-2 text-[11px]" style={{ fontFamily: "var(--font-mono)" }}>
                   {f.stat.binary ? (
@@ -210,38 +304,58 @@ export function DiffView({ diff }: DiffViewProps) {
                       >
                         {h.header}
                       </div>
-                      {h.lines.map((ln, li) => (
-                        <div
-                          key={li}
-                          className="grid"
-                          style={{
-                            gridTemplateColumns: "44px 44px 16px 1fr",
-                            background: KIND_BG[ln.kind],
-                            borderLeft: `2px solid ${KIND_GUTTER[ln.kind]}`,
-                          }}
-                        >
-                          <span className="text-right pr-2 text-white/25 select-none">
-                            {ln.oldNo ?? ""}
-                          </span>
-                          <span className="text-right pr-2 text-white/25 select-none">
-                            {ln.newNo ?? ""}
-                          </span>
-                          <span
-                            className="text-center select-none"
-                            style={{
-                              color:
-                                ln.kind === "add"
-                                  ? "#28c840"
-                                  : ln.kind === "del"
-                                    ? "#ff6b6b"
-                                    : "rgba(203,213,225,0.30)",
-                            }}
-                          >
-                            {KIND_PREFIX[ln.kind]}
-                          </span>
-                          <span className="text-white/85 whitespace-pre">{ln.text}</span>
-                        </div>
-                      ))}
+                      {h.lines.map((ln, li) => {
+                        // A comment can anchor to either side of the diff;
+                        // check both keys so context lines (which have both
+                        // line numbers) match comments on either side.
+                        const onNew =
+                          ln.newNo != null
+                            ? commentIndex.get(`${f.newPath}::new::${ln.newNo}`) ??
+                              commentIndex.get(`${f.oldPath}::new::${ln.newNo}`)
+                            : undefined;
+                        const onOld =
+                          ln.oldNo != null
+                            ? commentIndex.get(`${f.newPath}::old::${ln.oldNo}`) ??
+                              commentIndex.get(`${f.oldPath}::old::${ln.oldNo}`)
+                            : undefined;
+                        const lineComments = [...(onNew ?? []), ...(onOld ?? [])];
+                        return (
+                          <div key={li}>
+                            <div
+                              className="grid"
+                              style={{
+                                gridTemplateColumns: "44px 44px 16px 1fr",
+                                background: KIND_BG[ln.kind],
+                                borderLeft: `2px solid ${KIND_GUTTER[ln.kind]}`,
+                              }}
+                            >
+                              <span className="text-right pr-2 text-white/25 select-none">
+                                {ln.oldNo ?? ""}
+                              </span>
+                              <span className="text-right pr-2 text-white/25 select-none">
+                                {ln.newNo ?? ""}
+                              </span>
+                              <span
+                                className="text-center select-none"
+                                style={{
+                                  color:
+                                    ln.kind === "add"
+                                      ? "#28c840"
+                                      : ln.kind === "del"
+                                        ? "#ff6b6b"
+                                        : "rgba(203,213,225,0.30)",
+                                }}
+                              >
+                                {KIND_PREFIX[ln.kind]}
+                              </span>
+                              <span className="text-white/85 whitespace-pre">{ln.text}</span>
+                            </div>
+                            {lineComments.length > 0 && (
+                              <CommentThread comments={lineComments} />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
                 </pre>
