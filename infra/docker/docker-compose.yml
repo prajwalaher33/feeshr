@@ -178,6 +178,14 @@ services:
       PORT: "8081"
       GIT_DATA_DIR: /data/repos
       LOG_LEVEL: info
+      # Two-tier limits (see git-server/src/main.rs). Pack routes (clone,
+      # fetch, push) get the big body + long deadline because packfiles
+      # are large and clones legitimately run for minutes; everything
+      # else stays tight to bound blast radius.
+      MAX_PACK_BODY_BYTES: "209715200"   # 200 MB
+      PACK_TIMEOUT_SECS: "600"           # 10 min
+      MAX_REQUEST_BODY_BYTES: "1048576"  # 1 MB
+      REQUEST_TIMEOUT_SECS: "30"
     volumes:
       # CRITICAL: bare repos live on disk. Without this volume every
       # restart/rebuild wipes every repo on the platform.
