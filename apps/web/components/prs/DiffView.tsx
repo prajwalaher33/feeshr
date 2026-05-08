@@ -1,0 +1,260 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { RepoDiff, DiffFileStat } from "@/lib/api";
+
+interface DiffViewProps {
+  diff: RepoDiff;
+}
+
+interface ParsedFile {
+  stat: DiffFileStat | null;
+  /** Header lines from the diff (diff --git, ---, +++, etc.) — not rendered as hunk lines. */
+  oldPath: string;
+  newPath: string;
+  hunks: Hunk[];
+}
+
+interface Hunk {
+  header: string;
+  lines: HunkLine[];
+}
+
+interface HunkLine {
+  kind: "ctx" | "add" | "del" | "meta";
+  oldNo: number | null;
+  newNo: number | null;
+  text: string;
+}
+
+function parseUnifiedDiff(raw: string, stats: DiffFileStat[]): ParsedFile[] {
+  const statByPath = new Map(stats.map((s) => [s.path, s] as const));
+  const lines = raw.split("\n");
+  const files: ParsedFile[] = [];
+  let cur: ParsedFile | null = null;
+  let curHunk: Hunk | null = null;
+  let oldNo = 0;
+  let newNo = 0;
+
+  const flushFile = () => {
+    if (cur) files.push(cur);
+    cur = null;
+    curHunk = null;
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("diff --git ")) {
+      flushFile();
+      // "diff --git a/path b/path" — pull the b/ side as canonical
+      const m = line.match(/^diff --git a\/(.+) b\/(.+)$/);
+      const oldPath = m?.[1] ?? "";
+      const newPath = m?.[2] ?? "";
+      cur = {
+        stat: statByPath.get(newPath) ?? statByPath.get(oldPath) ?? null,
+        oldPath,
+        newPath,
+        hunks: [],
+      };
+      continue;
+    }
+    if (!cur) continue;
+
+    if (line.startsWith("@@")) {
+      // @@ -oldStart,oldLines +newStart,newLines @@ ...
+      const m = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      oldNo = m ? parseInt(m[1], 10) : 0;
+      newNo = m ? parseInt(m[2], 10) : 0;
+      curHunk = { header: line, lines: [] };
+      cur.hunks.push(curHunk);
+      continue;
+    }
+
+    // Skip the per-file header lines (---, +++, index, mode changes, binary)
+    if (
+      !curHunk &&
+      (line.startsWith("---") ||
+        line.startsWith("+++") ||
+        line.startsWith("index ") ||
+        line.startsWith("new file") ||
+        line.startsWith("deleted file") ||
+        line.startsWith("rename ") ||
+        line.startsWith("similarity ") ||
+        line.startsWith("Binary files"))
+    ) {
+      continue;
+    }
+
+    if (!curHunk) continue;
+    if (line.startsWith("+")) {
+      curHunk.lines.push({ kind: "add", oldNo: null, newNo: newNo++, text: line.slice(1) });
+    } else if (line.startsWith("-")) {
+      curHunk.lines.push({ kind: "del", oldNo: oldNo++, newNo: null, text: line.slice(1) });
+    } else if (line.startsWith("\\")) {
+      // "\ No newline at end of file" — keep as meta
+      curHunk.lines.push({ kind: "meta", oldNo: null, newNo: null, text: line });
+    } else {
+      // Context line — leading space, or empty line inside hunk
+      curHunk.lines.push({
+        kind: "ctx",
+        oldNo: oldNo++,
+        newNo: newNo++,
+        text: line.startsWith(" ") ? line.slice(1) : line,
+      });
+    }
+  }
+  flushFile();
+  return files;
+}
+
+const KIND_BG: Record<HunkLine["kind"], string> = {
+  add: "rgba(34,197,94,0.08)",
+  del: "rgba(239,68,68,0.08)",
+  ctx: "transparent",
+  meta: "rgba(203,213,225,0.04)",
+};
+const KIND_GUTTER: Record<HunkLine["kind"], string> = {
+  add: "rgba(34,197,94,0.18)",
+  del: "rgba(239,68,68,0.18)",
+  ctx: "rgba(203,213,225,0.12)",
+  meta: "rgba(203,213,225,0.10)",
+};
+const KIND_PREFIX: Record<HunkLine["kind"], string> = {
+  add: "+",
+  del: "-",
+  ctx: " ",
+  meta: " ",
+};
+
+export function DiffView({ diff }: DiffViewProps) {
+  const files = useMemo(
+    () => parseUnifiedDiff(diff.diff ?? "", diff.files ?? []),
+    [diff.diff, diff.files],
+  );
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const toggle = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  if (!diff.diff || files.length === 0) {
+    return (
+      <div className="empty-state">
+        <span className="empty-state-text">No changes between {diff.base} and {diff.head}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {diff.truncated && (
+        <div
+          className="text-[12px] px-3 py-2 rounded-lg"
+          style={{
+            color: "#f7c948",
+            background: "rgba(247,201,72,0.08)",
+            border: "1px solid rgba(247,201,72,0.18)",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          Diff was truncated at the server cap. Some hunks may be missing.
+        </div>
+      )}
+      {files.map((f) => {
+        const key = f.newPath || f.oldPath;
+        const isCollapsed = collapsed.has(key);
+        return (
+          <div key={key} className="card overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggle(key)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+              aria-expanded={!isCollapsed}
+            >
+              <span className="text-white/30 text-[10px] w-3" style={{ fontFamily: "var(--font-mono)" }}>
+                {isCollapsed ? "▸" : "▾"}
+              </span>
+              <span className="flex-1 truncate text-[13px] text-white/85" style={{ fontFamily: "var(--font-mono)" }}>
+                {f.newPath !== f.oldPath && f.oldPath ? `${f.oldPath} → ${f.newPath}` : f.newPath || f.oldPath}
+              </span>
+              {f.stat && (
+                <span className="flex items-center gap-2 text-[11px]" style={{ fontFamily: "var(--font-mono)" }}>
+                  {f.stat.binary ? (
+                    <span className="text-white/40">binary</span>
+                  ) : (
+                    <>
+                      <span className="text-[#28c840]">+{f.stat.additions ?? 0}</span>
+                      <span className="text-[#ff6b6b]">-{f.stat.deletions ?? 0}</span>
+                    </>
+                  )}
+                </span>
+              )}
+            </button>
+            {!isCollapsed && f.hunks.length > 0 && (
+              <div className="border-t border-white/[0.06] overflow-x-auto">
+                <pre
+                  className="text-[12px] leading-[1.55] m-0"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {f.hunks.map((h, hi) => (
+                    <div key={hi}>
+                      <div
+                        className="px-3 py-1 text-white/40 select-none"
+                        style={{
+                          background: "rgba(203,213,225,0.04)",
+                          borderTop: hi > 0 ? "1px solid rgba(203,213,225,0.06)" : "none",
+                        }}
+                      >
+                        {h.header}
+                      </div>
+                      {h.lines.map((ln, li) => (
+                        <div
+                          key={li}
+                          className="grid"
+                          style={{
+                            gridTemplateColumns: "44px 44px 16px 1fr",
+                            background: KIND_BG[ln.kind],
+                            borderLeft: `2px solid ${KIND_GUTTER[ln.kind]}`,
+                          }}
+                        >
+                          <span className="text-right pr-2 text-white/25 select-none">
+                            {ln.oldNo ?? ""}
+                          </span>
+                          <span className="text-right pr-2 text-white/25 select-none">
+                            {ln.newNo ?? ""}
+                          </span>
+                          <span
+                            className="text-center select-none"
+                            style={{
+                              color:
+                                ln.kind === "add"
+                                  ? "#28c840"
+                                  : ln.kind === "del"
+                                    ? "#ff6b6b"
+                                    : "rgba(203,213,225,0.30)",
+                            }}
+                          >
+                            {KIND_PREFIX[ln.kind]}
+                          </span>
+                          <span className="text-white/85 whitespace-pre">{ln.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </pre>
+              </div>
+            )}
+            {!isCollapsed && f.hunks.length === 0 && (
+              <div className="border-t border-white/[0.06] px-4 py-3 text-[12px] text-white/40" style={{ fontFamily: "var(--font-mono)" }}>
+                No textual hunks (likely binary or whitespace-only).
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
