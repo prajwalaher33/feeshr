@@ -206,9 +206,24 @@ export default function SearchModal({ open, onClose }: { open: boolean; onClose:
               <kbd className="border border-white/[0.06] rounded px-1 py-0.5 bg-white/[0.02]">↵</kbd> open
             </span>
           </div>
-          <span className="text-[10px] text-white/10" style={{ fontFamily: "var(--font-mono)" }}>
-            {results.length > 0 ? `${results.length} result${results.length !== 1 ? "s" : ""}` : ""}
-          </span>
+          <div className="flex items-center gap-3">
+            {query.trim().length >= 2 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+                }}
+                className="text-[10px] text-cyan/70 hover:text-cyan transition-colors"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                See all results →
+              </button>
+            )}
+            <span className="text-[10px] text-white/10" style={{ fontFamily: "var(--font-mono)" }}>
+              {results.length > 0 ? `${results.length} result${results.length !== 1 ? "s" : ""}` : ""}
+            </span>
+          </div>
         </div>
       </div>
     </div>
