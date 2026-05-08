@@ -382,6 +382,94 @@ pub async fn get_my_trace_stats(
     })))
 }
 
+// ─── Public observer endpoint ───────────────────────────────────
+
+/// Query parameters for public reasoning-activity.
+#[derive(Deserialize)]
+pub struct PublicActivityQuery {
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+    pub action_type: Option<String>,
+}
+
+/// Public, sanitized reasoning activity for an agent.
+///
+/// GET /api/v1/agents/:id/reasoning-activity
+///
+/// Returns metadata only — `context`, `reasoning_trace`, and `decision`
+/// stay agent-private. Humans observing the network can see *that* an
+/// agent reasoned on a thing, plus how long, how much, and how it
+/// turned out, but not the actual prompt or chain-of-thought.
+pub async fn get_public_reasoning_activity(
+    Path(agent_id): Path<String>,
+    Query(params): Query<PublicActivityQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<Value>, AppError> {
+    let limit = params.limit.unwrap_or(20).min(100);
+    let offset = params.offset.unwrap_or(0);
+
+    let traces: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(t) FROM (
+               SELECT id, action_type, action_ref_type, action_ref_id,
+                      context_tokens, reasoning_tokens, decision_tokens, total_tokens,
+                      outcome_quality, agent_model, reasoning_duration_ms, created_at
+               FROM reasoning_traces
+               WHERE agent_id = $1
+                 AND ($2::text IS NULL OR action_type = $2)
+               ORDER BY created_at DESC
+               LIMIT $3 OFFSET $4
+           ) t"#,
+    )
+    .bind(&agent_id)
+    .bind(&params.action_type)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await?;
+
+    let by_action: Vec<(String, i64)> = sqlx::query_as(
+        r#"SELECT action_type, COUNT(*)
+           FROM reasoning_traces
+           WHERE agent_id = $1
+           GROUP BY action_type
+           ORDER BY COUNT(*) DESC"#,
+    )
+    .bind(&agent_id)
+    .fetch_all(&state.db)
+    .await?;
+    let by_action_map: serde_json::Map<String, Value> = by_action
+        .iter()
+        .map(|(t, c)| (t.clone(), serde_json::json!(c)))
+        .collect();
+
+    let outcomes: Option<(Option<i64>, Option<i64>, Option<i64>)> = sqlx::query_as(
+        r#"SELECT
+               COUNT(*) FILTER (WHERE outcome_quality = 'positive'),
+               COUNT(*) FILTER (WHERE outcome_quality = 'negative'),
+               COUNT(*) FILTER (WHERE outcome_quality IN ('positive', 'negative'))
+           FROM reasoning_traces
+           WHERE agent_id = $1"#,
+    )
+    .bind(&agent_id)
+    .fetch_optional(&state.db)
+    .await?;
+    let (pos, neg, evaluated) = outcomes.unwrap_or((None, None, None));
+
+    let total: i64 = by_action.iter().map(|(_, c)| c).sum();
+
+    Ok(Json(serde_json::json!({
+        "agent_id": agent_id,
+        "total_traces": total,
+        "by_action_type": by_action_map,
+        "outcomes": {
+            "positive": pos.unwrap_or(0),
+            "negative": neg.unwrap_or(0),
+            "evaluated": evaluated.unwrap_or(0),
+        },
+        "traces": traces,
+    })))
+}
+
 // ─── Internal endpoints ─────────────────────────────────────────
 
 /// Export traces for SRC training.

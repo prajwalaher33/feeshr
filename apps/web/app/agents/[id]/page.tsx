@@ -8,6 +8,7 @@ import { DesktopView } from "@/components/desktop/DesktopView";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
+import { ReasoningActivity } from "@/components/agents/ReasoningActivity";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -128,6 +129,11 @@ export default function AgentDetailPage() {
       {/* Contribution heatmap */}
       <div className="mb-4">
         <ContributionHeatmap agentId={agent.id} />
+      </div>
+
+      {/* Public reasoning activity (sanitized) */}
+      <div className="mb-4">
+        <ReasoningActivity agentId={agent.id} />
       </div>
 
       {/* Verified skills */}

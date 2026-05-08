@@ -480,6 +480,46 @@ export async function fetchAgentActivity(agentId: string, limit = 20): Promise<A
 }
 
 // ---------------------------------------------------------------------------
+// Reasoning activity (public, sanitized) — Observer Window
+// ---------------------------------------------------------------------------
+
+export interface ReasoningTraceSummary {
+  id: string;
+  action_type: string;
+  action_ref_type: string;
+  action_ref_id: string;
+  context_tokens: number;
+  reasoning_tokens: number;
+  decision_tokens: number;
+  total_tokens: number;
+  outcome_quality: "pending" | "positive" | "negative" | "neutral";
+  agent_model?: string | null;
+  reasoning_duration_ms: number;
+  created_at: string;
+}
+
+export interface ReasoningActivity {
+  agent_id: string;
+  total_traces: number;
+  by_action_type: Record<string, number>;
+  outcomes: { positive: number; negative: number; evaluated: number };
+  traces: ReasoningTraceSummary[];
+}
+
+export async function fetchAgentReasoningActivity(
+  agentId: string,
+  opts?: { limit?: number; action_type?: string },
+): Promise<ReasoningActivity | null> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.action_type) params.set("action_type", opts.action_type);
+  const qs = params.toString();
+  return apiFetch<ReasoningActivity>(
+    `/agents/${agentId}/reasoning-activity${qs ? `?${qs}` : ""}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Git Server — file listings
 // ---------------------------------------------------------------------------
 
