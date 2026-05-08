@@ -11,24 +11,10 @@ export interface DiffComment extends ReviewFinding {
   created_at: string;
 }
 
-/** A draft (unsaved) line comment the reviewer is composing. */
-export interface DraftFinding extends ReviewFinding {
-  /** Stable client-side id so React can key edits/removes. */
-  id: string;
-}
-
 interface DiffViewProps {
   diff: RepoDiff;
   /** Line-anchored review comments to render in-thread under matching rows. */
   comments?: DiffComment[];
-  /** Local draft comments the reviewer is still composing. */
-  drafts?: DraftFinding[];
-  /** Called when the reviewer clicks the "+" on a diff line. */
-  onAddDraft?: (file: string, line: number, side: "old" | "new") => void;
-  /** Update a draft's body in place. */
-  onEditDraft?: (id: string, body: string) => void;
-  /** Discard a draft. */
-  onRemoveDraft?: (id: string) => void;
 }
 
 interface ParsedFile {
@@ -149,58 +135,6 @@ const KIND_PREFIX: Record<HunkLine["kind"], string> = {
   meta: " ",
 };
 
-function DraftEditor({
-  draft,
-  onEdit,
-  onRemove,
-}: {
-  draft: DraftFinding;
-  onEdit?: (id: string, body: string) => void;
-  onRemove?: (id: string) => void;
-}) {
-  return (
-    <div
-      className="px-3 py-2 border-y"
-      style={{
-        background: "rgba(247,201,72,0.05)",
-        borderColor: "rgba(247,201,72,0.18)",
-      }}
-    >
-      <div className="flex items-start gap-2">
-        <span
-          className="shrink-0 mt-1.5 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded"
-          style={{
-            color: "#f7c948",
-            background: "rgba(247,201,72,0.10)",
-            border: "1px solid rgba(247,201,72,0.25)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
-          draft
-        </span>
-        <textarea
-          value={draft.body}
-          autoFocus
-          rows={2}
-          placeholder="Leave a comment on this line..."
-          onChange={(e) => onEdit?.(draft.id, e.target.value)}
-          className="flex-1 min-w-0 bg-transparent border border-white/10 rounded px-2 py-1.5 text-[12px] text-white/85 leading-relaxed focus:outline-none focus:border-cyan/40 resize-y"
-          style={{ fontFamily: "var(--font-mono)" }}
-        />
-        <button
-          type="button"
-          onClick={() => onRemove?.(draft.id)}
-          className="shrink-0 mt-1 text-[10px] text-white/40 hover:text-[#ff6b6b] transition-colors"
-          style={{ fontFamily: "var(--font-mono)" }}
-          title="Discard"
-        >
-          remove
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function CommentThread({ comments }: { comments: DiffComment[] }) {
   return (
     <div
@@ -267,35 +201,13 @@ const SEVERITY_DOT: Record<NonNullable<DiffComment["severity"]>, string> = {
   error: "#ff6b6b",
 };
 
-/** Same shape as indexComments but for drafts. */
-function indexDrafts(drafts: DraftFinding[] | undefined): Map<string, DraftFinding[]> {
-  const out = new Map<string, DraftFinding[]>();
-  for (const d of drafts ?? []) {
-    const side = d.side ?? "new";
-    const key = `${d.file}::${side}::${d.line}`;
-    const arr = out.get(key);
-    if (arr) arr.push(d);
-    else out.set(key, [d]);
-  }
-  return out;
-}
-
-export function DiffView({
-  diff,
-  comments,
-  drafts,
-  onAddDraft,
-  onEditDraft,
-  onRemoveDraft,
-}: DiffViewProps) {
+export function DiffView({ diff, comments }: DiffViewProps) {
   const files = useMemo(
     () => parseUnifiedDiff(diff.diff ?? "", diff.files ?? []),
     [diff.diff, diff.files],
   );
   const commentIndex = useMemo(() => indexComments(comments), [comments]);
-  const draftIndex = useMemo(() => indexDrafts(drafts), [drafts]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const drafting = onAddDraft != null;
 
   const toggle = (key: string) =>
     setCollapsed((prev) => {
@@ -407,26 +319,10 @@ export function DiffView({
                               commentIndex.get(`${f.oldPath}::old::${ln.oldNo}`)
                             : undefined;
                         const lineComments = [...(onNew ?? []), ...(onOld ?? [])];
-                        const lineDrafts = [
-                          ...(ln.newNo != null
-                            ? draftIndex.get(`${f.newPath}::new::${ln.newNo}`) ?? []
-                            : []),
-                          ...(ln.oldNo != null
-                            ? draftIndex.get(`${f.newPath}::old::${ln.oldNo}`) ?? []
-                            : []),
-                        ];
-                        // Default-side for the "+" button: prefer "new" when
-                        // the line exists in the post-change file (add or
-                        // ctx); fall back to "old" for deletions.
-                        const draftSide: "old" | "new" =
-                          ln.newNo != null ? "new" : "old";
-                        const draftLine = ln.newNo ?? ln.oldNo;
-                        const canDraft =
-                          drafting && draftLine != null && ln.kind !== "meta";
                         return (
                           <div key={li}>
                             <div
-                              className="group grid"
+                              className="grid"
                               style={{
                                 gridTemplateColumns: "44px 44px 16px 1fr",
                                 background: KIND_BG[ln.kind],
@@ -436,26 +332,8 @@ export function DiffView({
                               <span className="text-right pr-2 text-white/25 select-none">
                                 {ln.oldNo ?? ""}
                               </span>
-                              <span className="text-right pr-2 text-white/25 select-none relative">
+                              <span className="text-right pr-2 text-white/25 select-none">
                                 {ln.newNo ?? ""}
-                                {canDraft && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onAddDraft?.(f.newPath, draftLine, draftSide)
-                                    }
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity absolute -left-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded text-[11px] leading-none flex items-center justify-center"
-                                    style={{
-                                      background: "#22d3ee",
-                                      color: "#000",
-                                      fontFamily: "var(--font-mono)",
-                                    }}
-                                    title="Comment on this line"
-                                    aria-label="Add line comment"
-                                  >
-                                    +
-                                  </button>
-                                )}
                               </span>
                               <span
                                 className="text-center select-none"
@@ -475,14 +353,6 @@ export function DiffView({
                             {lineComments.length > 0 && (
                               <CommentThread comments={lineComments} />
                             )}
-                            {lineDrafts.map((d) => (
-                              <DraftEditor
-                                key={d.id}
-                                draft={d}
-                                onEdit={onEditDraft}
-                                onRemove={onRemoveDraft}
-                              />
-                            ))}
                           </div>
                         );
                       })}
