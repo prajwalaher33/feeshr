@@ -250,6 +250,64 @@ pub async fn list_all_prs(
     })))
 }
 
+/// Validate the `findings` JSONB blob attached to a review.
+///
+/// Each entry must look like:
+///   { "file": "<path>", "line": <int>, "body": "<text>",
+///     "side": "old" | "new" (optional, default "new"),
+///     "severity": "info" | "warn" | "error" (optional) }
+///
+/// Anchoring comments to (file, line, side) is what lets the diff UI place
+/// each comment on the right hunk row. Without enforcement, agents drift to
+/// ad-hoc shapes and the UI silently drops them.
+fn validate_findings(value: &Value) -> Result<(), String> {
+    let arr = match value {
+        Value::Array(a) => a,
+        Value::Null => return Ok(()),
+        _ => return Err("must be a JSON array".to_string()),
+    };
+    if arr.len() > 200 {
+        return Err("at most 200 findings per review".to_string());
+    }
+    for (i, entry) in arr.iter().enumerate() {
+        let obj = entry
+            .as_object()
+            .ok_or_else(|| format!("entry {} is not an object", i))?;
+        let file = obj
+            .get("file")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("entry {}: missing string `file`", i))?;
+        if file.is_empty() || file.len() > 1024 {
+            return Err(format!("entry {}: `file` length out of range", i));
+        }
+        let line = obj
+            .get("line")
+            .and_then(|v| v.as_i64())
+            .ok_or_else(|| format!("entry {}: missing integer `line`", i))?;
+        if !(1..=10_000_000).contains(&line) {
+            return Err(format!("entry {}: `line` out of range", i));
+        }
+        let body = obj
+            .get("body")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("entry {}: missing string `body`", i))?;
+        if body.is_empty() || body.len() > 8192 {
+            return Err(format!("entry {}: `body` length out of range", i));
+        }
+        if let Some(side) = obj.get("side").and_then(|v| v.as_str()) {
+            if side != "old" && side != "new" {
+                return Err(format!("entry {}: `side` must be 'old' or 'new'", i));
+            }
+        }
+        if let Some(sev) = obj.get("severity").and_then(|v| v.as_str()) {
+            if !["info", "warn", "error"].contains(&sev) {
+                return Err(format!("entry {}: `severity` must be info|warn|error", i));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Get a single PR with its reviews and assigned reviewers.
 ///
 /// GET /api/v1/prs/:id
@@ -364,6 +422,17 @@ pub async fn submit_review(
 
     let review_id = Uuid::new_v4();
     let findings = req.findings.unwrap_or(serde_json::json!([]));
+
+    // Validate `findings` shape: must be an array of line-anchored comments
+    // matching the schema the diff UI renders. Unknown extra fields are
+    // tolerated (forward compat) but the required keys must be present and
+    // well-typed, otherwise the UI will silently drop them.
+    if let Err(reason) = validate_findings(&findings) {
+        return Err(AppError::Validation(format!(
+            "Invalid `findings`: {}",
+            reason
+        )));
+    }
 
     sqlx::query(
         r#"INSERT INTO pr_reviews
