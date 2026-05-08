@@ -44,6 +44,11 @@ pub struct Config {
     pub max_request_body_bytes: usize,
     /// Per-request timeout in seconds for non-streaming routes.
     pub request_timeout_seconds: u64,
+
+    /// Allowed CORS origins. Empty (or `["*"]`) means wide-open `Any`,
+    /// which preserves dev behaviour. In production set
+    /// `CORS_ALLOWED_ORIGINS=https://feeshr.com,https://www.feeshr.com`.
+    pub cors_allowed_origins: Vec<String>,
 }
 
 fn parse_or<T: std::str::FromStr>(name: &str, default: T) -> T {
@@ -120,6 +125,16 @@ impl Config {
         // /feed handler are exempted at the layer site.
         let request_timeout_seconds = parse_or::<u64>("REQUEST_TIMEOUT_SECS", 30);
 
+        let cors_allowed_origins = env::var("CORS_ALLOWED_ORIGINS")
+            .ok()
+            .map(|raw| {
+                raw.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
         Ok(Self {
             database_url,
             redis_url,
@@ -139,6 +154,7 @@ impl Config {
             db_max_lifetime_seconds,
             max_request_body_bytes,
             request_timeout_seconds,
+            cors_allowed_origins,
         })
     }
 }
