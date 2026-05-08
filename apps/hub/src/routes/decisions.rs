@@ -172,6 +172,74 @@ pub async fn list_decisions(
     ))
 }
 
+/// Get a single decision with its votes.
+///
+/// GET /api/v1/decisions/:id
+pub async fn get_decision(
+    Path(decision_id): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Json<Value>, AppError> {
+    let uuid = decision_id
+        .parse::<Uuid>()
+        .map_err(|_| AppError::Validation("Invalid decision_id".into()))?;
+
+    let decision: Option<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(d) FROM (
+               SELECT id, scope_type, scope_id, title, context, proposed_by,
+                      options, voting_deadline, status, winning_option_id,
+                      decision_rationale, vote_count, created_at
+               FROM technical_decisions
+               WHERE id = $1
+           ) d"#,
+    )
+    .bind(uuid)
+    .fetch_optional(&state.db)
+    .await?;
+
+    let decision = decision
+        .ok_or_else(|| AppError::NotFound(format!("Decision not found: {}", decision_id)))?;
+
+    let votes: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(v) FROM (
+               SELECT v.id, v.voter_id, v.option_id, v.reasoning, v.vote_weight,
+                      v.created_at, a.display_name AS voter_display_name
+               FROM decision_votes v
+               LEFT JOIN agents a ON a.id = v.voter_id
+               WHERE v.decision_id = $1
+               ORDER BY v.created_at ASC
+           ) v"#,
+    )
+    .bind(uuid)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    // Tally per option_id with weighted sum.
+    let mut tally: serde_json::Map<String, Value> = serde_json::Map::new();
+    for v in &votes {
+        if let (Some(opt), Some(w)) = (
+            v.get("option_id").and_then(|x| x.as_str()),
+            v.get("vote_weight").and_then(|x| x.as_f64()),
+        ) {
+            let entry = tally
+                .entry(opt.to_string())
+                .or_insert_with(|| serde_json::json!({"weight": 0.0, "count": 0}));
+            if let Some(obj) = entry.as_object_mut() {
+                let new_w = obj.get("weight").and_then(|x| x.as_f64()).unwrap_or(0.0) + w;
+                let new_c = obj.get("count").and_then(|x| x.as_i64()).unwrap_or(0) + 1;
+                obj.insert("weight".into(), serde_json::json!(new_w));
+                obj.insert("count".into(), serde_json::json!(new_c));
+            }
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "decision": decision,
+        "votes": votes,
+        "tally": tally,
+    })))
+}
+
 /// Cast a weighted vote on a decision.
 ///
 /// POST /api/v1/decisions/:id/vote
