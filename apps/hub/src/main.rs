@@ -61,16 +61,11 @@ async fn main() -> Result<(), anyhow::Error> {
     // an internal Postgres advisory lock so multiple replicas booting in
     // parallel won't race. The migration files are baked into the binary
     // at compile time via the `migrations` symlink to packages/db/migrations.
-    //
-    // RUN_MIGRATIONS_ON_STARTUP=false opt-out exists for users with an
-    // existing pre-sqlx deployment (where tables exist but the
-    // _sqlx_migrations bookkeeping table does not — running here would
-    // try to re-apply 001 and crash on "relation already exists"). Those
-    // users should disable this flag and continue running migrations the
-    // old way until they run the one-time backfill.
     if cfg.run_migrations_on_startup {
+        let migrator = sqlx::migrate!("./migrations");
+        backfill_sqlx_migrations(&pool, &migrator).await?;
         info!("Running database migrations");
-        sqlx::migrate!("./migrations")
+        migrator
             .run(&pool)
             .await
             .context("Database migration failed")?;
@@ -105,6 +100,90 @@ async fn main() -> Result<(), anyhow::Error> {
         .context("Server error")?;
 
     info!("Feeshr Hub shut down cleanly");
+    Ok(())
+}
+
+/// Self-heal for pre-sqlx deployments: detect a database that already has
+/// our schema applied (the canonical core table `agents` exists) but no
+/// `_sqlx_migrations` bookkeeping. Without this, sqlx::migrate would try
+/// to apply migration 001 and crash on `relation "agents" already exists`.
+///
+/// Strategy: if `agents` exists and `_sqlx_migrations` does not, create
+/// `_sqlx_migrations` and seed marker rows for every migration sqlx knows
+/// about — using the in-binary checksums so subsequent migrate calls
+/// match exactly. The seeded rows mean migrate sees "all applied, nothing
+/// to do" on first boot, then real new migrations apply normally on
+/// future boots.
+///
+/// On a fresh database (neither table exists), this is a no-op and the
+/// regular migrate call creates `_sqlx_migrations` itself.
+async fn backfill_sqlx_migrations(
+    pool: &sqlx::PgPool,
+    migrator: &sqlx::migrate::Migrator,
+) -> Result<(), anyhow::Error> {
+    let bookkeeping_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables \
+         WHERE table_name = '_sqlx_migrations')",
+    )
+    .fetch_one(pool)
+    .await
+    .context("Failed to probe for _sqlx_migrations")?;
+
+    if bookkeeping_exists {
+        return Ok(());
+    }
+
+    let agents_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables \
+         WHERE table_name = 'agents')",
+    )
+    .fetch_one(pool)
+    .await
+    .context("Failed to probe for agents table")?;
+
+    if !agents_exists {
+        // Fresh database — let sqlx::migrate handle everything.
+        return Ok(());
+    }
+
+    info!("Existing schema detected without _sqlx_migrations; seeding bookkeeping");
+
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS _sqlx_migrations (
+               version BIGINT PRIMARY KEY,
+               description TEXT NOT NULL,
+               installed_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+               success BOOLEAN NOT NULL,
+               checksum BYTEA NOT NULL,
+               execution_time BIGINT NOT NULL
+           )"#,
+    )
+    .execute(pool)
+    .await
+    .context("Failed to create _sqlx_migrations")?;
+
+    let mut seeded = 0usize;
+    for migration in migrator.iter() {
+        let res = sqlx::query(
+            "INSERT INTO _sqlx_migrations \
+             (version, description, success, checksum, execution_time) \
+             VALUES ($1, $2, true, $3, 0) \
+             ON CONFLICT (version) DO NOTHING",
+        )
+        .bind(migration.version)
+        .bind(migration.description.as_ref())
+        .bind(migration.checksum.as_ref())
+        .execute(pool)
+        .await
+        .context("Failed to seed _sqlx_migrations row")?;
+        if res.rows_affected() > 0 {
+            seeded += 1;
+        }
+    }
+    info!(
+        seeded = seeded,
+        "Seeded _sqlx_migrations from in-binary migration list"
+    );
     Ok(())
 }
 
