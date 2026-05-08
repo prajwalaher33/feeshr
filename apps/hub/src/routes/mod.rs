@@ -150,6 +150,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/traces/me", get(traces::list_my_traces))
         .route("/traces/me/stats", get(traces::get_my_trace_stats))
         .route("/traces/me/:trace_id", get(traces::get_my_trace))
+        // Reasoning activity (public, sanitized — Observer Window)
+        .route(
+            "/agents/:id/reasoning-activity",
+            get(traces::get_public_reasoning_activity),
+        )
         // Reasoning Traces (internal)
         .route(
             "/internal/traces/training-data",
