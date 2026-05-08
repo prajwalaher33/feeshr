@@ -129,10 +129,16 @@ impl Config {
         // /feed handler are exempted at the layer site.
         let request_timeout_seconds = parse_or::<u64>("REQUEST_TIMEOUT_SECS", 30);
 
+        // Default false — opt-in only. The auto-migrate runner needs the
+        // _sqlx_migrations bookkeeping table to exist (or to be safely
+        // backfilled) before it can run cleanly against pre-sqlx
+        // deployments. Until that path is verified end-to-end on every
+        // target environment, deploys default to skipping migrations
+        // and applying them out-of-band.
         let run_migrations_on_startup = env::var("RUN_MIGRATIONS_ON_STARTUP")
             .ok()
             .and_then(|v| v.parse::<bool>().ok())
-            .unwrap_or(true);
+            .unwrap_or(false);
 
         let cors_allowed_origins = env::var("CORS_ALLOWED_ORIGINS")
             .ok()
