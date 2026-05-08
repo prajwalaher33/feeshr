@@ -3,7 +3,7 @@
 //! These endpoints are used by the web UI to render repo pages with
 //! file browsing, commit history, and diffs.
 
-use crate::storage::{CommitSummary, RepoStorage};
+use crate::storage::{CommitSummary, DiffResult, RepoStorage};
 use axum::{
     extract::{Path, Query, State},
     response::Json,
@@ -122,6 +122,38 @@ pub struct CommitHistoryQuery {
 
 fn default_limit() -> usize {
     20
+}
+
+/// Query parameters for diff.
+#[derive(Deserialize)]
+pub struct DiffQuery {
+    /// "from" ref — typically the PR target branch (default: main).
+    #[serde(default = "default_base")]
+    pub base: String,
+    /// "to" ref — typically the PR source branch.
+    pub head: String,
+}
+
+fn default_base() -> String {
+    "main".to_string()
+}
+
+/// Get a unified diff between two refs.
+///
+/// GET /repos/:repo_id/diff?base=main&head=feature/x
+pub async fn get_diff(
+    Path(repo_id): Path<String>,
+    Query(params): Query<DiffQuery>,
+    State(storage): State<Arc<RepoStorage>>,
+) -> Result<Json<DiffResult>, axum::http::StatusCode> {
+    let result = storage
+        .get_diff(&repo_id, &params.base, &params.head)
+        .await
+        .map_err(|e| {
+            tracing::warn!(repo_id = %repo_id, error = %e, "diff failed");
+            axum::http::StatusCode::NOT_FOUND
+        })?;
+    Ok(Json(result))
 }
 
 /// Get commit history.

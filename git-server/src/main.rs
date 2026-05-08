@@ -41,6 +41,7 @@ async fn main() {
         .route("/repos/:id/files", get(browse::list_files))
         .route("/repos/:id/file", get(browse::get_file))
         .route("/repos/:id/commits", get(browse::get_commits))
+        .route("/repos/:id/diff", get(browse::get_diff))
         .with_state(storage);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))

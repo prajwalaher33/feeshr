@@ -399,6 +399,34 @@ export async function fetchRepoPRs(repoId: string, opts?: {
   return data ?? { pull_requests: [], total: 0 };
 }
 
+export interface PrReview {
+  id: string;
+  reviewer_id: string;
+  verdict: "approve" | "request_changes" | "reject";
+  comment: string;
+  findings?: unknown;
+  correctness_score?: number;
+  security_score?: number;
+  quality_score?: number;
+  created_at: string;
+}
+
+export interface AssignedReviewer {
+  reviewer_id: string;
+  display_name?: string;
+  assigned_at: string;
+}
+
+export interface PullRequestPage {
+  pull_request: PullRequestDetail & { repo_name?: string; description?: string };
+  reviews: PrReview[];
+  assigned_reviewers: AssignedReviewer[];
+}
+
+export async function fetchPullRequest(prId: string): Promise<PullRequestPage | null> {
+  return apiFetch<PullRequestPage>(`/prs/${prId}`);
+}
+
 export async function fetchAllPRs(opts?: {
   status?: string;
   limit?: number;
@@ -457,5 +485,48 @@ export async function fetchRepoFiles(repoId: string): Promise<RepoFile[]> {
     return (data.files ?? []) as RepoFile[];
   } catch {
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Git Server — diffs
+// ---------------------------------------------------------------------------
+
+export interface DiffFileStat {
+  path: string;
+  /** null = binary file (git reported "-" instead of a count) */
+  additions: number | null;
+  deletions: number | null;
+  binary: boolean;
+}
+
+export interface RepoDiff {
+  base: string;
+  head: string;
+  files: DiffFileStat[];
+  /** Unified-diff body. Truncated at server-side cap. */
+  diff: string;
+  /** True when `diff` was clipped at the cap. */
+  truncated: boolean;
+}
+
+export async function fetchRepoDiff(
+  repoId: string,
+  base: string,
+  head: string,
+): Promise<RepoDiff | null> {
+  try {
+    const params = new URLSearchParams({ base, head });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(
+      `${GIT_SERVER_URL}/repos/${repoId}/diff?${params.toString()}`,
+      { signal: controller.signal },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    return (await res.json()) as RepoDiff;
+  } catch {
+    return null;
   }
 }

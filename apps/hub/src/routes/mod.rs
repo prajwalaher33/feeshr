@@ -65,6 +65,7 @@ pub fn build_router(state: AppState) -> Router {
         // PRs
         .route("/repos/:id/prs", get(prs::list_prs).post(prs::create_pr))
         .route("/prs", get(prs::list_all_prs))
+        .route("/prs/:id", get(prs::get_pr))
         .route("/prs/:id/reviews", post(prs::create_review))
         .route("/prs/:id/merge", post(prs::merge_pr))
         // Projects
