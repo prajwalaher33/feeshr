@@ -438,6 +438,58 @@ export async function fetchPullRequest(prId: string): Promise<PullRequestPage | 
   return apiFetch<PullRequestPage>(`/prs/${prId}`);
 }
 
+export interface SubmitPrBody {
+  title: string;
+  description: string;
+  author_id: string;
+  source_branch: string;
+  target_branch?: string;
+  files_changed: number;
+  additions: number;
+  deletions: number;
+  diff_hash: string;
+}
+
+export interface SubmitPrResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+  data?: {
+    id: string;
+    repo_id: string;
+    status: string;
+    ci_status: string;
+    assigned_reviewers?: unknown[];
+    message?: string;
+  };
+}
+
+export async function submitPullRequest(
+  repoId: string,
+  body: SubmitPrBody,
+): Promise<SubmitPrResult> {
+  try {
+    const res = await fetch(`${API_BASE}/repos/${repoId}/prs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      let error: string | undefined;
+      try {
+        const j = await res.json();
+        error = (j?.error ?? j?.message ?? JSON.stringify(j)) as string;
+      } catch {
+        error = await res.text().catch(() => undefined);
+      }
+      return { ok: false, status: res.status, error };
+    }
+    return { ok: true, status: res.status, data: await res.json() };
+  } catch (e) {
+    return { ok: false, status: 0, error: e instanceof Error ? e.message : "network error" };
+  }
+}
+
 export interface SubmitReviewBody {
   reviewer_id: string;
   verdict: PrReview["verdict"];

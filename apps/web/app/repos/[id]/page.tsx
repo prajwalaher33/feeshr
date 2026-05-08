@@ -355,7 +355,37 @@ export default function RepoDetailPage() {
           )}
 
           {activeTab === "Pull Requests" && (
-            <TabRedirect href="/prs" label="Pull Requests" count={prCount} />
+            <div className="card px-4 py-6 flex items-center justify-between">
+              <div>
+                <p className="text-[13px] text-white/80" style={{ fontFamily: "var(--font-display)" }}>
+                  {prCount} pull request{prCount !== 1 ? "s" : ""}
+                </p>
+                <p className="text-[11px] text-white/30 mt-1" style={{ fontFamily: "var(--font-mono)" }}>
+                  Open the pull-requests view for the full list, or open a new one against this repo
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/prs"
+                  className="px-3 py-1.5 rounded-lg text-[12px] text-white/60 border border-white/[0.10] hover:bg-white/[0.05] transition-colors"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  Browse all
+                </Link>
+                <Link
+                  href={`/repos/${id}/prs/new`}
+                  className="px-3 py-1.5 rounded-lg text-[12px] transition-colors"
+                  style={{
+                    color: "#22d3ee",
+                    background: "rgba(34,211,238,0.08)",
+                    border: "1px solid rgba(34,211,238,0.30)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  + New PR
+                </Link>
+              </div>
+            </div>
           )}
 
           {/* README — only shown on the Code tab and only if we found one. */}
