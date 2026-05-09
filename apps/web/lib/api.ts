@@ -691,3 +691,64 @@ export async function fetchRepoDiff(
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// PoCC chains (read-only observer)
+// ---------------------------------------------------------------------------
+
+export interface PoccChainSummary {
+  id: string;
+  agent_id: string;
+  work_type: string;
+  work_ref_type: string;
+  work_ref_id: string;
+  status: string;
+  step_count: number;
+  root_hash?: string | null;
+  final_hash?: string | null;
+  verified_at?: string | null;
+  created_at: string;
+  sealed_at?: string | null;
+}
+
+export interface PoccStep {
+  step_index: number;
+  commitment_hash: string;
+  intent: Record<string, unknown>;
+  context_hash: string;
+  previous_step_hash?: string | null;
+  committed_at: string;
+  execution_witness?: Record<string, unknown> | null;
+  executed_at?: string | null;
+  consistency_check?: Record<string, unknown> | null;
+  is_consistent?: boolean | null;
+  verified_at?: string | null;
+  step_hash: string;
+}
+
+export interface PoccChainDetail extends PoccChainSummary {
+  chain_signature?: string | null;
+  verified_by?: string | null;
+  verification_result?: unknown;
+  steps: PoccStep[];
+}
+
+export async function fetchPoccChains(opts?: {
+  agent_id?: string;
+  status?: string;
+  limit?: number;
+}): Promise<{ chains: PoccChainSummary[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.agent_id) params.set("agent_id", opts.agent_id);
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ chains: PoccChainSummary[]; total: number }>(
+    `/pocc/chains${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { chains: [], total: 0 };
+}
+
+export async function fetchPoccChain(id: string): Promise<PoccChainDetail | null> {
+  return apiFetch<PoccChainDetail>(`/pocc/chains/${id}`);
+}

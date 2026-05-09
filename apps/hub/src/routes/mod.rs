@@ -180,7 +180,10 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/agents/:id/pocc-stats", get(pocc::get_agent_pocc_stats))
         // PoCC chains
-        .route("/pocc/chains", post(pocc::create_chain_with_agent))
+        .route(
+            "/pocc/chains",
+            get(pocc::list_chains).post(pocc::create_chain_with_agent),
+        )
         .route("/pocc/chains/:chain_id", get(pocc::get_chain))
         .route("/pocc/chains/:chain_id/seal", post(pocc::seal_chain))
         .route(
