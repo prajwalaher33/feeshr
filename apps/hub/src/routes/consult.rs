@@ -4,7 +4,10 @@
 //! BEFORE starting work on anything. It returns everything needed to
 //! avoid wasted effort: locks, conflicts, pitfalls, warnings, and decisions.
 
-use axum::{extract::State, response::Json};
+use axum::{
+    extract::{Query, State},
+    response::Json,
+};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
@@ -12,6 +15,98 @@ use uuid::Uuid;
 
 use crate::errors::AppError;
 use crate::state::AppState;
+
+#[derive(Deserialize)]
+pub struct RecentConsultationsQuery {
+    pub agent_id: Option<String>,
+    pub target_type: Option<String>,
+    pub limit: Option<i64>,
+}
+
+/// Public observer surface — recent pre-commit consultations across the
+/// network, sanitized to a flat shape (agent + target + recommendation +
+/// reason) so observers can see the network's deliberation pulse without
+/// the full per-target context blob.
+///
+/// GET /api/v1/consultations/recent
+pub async fn list_recent_consultations(
+    Query(params): Query<RecentConsultationsQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<Value>, AppError> {
+    let limit = params.limit.unwrap_or(50).min(200);
+
+    let rows: Vec<(Uuid, String, String, Uuid, Value, chrono::DateTime<Utc>)> = sqlx::query_as(
+        r#"SELECT id, agent_id, target_type, target_id, result, created_at
+           FROM precommit_consultations
+           WHERE ($1::text IS NULL OR agent_id = $1)
+             AND ($2::text IS NULL OR target_type = $2)
+           ORDER BY created_at DESC
+           LIMIT $3"#,
+    )
+    .bind(&params.agent_id)
+    .bind(&params.target_type)
+    .bind(limit)
+    .fetch_all(&state.db)
+    .await?;
+
+    let consultations: Vec<Value> = rows
+        .into_iter()
+        .map(
+            |(id, agent_id, target_type, target_id, result, created_at)| {
+                let recommendation = result
+                    .get("recommendation")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let reason = result
+                    .get("reason")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let active_locks_count = result
+                    .get("active_locks")
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.len())
+                    .unwrap_or(0);
+                let related_prs_count = result
+                    .get("related_prs")
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.len())
+                    .unwrap_or(0);
+                let warnings_count = result
+                    .get("warnings")
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.len())
+                    .unwrap_or(0);
+                let pending_decisions_count = result
+                    .get("pending_decisions")
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.len())
+                    .unwrap_or(0);
+                serde_json::json!({
+                    "id": id,
+                    "agent_id": agent_id,
+                    "target_type": target_type,
+                    "target_id": target_id,
+                    "recommendation": recommendation,
+                    "reason": reason,
+                    "signals": {
+                        "active_locks": active_locks_count,
+                        "related_prs": related_prs_count,
+                        "warnings": warnings_count,
+                        "pending_decisions": pending_decisions_count,
+                    },
+                    "created_at": created_at,
+                })
+            },
+        )
+        .collect();
+
+    Ok(Json(serde_json::json!({
+        "consultations": consultations,
+        "total": consultations.len(),
+    })))
+}
 
 #[derive(Deserialize)]
 pub struct ConsultRequest {

@@ -144,6 +144,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/decisions/:id/resolve", post(decisions::resolve_decision))
         // Pre-Commit Consultation
         .route("/consult", post(consult::consult))
+        .route(
+            "/consultations/recent",
+            get(consult::list_recent_consultations),
+        )
         // Agents (extended)
         .route(
             "/agents/:id/reputation-history",
