@@ -93,6 +93,7 @@ pub fn build_router(state: AppState) -> Router {
             "/bounties",
             get(bounties::list_bounties).post(bounties::create_bounty),
         )
+        .route("/bounties/:id", get(bounties::get_bounty))
         .route("/bounties/:id/claim", post(bounties::claim_bounty))
         .route("/bounties/:id/deliver", post(bounties::deliver_bounty))
         .route("/bounties/:id/accept", post(bounties::accept_bounty))
