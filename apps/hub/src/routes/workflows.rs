@@ -181,6 +181,89 @@ pub async fn create_instance(
     })))
 }
 
+/// Query params for listing workflow instances.
+#[derive(Deserialize)]
+pub struct ListInstancesQuery {
+    pub status: Option<String>,
+    pub agent_id: Option<String>,
+    pub context_type: Option<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+/// List workflow instances (public observer surface).
+///
+/// GET /api/v1/workflows/instances
+pub async fn list_instances(
+    Query(params): Query<ListInstancesQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let limit = params.limit.unwrap_or(50).min(200);
+    let offset = params.offset.unwrap_or(0);
+
+    let instances: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(i) FROM (
+               SELECT wi.id, wi.template_id, wt.name AS template_name,
+                      wt.display_name AS template_display_name,
+                      wt.category AS template_category,
+                      wi.context_type, wi.context_id, wi.agent_id,
+                      wi.current_step, wi.total_steps, wi.status,
+                      wi.created_at, wi.updated_at
+               FROM workflow_instances wi
+               LEFT JOIN workflow_templates wt ON wt.id = wi.template_id
+               WHERE ($1::text IS NULL OR wi.status = $1)
+                 AND ($2::text IS NULL OR wi.agent_id = $2)
+                 AND ($3::text IS NULL OR wi.context_type = $3)
+               ORDER BY wi.created_at DESC
+               LIMIT $4 OFFSET $5
+           ) i"#,
+    )
+    .bind(&params.status)
+    .bind(&params.agent_id)
+    .bind(&params.context_type)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({
+        "instances": instances,
+        "total": instances.len(),
+    })))
+}
+
+/// Get a single workflow instance with template + progress log.
+///
+/// GET /api/v1/workflows/instances/:id
+pub async fn get_instance(
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let uuid = parse_uuid(&id, "id")?;
+
+    let instance: Option<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(i) FROM (
+               SELECT wi.id, wi.template_id, wt.name AS template_name,
+                      wt.display_name AS template_display_name,
+                      wt.category AS template_category,
+                      wt.steps AS template_steps,
+                      wi.context_type, wi.context_id, wi.agent_id,
+                      wi.current_step, wi.total_steps, wi.status,
+                      wi.progress_log, wi.created_at, wi.updated_at
+               FROM workflow_instances wi
+               LEFT JOIN workflow_templates wt ON wt.id = wi.template_id
+               WHERE wi.id = $1
+           ) i"#,
+    )
+    .bind(uuid)
+    .fetch_optional(&state.db)
+    .await?;
+
+    instance
+        .map(Json)
+        .ok_or_else(|| AppError::NotFound(format!("Workflow instance not found: {}", id)))
+}
+
 /// Advance a workflow instance to the next step.
 ///
 /// PATCH /api/v1/workflows/instances/:id/advance

@@ -110,7 +110,11 @@ pub fn build_router(state: AppState) -> Router {
             get(workflows::list_templates).post(workflows::create_template),
         )
         .route("/workflows/templates/:id", get(workflows::get_template))
-        .route("/workflows/instances", post(workflows::create_instance))
+        .route(
+            "/workflows/instances",
+            get(workflows::list_instances).post(workflows::create_instance),
+        )
+        .route("/workflows/instances/:id", get(workflows::get_instance))
         .route(
             "/workflows/instances/:id/advance",
             patch(workflows::advance_instance),
