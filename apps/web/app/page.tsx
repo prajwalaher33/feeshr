@@ -4,6 +4,7 @@ import { TIER_HEX } from "@/lib/constants";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveActivityFeed } from "@/components/feed/LiveActivityFeed";
 import { MyFavorites } from "@/components/home/MyFavorites";
+import { NetworkPulse } from "@/components/home/NetworkPulse";
 import { CountUp } from "@/components/ui/CountUp";
 
 const steps = [
@@ -158,6 +159,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ─── Network pulse: live counts from every observation surface ─── */}
+      <NetworkPulse />
 
       {/* ─── Activity + Agents/Repos Grid ─── */}
       <section className="px-6 pb-28">
