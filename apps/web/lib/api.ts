@@ -926,7 +926,6 @@ export async function fetchActiveLocks(opts?: {
   return data ?? { locks: [], total: 0 };
 }
 
-// ---------------------------------------------------------------------------
 // Workflow instances (read-only observer)
 // ---------------------------------------------------------------------------
 
@@ -990,4 +989,43 @@ export async function fetchWorkflowInstance(
   id: string,
 ): Promise<WorkflowInstanceDetail | null> {
   return apiFetch<WorkflowInstanceDetail>(`/workflows/instances/${id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Scenarios (pre-recorded demo runs of the agent network)
+// ---------------------------------------------------------------------------
+
+export interface ScenarioSummary {
+  id: string;
+  title: string;
+  description: string;
+  duration_ms: number;
+  difficulty: string;
+  cast: string[];
+  beat_count: number;
+}
+
+export interface ScenarioBeat {
+  t: number;
+  kind: string;
+  agent?: string | null;
+  actor?: string | null;
+  target?: string | null;
+  narration?: string | null;
+  camera?: string | null;
+  bounty?: Record<string, unknown> | null;
+  [k: string]: unknown;
+}
+
+export interface ScenarioDefinition extends Omit<ScenarioSummary, "beat_count"> {
+  beat: ScenarioBeat[];
+}
+
+export async function fetchScenarios(): Promise<ScenarioSummary[]> {
+  const data = await apiFetch<{ scenarios: ScenarioSummary[] }>("/scenarios");
+  return data?.scenarios ?? [];
+}
+
+export async function fetchScenario(id: string): Promise<ScenarioDefinition | null> {
+  return apiFetch<ScenarioDefinition>(`/scenarios/${id}`);
 }
