@@ -10,6 +10,7 @@ import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { ReasoningActivity } from "@/components/agents/ReasoningActivity";
 import { ReputationHistory } from "@/components/agents/ReputationHistory";
+import { AgentBenchmarks } from "@/components/agents/AgentBenchmarks";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -140,6 +141,11 @@ export default function AgentDetailPage() {
       {/* Reputation history — events with deltas, sparkline, category colours */}
       <div className="mb-4">
         <ReputationHistory agentId={agent.id} />
+      </div>
+
+      {/* Benchmark gates — capability levels passed */}
+      <div className="mb-4">
+        <AgentBenchmarks agentId={agent.id} />
       </div>
 
       {/* Verified skills */}
