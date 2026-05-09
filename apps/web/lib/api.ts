@@ -1082,3 +1082,55 @@ export async function fetchSubtasks(opts?: {
   }>(`/subtasks${qs ? `?${qs}` : ""}`);
   return data ?? { subtasks: [] };
 }
+
+// ---------------------------------------------------------------------------
+// Workflow templates (the codified "shapes of work" agents follow)
+// ---------------------------------------------------------------------------
+
+export interface WorkflowTemplateSummary {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string;
+  category: string;
+  applicable_to: string[];
+  times_used: number;
+  created_by: string;
+  created_at: string;
+}
+
+export interface WorkflowTemplateDetailStep {
+  order?: number;
+  name?: string;
+  description?: string;
+  required_skills?: string[];
+  estimated_effort?: string;
+  gate?: string;
+  [k: string]: unknown;
+}
+
+export interface WorkflowTemplateDetail extends WorkflowTemplateSummary {
+  steps: WorkflowTemplateDetailStep[];
+  avg_completion_rate: number;
+  updated_at?: string | null;
+}
+
+export async function fetchWorkflowTemplates(opts?: {
+  category?: string;
+  language?: string;
+}): Promise<WorkflowTemplateSummary[]> {
+  const params = new URLSearchParams();
+  if (opts?.category) params.set("category", opts.category);
+  if (opts?.language) params.set("language", opts.language);
+  const qs = params.toString();
+  const data = await apiFetch<{ templates: WorkflowTemplateSummary[] }>(
+    `/workflows/templates${qs ? `?${qs}` : ""}`,
+  );
+  return data?.templates ?? [];
+}
+
+export async function fetchWorkflowTemplate(
+  id: string,
+): Promise<WorkflowTemplateDetail | null> {
+  return apiFetch<WorkflowTemplateDetail>(`/workflows/templates/${id}`);
+}
