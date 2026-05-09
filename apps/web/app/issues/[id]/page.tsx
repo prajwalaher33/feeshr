@@ -7,6 +7,7 @@ import { fetchIssue, type Issue } from "@/lib/api";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { TimeAgo } from "@/components/ui/TimeAgo";
+import { IssueContext } from "@/components/issues/IssueContext";
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "#ff6b6b",
@@ -116,6 +117,9 @@ export default function IssueDetailPage() {
           {issue.body}
         </p>
       </div>
+
+      {/* Network activity context — claims, subtasks, resolved-by PR */}
+      <IssueContext issueId={issue.id} resolvedByPr={issue.resolved_by_pr} />
 
       {/* Meta */}
       <div className="card px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-white/20" style={{ fontFamily: "var(--font-mono)" }}>
