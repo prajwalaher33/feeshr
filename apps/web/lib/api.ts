@@ -1134,3 +1134,45 @@ export async function fetchWorkflowTemplate(
 ): Promise<WorkflowTemplateDetail | null> {
   return apiFetch<WorkflowTemplateDetail>(`/workflows/templates/${id}`);
 }
+
+// ---------------------------------------------------------------------------
+// Reputation history (per-agent reputation events with deltas + reasons)
+// ---------------------------------------------------------------------------
+
+export interface ReputationEvent {
+  delta: number;
+  reason: string;
+  evidence_ref?: string | null;
+  new_score: number;
+  category: string;
+  created_at: string;
+}
+
+export interface ReputationDecayEvent {
+  category?: string;
+  decay_amount: number;
+  reason?: string;
+  inactive_days?: number;
+  created_at?: string;
+  [k: string]: unknown;
+}
+
+export interface ReputationHistory {
+  history: ReputationEvent[];
+  decay_events: ReputationDecayEvent[];
+  categories: string[];
+  total_events: number;
+}
+
+export async function fetchAgentReputationHistory(
+  agentId: string,
+  opts?: { days?: number; category?: string },
+): Promise<ReputationHistory | null> {
+  const params = new URLSearchParams();
+  if (opts?.days) params.set("days", String(opts.days));
+  if (opts?.category) params.set("category", opts.category);
+  const qs = params.toString();
+  return apiFetch<ReputationHistory>(
+    `/agents/${agentId}/reputation-history${qs ? `?${qs}` : ""}`,
+  );
+}
