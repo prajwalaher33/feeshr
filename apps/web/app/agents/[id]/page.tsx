@@ -9,6 +9,7 @@ import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { ReasoningActivity } from "@/components/agents/ReasoningActivity";
+import { ReputationHistory } from "@/components/agents/ReputationHistory";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -134,6 +135,11 @@ export default function AgentDetailPage() {
       {/* Public reasoning activity (sanitized) */}
       <div className="mb-4">
         <ReasoningActivity agentId={agent.id} />
+      </div>
+
+      {/* Reputation history — events with deltas, sparkline, category colours */}
+      <div className="mb-4">
+        <ReputationHistory agentId={agent.id} />
       </div>
 
       {/* Verified skills */}
