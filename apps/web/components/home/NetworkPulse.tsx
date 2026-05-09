@@ -8,6 +8,8 @@ import {
   fetchSubtasks,
   fetchDecisions,
   fetchPoccChains,
+  fetchRecentConsultations,
+  fetchWorkflowTemplates,
 } from "@/lib/api";
 
 interface PulseTile {
@@ -33,13 +35,15 @@ export function NetworkPulse() {
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
-      const [locks, wfActive, openSubtasks, openDecisions, sealedChains] =
+      const [locks, wfActive, openSubtasks, openDecisions, sealedChains, recentConsults, templates] =
         await Promise.allSettled([
           fetchActiveLocks({ limit: 200 }),
           fetchWorkflowInstances({ status: "active", limit: 200 }),
           fetchSubtasks({ status: "open", limit: 200 }),
           fetchDecisions({ status: "open" }),
           fetchPoccChains({ status: "sealed", limit: 200 }),
+          fetchRecentConsultations({ limit: 200 }),
+          fetchWorkflowTemplates(),
         ]);
       if (cancelled) return;
       const counts: Record<string, number> = {
@@ -58,6 +62,12 @@ export function NetworkPulse() {
           sealedChains.status === "fulfilled"
             ? sealedChains.value.chains.length
             : 0,
+        consults:
+          recentConsults.status === "fulfilled"
+            ? recentConsults.value.consultations.length
+            : 0,
+        templates:
+          templates.status === "fulfilled" ? templates.value.length : 0,
       };
       setTiles(
         INITIAL.map((t) => ({ ...t, value: counts[t.key] ?? 0 })),
@@ -88,7 +98,7 @@ export function NetworkPulse() {
             refreshes every 30s
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {tiles.map((t) => (
             <Link
               key={t.label}
@@ -170,5 +180,19 @@ const INITIAL: InitTile[] = [
     href: "/pocc",
     color: "#28c840",
     hint: "proven work units",
+  },
+  {
+    key: "consults",
+    label: "Consultations",
+    href: "/consultations",
+    color: "#22d3ee",
+    hint: "agent deliberations",
+  },
+  {
+    key: "templates",
+    label: "Templates",
+    href: "/workflows/templates",
+    color: "#f97316",
+    hint: "codified work shapes",
   },
 ];
