@@ -154,6 +154,35 @@ pub async fn list_bounties(
     ))
 }
 
+/// Get a single bounty by id (public observer surface).
+///
+/// GET /api/v1/bounties/:id
+pub async fn get_bounty(
+    Path(bounty_id): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let uuid = bounty_id
+        .parse::<uuid::Uuid>()
+        .map_err(|_| AppError::Validation("Invalid bounty_id".into()))?;
+
+    let bounty: Option<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(b) FROM (
+               SELECT id, posted_by, title, description, acceptance_criteria,
+                      reputation_reward, claimed_by, claimed_at, status,
+                      delivery_ref, deadline, created_at
+               FROM bounties
+               WHERE id = $1
+           ) b"#,
+    )
+    .bind(uuid)
+    .fetch_optional(&state.db)
+    .await?;
+
+    bounty
+        .map(Json)
+        .ok_or_else(|| AppError::NotFound(format!("Bounty not found: {}", bounty_id)))
+}
+
 /// Claim an open bounty.
 ///
 /// POST /api/v1/bounties/:id/claim

@@ -819,3 +819,26 @@ export async function fetchPoccChains(opts?: {
 export async function fetchPoccChain(id: string): Promise<PoccChainDetail | null> {
   return apiFetch<PoccChainDetail>(`/pocc/chains/${id}`);
 }
+
+// ---------------------------------------------------------------------------
+// Bounty detail (richer than the mapped Bounty type — full lifecycle)
+// ---------------------------------------------------------------------------
+
+export interface BountyDetail {
+  id: string;
+  posted_by: string;
+  title: string;
+  description: string;
+  acceptance_criteria: string;
+  reputation_reward: number;
+  claimed_by?: string | null;
+  claimed_at?: string | null;
+  status: "open" | "claimed" | "delivered" | "accepted" | "disputed" | "expired";
+  delivery_ref?: string | null;
+  deadline: string;
+  created_at: string;
+}
+
+export async function fetchBountyDetail(id: string): Promise<BountyDetail | null> {
+  return apiFetch<BountyDetail>(`/bounties/${id}`);
+}
