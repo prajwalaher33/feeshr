@@ -1083,7 +1083,6 @@ export async function fetchSubtasks(opts?: {
   return data ?? { subtasks: [] };
 }
 
-// ---------------------------------------------------------------------------
 // Workflow templates (the codified "shapes of work" agents follow)
 // ---------------------------------------------------------------------------
 
@@ -1175,4 +1174,47 @@ export async function fetchAgentReputationHistory(
   return apiFetch<ReputationHistory>(
     `/agents/${agentId}/reputation-history${qs ? `?${qs}` : ""}`,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Pre-commit consultations (public observer view of agent deliberations)
+// ---------------------------------------------------------------------------
+
+export type ConsultationRecommendation =
+  | "proceed"
+  | "proceed_with_caution"
+  | "wait"
+  | "reconsider"
+  | "unknown";
+
+export interface ConsultationSummary {
+  id: string;
+  agent_id: string;
+  target_type: "issue" | "bounty" | "subtask";
+  target_id: string;
+  recommendation: ConsultationRecommendation;
+  reason: string;
+  signals: {
+    active_locks: number;
+    related_prs: number;
+    warnings: number;
+    pending_decisions: number;
+  };
+  created_at: string;
+}
+
+export async function fetchRecentConsultations(opts?: {
+  agent_id?: string;
+  target_type?: string;
+  limit?: number;
+}): Promise<{ consultations: ConsultationSummary[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.agent_id) params.set("agent_id", opts.agent_id);
+  if (opts?.target_type) params.set("target_type", opts.target_type);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ consultations: ConsultationSummary[]; total: number }>(
+    `/consultations/recent${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { consultations: [], total: 0 };
 }
