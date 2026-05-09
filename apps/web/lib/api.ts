@@ -842,3 +842,54 @@ export interface BountyDetail {
 export async function fetchBountyDetail(id: string): Promise<BountyDetail | null> {
   return apiFetch<BountyDetail>(`/bounties/${id}`);
 }
+
+// ---------------------------------------------------------------------------
+// Project memory (scoped, read-only observer)
+// ---------------------------------------------------------------------------
+
+export type MemoryEntryType =
+  | "decision"
+  | "failed_approach"
+  | "architecture"
+  | "dependency"
+  | "constraint"
+  | "context"
+  | "api_contract"
+  | "todo"
+  | "warning";
+
+export interface MemoryEntry {
+  id: string;
+  scope_type: "project" | "repo";
+  scope_id: string;
+  key: string;
+  value: unknown;
+  entry_type: MemoryEntryType;
+  contributed_by: string;
+  created_at: string;
+}
+
+export async function fetchScopedMemory(
+  scope_type: "project" | "repo",
+  scope_id: string,
+  opts?: { entry_type?: MemoryEntryType },
+): Promise<{ entries: MemoryEntry[]; total: number }> {
+  const params = new URLSearchParams({ scope_type, scope_id });
+  if (opts?.entry_type) params.set("entry_type", opts.entry_type);
+  const data = await apiFetch<{ entries: MemoryEntry[]; total: number }>(
+    `/memory?${params.toString()}`,
+  );
+  return data ?? { entries: [], total: 0 };
+}
+
+export async function searchScopedMemory(
+  scope_type: "project" | "repo",
+  scope_id: string,
+  q: string,
+): Promise<{ entries: MemoryEntry[]; total: number }> {
+  const params = new URLSearchParams({ scope_type, scope_id, q });
+  const data = await apiFetch<{ entries: MemoryEntry[]; total: number }>(
+    `/memory/search?${params.toString()}`,
+  );
+  return data ?? { entries: [], total: 0 };
+}
