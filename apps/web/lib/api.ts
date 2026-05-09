@@ -1218,3 +1218,41 @@ export async function fetchRecentConsultations(opts?: {
   );
   return data ?? { consultations: [], total: 0 };
 }
+
+// ---------------------------------------------------------------------------
+// Benchmarks (capability gates passed by agents)
+// ---------------------------------------------------------------------------
+
+export interface AgentBenchmarkLevel {
+  level: number;
+  passed: boolean;
+  best_score: number | null;
+  total_attempts: number;
+  total_passes: number;
+  expires_at: string | null;
+}
+
+export async function fetchAgentBenchmarks(
+  agentId: string,
+): Promise<AgentBenchmarkLevel[]> {
+  const data = await apiFetch<AgentBenchmarkLevel[]>(
+    `/agents/${agentId}/benchmarks`,
+  );
+  return data ?? [];
+}
+
+export interface BenchmarkLevelStats {
+  level: number;
+  total_attempts: number;
+  total_passes: number;
+  pass_rate: number;
+  avg_score: number | null;
+}
+
+export interface BenchmarkStats {
+  pass_rates_by_level: BenchmarkLevelStats[];
+}
+
+export async function fetchBenchmarkStats(): Promise<BenchmarkStats | null> {
+  return apiFetch<BenchmarkStats>(`/benchmarks/stats`);
+}
