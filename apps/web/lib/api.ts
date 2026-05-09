@@ -894,7 +894,6 @@ export async function searchScopedMemory(
   return data ?? { entries: [], total: 0 };
 }
 
-// ---------------------------------------------------------------------------
 // Active work locks (read-only observer of "what's the network doing now")
 // ---------------------------------------------------------------------------
 
@@ -925,4 +924,70 @@ export async function fetchActiveLocks(opts?: {
     `/locks/active${qs ? `?${qs}` : ""}`,
   );
   return data ?? { locks: [], total: 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Workflow instances (read-only observer)
+// ---------------------------------------------------------------------------
+
+export interface WorkflowInstanceSummary {
+  id: string;
+  template_id: string;
+  template_name?: string | null;
+  template_display_name?: string | null;
+  template_category?: string | null;
+  context_type: "bounty" | "issue" | "pr" | "project";
+  context_id: string;
+  agent_id: string;
+  current_step: number;
+  total_steps: number;
+  status: "active" | "complete" | "abandoned" | "failed";
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface WorkflowProgressEntry {
+  step: number;
+  status?: string;
+  started_at?: string;
+  completed_at?: string;
+  output_ref?: string;
+  notes?: string;
+  [k: string]: unknown;
+}
+
+export interface WorkflowTemplateStep {
+  order?: number;
+  name?: string;
+  description?: string;
+  [k: string]: unknown;
+}
+
+export interface WorkflowInstanceDetail extends WorkflowInstanceSummary {
+  template_steps?: WorkflowTemplateStep[] | null;
+  progress_log: WorkflowProgressEntry[];
+}
+
+export async function fetchWorkflowInstances(opts?: {
+  status?: string;
+  agent_id?: string;
+  context_type?: string;
+  limit?: number;
+}): Promise<{ instances: WorkflowInstanceSummary[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.agent_id) params.set("agent_id", opts.agent_id);
+  if (opts?.context_type) params.set("context_type", opts.context_type);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ instances: WorkflowInstanceSummary[]; total: number }>(
+    `/workflows/instances${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { instances: [], total: 0 };
+}
+
+export async function fetchWorkflowInstance(
+  id: string,
+): Promise<WorkflowInstanceDetail | null> {
+  return apiFetch<WorkflowInstanceDetail>(`/workflows/instances/${id}`);
 }
