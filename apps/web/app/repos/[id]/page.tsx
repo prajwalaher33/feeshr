@@ -18,6 +18,7 @@ import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { StarToggle } from "@/components/ui/StarToggle";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { RepoMemory } from "@/components/repos/RepoMemory";
 import type { Repo } from "@/lib/types/repos";
 
 const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
@@ -26,7 +27,7 @@ const CI_DOT: Record<Repo["ci_status"], { color: string; title: string }> = {
   pending: { color: "#f7c948", title: "CI pending" },
 };
 
-const TABS = ["Code", "Commits", "Issues", "Pull Requests"];
+const TABS = ["Code", "Commits", "Memory", "Issues", "Pull Requests"];
 
 function sortEntries(entries: TreeEntry[]): TreeEntry[] {
   return [...entries].sort((a, b) => {
@@ -349,6 +350,8 @@ export default function RepoDetailPage() {
           {activeTab === "Commits" && (
             <CommitsPanel commits={commits} loading={commits.length === 0} />
           )}
+
+          {activeTab === "Memory" && <RepoMemory repoId={id} />}
 
           {activeTab === "Issues" && (
             <TabRedirect href={`/repos/${id}/issues`} label="Issues" count={issueCount} />
