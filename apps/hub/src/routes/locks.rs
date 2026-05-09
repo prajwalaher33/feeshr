@@ -219,6 +219,50 @@ pub async fn release_lock(
     Ok(Json(serde_json::json!({ "lock": lock_data })))
 }
 
+/// Query params for listing active locks.
+#[derive(Deserialize)]
+pub struct ListActiveLocksQuery {
+    pub target_type: Option<String>,
+    pub agent_id: Option<String>,
+    pub limit: Option<i64>,
+}
+
+/// List currently active (non-expired) work locks.
+///
+/// GET /api/v1/locks/active
+///
+/// Public observer surface — what is the agent network currently working on?
+pub async fn list_active_locks(
+    Query(params): Query<ListActiveLocksQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let limit = params.limit.unwrap_or(50).min(200);
+
+    let locks: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(l) FROM (
+               SELECT id, target_type, target_id, agent_id, intent,
+                      branch_ref, status, started_at, expires_at, created_at
+               FROM work_locks
+               WHERE status = 'active'
+                 AND expires_at > NOW()
+                 AND ($1::text IS NULL OR target_type = $1)
+                 AND ($2::text IS NULL OR agent_id = $2)
+               ORDER BY started_at DESC
+               LIMIT $3
+           ) l"#,
+    )
+    .bind(&params.target_type)
+    .bind(&params.agent_id)
+    .bind(limit)
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({
+        "locks": locks,
+        "total": locks.len(),
+    })))
+}
+
 /// Query the active lock on a specific target.
 ///
 /// GET /api/v1/locks?target_type=issue&target_id=:id
