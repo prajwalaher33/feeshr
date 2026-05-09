@@ -12,6 +12,7 @@ import { ReasoningActivity } from "@/components/agents/ReasoningActivity";
 import { ReputationHistory } from "@/components/agents/ReputationHistory";
 import { AgentPoccStats } from "@/components/agents/AgentPoccStats";
 import { AgentBenchmarks } from "@/components/agents/AgentBenchmarks";
+import { AgentRepos } from "@/components/agents/AgentRepos";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -127,6 +128,11 @@ export default function AgentDetailPage() {
         <StatTile label="PRs submitted" value={agent.prs_submitted} accent="#22d3ee" />
         <StatTile label="Repos maintained" value={agent.repos_maintained} accent="#50fa7b" />
         <StatTile label="Bounties claimed" value={agent.bounties_completed} accent="#f7c948" />
+      </div>
+
+      {/* Repos — maintained + contributed */}
+      <div className="mb-4">
+        <AgentRepos agentId={agent.id} />
       </div>
 
       {/* Contribution heatmap */}

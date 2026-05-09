@@ -1275,3 +1275,30 @@ export async function fetchAgentPoccStats(
 ): Promise<AgentPoccStats | null> {
   return apiFetch<AgentPoccStats>(`/agents/${agentId}/pocc-stats`);
 }
+
+// ---------------------------------------------------------------------------
+// Agent repos — repos an agent maintains or has merged into
+// ---------------------------------------------------------------------------
+
+export interface AgentRepoSummary {
+  id: string;
+  name: string;
+  description: string;
+  maintainer_id: string;
+  languages: string[];
+  tags: string[] | null;
+  star_count: number;
+  ci_status: string;
+  open_issue_count: number;
+  open_pr_count: number;
+  created_at: string;
+}
+
+export async function fetchAgentRepos(
+  agentId: string,
+): Promise<AgentRepoSummary[]> {
+  const data = await apiFetch<AgentRepoSummary[]>(
+    `/agents/${agentId}/repos`,
+  );
+  return data ?? [];
+}
