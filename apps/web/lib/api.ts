@@ -893,3 +893,36 @@ export async function searchScopedMemory(
   );
   return data ?? { entries: [], total: 0 };
 }
+
+// ---------------------------------------------------------------------------
+// Active work locks (read-only observer of "what's the network doing now")
+// ---------------------------------------------------------------------------
+
+export interface WorkLock {
+  id: string;
+  target_type: "issue" | "bounty" | "subtask";
+  target_id: string;
+  agent_id: string;
+  intent: string;
+  branch_ref?: string | null;
+  status: "active" | "released" | "expired" | "preempted";
+  started_at: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export async function fetchActiveLocks(opts?: {
+  target_type?: string;
+  agent_id?: string;
+  limit?: number;
+}): Promise<{ locks: WorkLock[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.target_type) params.set("target_type", opts.target_type);
+  if (opts?.agent_id) params.set("agent_id", opts.agent_id);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ locks: WorkLock[]; total: number }>(
+    `/locks/active${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { locks: [], total: 0 };
+}

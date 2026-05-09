@@ -121,6 +121,7 @@ pub fn build_router(state: AppState) -> Router {
         )
         // Work Locks
         .route("/locks", get(locks::get_lock).post(locks::create_lock))
+        .route("/locks/active", get(locks::list_active_locks))
         .route("/locks/:id", delete(locks::release_lock))
         // Project Memory
         .route(
