@@ -32,8 +32,16 @@ pub struct CreateSubtaskRequest {
 
 #[derive(Deserialize)]
 pub struct ListSubtasksQuery {
-    pub parent_type: String,
-    pub parent_id: String,
+    /// Optional parent scoping. When both parent_type AND parent_id are
+    /// supplied, returns subtasks for that parent (with a derived
+    /// dependency graph). When omitted, returns the global most-recent
+    /// list — useful for the Observer Window.
+    pub parent_type: Option<String>,
+    pub parent_id: Option<String>,
+    pub status: Option<String>,
+    pub assigned_to: Option<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -200,41 +208,76 @@ pub async fn create_subtask(
     Ok(Json(subtask))
 }
 
-/// List subtasks for a parent entity, including the dependency graph.
+/// List subtasks. Supports two modes:
+///   - parent-scoped (both parent_type + parent_id): returns the subtasks
+///     for that parent ordered ASC by creation, with a derived dependency
+///     graph for the UI.
+///   - global (no parent params): returns the most-recent subtasks across
+///     the network, paginated, with optional status/assigned filters.
 ///
 /// GET /api/v1/subtasks?parent_type=issue&parent_id=:id
+/// GET /api/v1/subtasks?status=open
 pub async fn list_subtasks(
     Query(params): Query<ListSubtasksQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let parent_uuid = params
-        .parent_id
-        .parse::<Uuid>()
-        .map_err(|_| AppError::Validation("Invalid parent_id".to_string()))?;
+    if let (Some(parent_type), Some(parent_id)) = (&params.parent_type, &params.parent_id) {
+        let parent_uuid = parent_id
+            .parse::<Uuid>()
+            .map_err(|_| AppError::Validation("Invalid parent_id".to_string()))?;
+
+        let subtasks: Vec<Value> = sqlx::query_scalar(
+            r#"SELECT row_to_json(s) FROM (
+                   SELECT * FROM subtasks
+                   WHERE parent_type = $1 AND parent_id = $2
+                   ORDER BY created_at ASC
+               ) s"#,
+        )
+        .bind(parent_type)
+        .bind(parent_uuid)
+        .fetch_all(&state.db)
+        .await?;
+
+        // Build dependency graph from the depends_on UUID[] columns
+        let mut graph = serde_json::Map::new();
+        for s in &subtasks {
+            let id = s.get("id").and_then(|v| v.as_str()).unwrap_or_default();
+            let deps = s.get("depends_on").cloned().unwrap_or(Value::Array(vec![]));
+            graph.insert(id.to_string(), deps);
+        }
+
+        return Ok(Json(serde_json::json!({
+            "subtasks": subtasks,
+            "dependency_graph": graph,
+        })));
+    }
+
+    let limit = params.limit.unwrap_or(50).min(200);
+    let offset = params.offset.unwrap_or(0);
 
     let subtasks: Vec<Value> = sqlx::query_scalar(
         r#"SELECT row_to_json(s) FROM (
-               SELECT * FROM subtasks
-               WHERE parent_type = $1 AND parent_id = $2
-               ORDER BY created_at ASC
+               SELECT id, parent_type, parent_id, title, description,
+                      required_skills, assigned_to, assigned_at, depends_on,
+                      status, output_ref, estimated_effort,
+                      started_at, completed_at, created_by, created_at
+               FROM subtasks
+               WHERE ($1::text IS NULL OR status = $1)
+                 AND ($2::text IS NULL OR assigned_to = $2)
+               ORDER BY created_at DESC
+               LIMIT $3 OFFSET $4
            ) s"#,
     )
-    .bind(&params.parent_type)
-    .bind(parent_uuid)
+    .bind(&params.status)
+    .bind(&params.assigned_to)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await?;
 
-    // Build dependency graph from the depends_on UUID[] columns
-    let mut graph = serde_json::Map::new();
-    for s in &subtasks {
-        let id = s.get("id").and_then(|v| v.as_str()).unwrap_or_default();
-        let deps = s.get("depends_on").cloned().unwrap_or(Value::Array(vec![]));
-        graph.insert(id.to_string(), deps);
-    }
-
     Ok(Json(serde_json::json!({
         "subtasks": subtasks,
-        "dependency_graph": graph,
+        "total": subtasks.len(),
     })))
 }
 

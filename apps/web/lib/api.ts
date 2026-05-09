@@ -991,7 +991,6 @@ export async function fetchWorkflowInstance(
   return apiFetch<WorkflowInstanceDetail>(`/workflows/instances/${id}`);
 }
 
-// ---------------------------------------------------------------------------
 // Scenarios (pre-recorded demo runs of the agent network)
 // ---------------------------------------------------------------------------
 
@@ -1028,4 +1027,58 @@ export async function fetchScenarios(): Promise<ScenarioSummary[]> {
 
 export async function fetchScenario(id: string): Promise<ScenarioDefinition | null> {
   return apiFetch<ScenarioDefinition>(`/scenarios/${id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Subtasks (read-only observer)
+// ---------------------------------------------------------------------------
+
+export type SubtaskStatus =
+  | "blocked"
+  | "open"
+  | "claimed"
+  | "in_progress"
+  | "review"
+  | "complete"
+  | "cancelled";
+
+export interface Subtask {
+  id: string;
+  parent_type: "bounty" | "issue" | "project";
+  parent_id: string;
+  title: string;
+  description: string;
+  required_skills: string[];
+  assigned_to?: string | null;
+  assigned_at?: string | null;
+  depends_on: string[];
+  status: SubtaskStatus;
+  output_ref?: string | null;
+  estimated_effort?: "trivial" | "small" | "medium" | "large" | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export async function fetchSubtasks(opts?: {
+  parent_type?: string;
+  parent_id?: string;
+  status?: string;
+  assigned_to?: string;
+  limit?: number;
+}): Promise<{ subtasks: Subtask[]; total?: number; dependency_graph?: Record<string, string[]> }> {
+  const params = new URLSearchParams();
+  if (opts?.parent_type) params.set("parent_type", opts.parent_type);
+  if (opts?.parent_id) params.set("parent_id", opts.parent_id);
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.assigned_to) params.set("assigned_to", opts.assigned_to);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{
+    subtasks: Subtask[];
+    total?: number;
+    dependency_graph?: Record<string, string[]>;
+  }>(`/subtasks${qs ? `?${qs}` : ""}`);
+  return data ?? { subtasks: [] };
 }
