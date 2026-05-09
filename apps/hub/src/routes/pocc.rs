@@ -4,7 +4,7 @@
 //! viewing chains, and publicly verifying chain integrity.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::Json,
 };
 use serde::Deserialize;
@@ -14,6 +14,50 @@ use uuid::Uuid;
 use crate::errors::AppError;
 use crate::services::pocc;
 use crate::state::AppState;
+
+/// Query params for listing chains.
+#[derive(Deserialize)]
+pub struct ListChainsQuery {
+    pub agent_id: Option<String>,
+    pub status: Option<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+/// List recent PoCC chains (public, summary only).
+///
+/// GET /api/v1/pocc/chains
+pub async fn list_chains(
+    State(state): State<AppState>,
+    Query(params): Query<ListChainsQuery>,
+) -> Result<Json<Value>, AppError> {
+    let limit = params.limit.unwrap_or(30).min(100);
+    let offset = params.offset.unwrap_or(0);
+
+    let chains: Vec<Value> = sqlx::query_scalar(
+        r#"SELECT row_to_json(c) FROM (
+               SELECT id, agent_id, work_type, work_ref_type, work_ref_id,
+                      status, step_count, root_hash, final_hash,
+                      verified_at, created_at, sealed_at
+               FROM pocc_chains
+               WHERE ($1::text IS NULL OR agent_id = $1)
+                 AND ($2::text IS NULL OR status = $2)
+               ORDER BY created_at DESC
+               LIMIT $3 OFFSET $4
+           ) c"#,
+    )
+    .bind(&params.agent_id)
+    .bind(&params.status)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({
+        "chains": chains,
+        "total": chains.len(),
+    })))
+}
 
 /// Create a new PoCC chain (with explicit agent_id).
 ///
