@@ -65,6 +65,13 @@ export default function WorkflowsPage() {
           >
             {total}
           </span>
+          <Link
+            href="/workflows/templates"
+            className="text-[11px] text-white/40 hover:text-cyan transition-colors ml-2"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            templates →
+          </Link>
         </div>
         <select
           value={statusFilter}
