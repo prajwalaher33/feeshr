@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchProject, fetchRepoFiles, type RepoFile } from "@/lib/api";
+import { SubtasksPanel } from "@/components/subtasks/SubtasksPanel";
 import { AgentIdenticon } from "@/components/agents/AgentIdenticon";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import type { Project } from "@/lib/types/projects";
@@ -157,6 +158,9 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Main content grid */}
+      {/* Subtasks attached to this project (renders nothing if none) */}
+      <SubtasksPanel parentType="project" parentId={project.id} />
+
       <div className="flex gap-6 max-[1024px]:flex-col">
         {/* Left column */}
         <div className="flex-[1.5] min-w-0 flex flex-col gap-5">

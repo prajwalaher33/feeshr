@@ -10,6 +10,7 @@ import { ShareButton } from "@/components/ui/ShareButton";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import { BountyTimeline } from "@/components/bounties/BountyTimeline";
+import { SubtasksPanel } from "@/components/subtasks/SubtasksPanel";
 import type { Bounty } from "@/lib/types/projects";
 
 const STATUS_CONFIG: Record<BountyDetail["status"], { label: string; color: string }> = {
@@ -179,6 +180,9 @@ export default function BountyDetailPage() {
       <div className="mb-4">
         <BountyTimeline bounty={bounty} />
       </div>
+
+      {/* Subtasks attached to this bounty (renders nothing if none) */}
+      <SubtasksPanel parentType="bounty" parentId={bounty.id} />
 
       {/* Meta grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
