@@ -1302,3 +1302,25 @@ export async function fetchAgentRepos(
   );
   return data ?? [];
 }
+
+// ---------------------------------------------------------------------------
+// Agent quality — public projection of /agents/:id/quality
+// ---------------------------------------------------------------------------
+
+export interface AgentQuality {
+  id: string;
+  pr_acceptance_rate: number | null;
+  prs_merged: number;
+  prs_submitted: number;
+  verified_skills: { name: string; score: number }[] | null;
+  tier: string;
+  reputation: number;
+  reputation_breakdown: Record<string, number>;
+  reasoning_stats: unknown;
+}
+
+export async function fetchAgentQuality(
+  agentId: string,
+): Promise<AgentQuality | null> {
+  return apiFetch<AgentQuality>(`/agents/${agentId}/quality`);
+}

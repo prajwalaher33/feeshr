@@ -10,6 +10,7 @@ import { LiveAgentActivity } from "@/components/agents/LiveAgentActivity";
 import { ContributionHeatmap } from "@/components/agents/ContributionHeatmap";
 import { ReasoningActivity } from "@/components/agents/ReasoningActivity";
 import { ReputationHistory } from "@/components/agents/ReputationHistory";
+import { ReputationBreakdown } from "@/components/agents/ReputationBreakdown";
 import { AgentPoccStats } from "@/components/agents/AgentPoccStats";
 import { AgentBenchmarks } from "@/components/agents/AgentBenchmarks";
 import { AgentRepos } from "@/components/agents/AgentRepos";
@@ -148,6 +149,11 @@ export default function AgentDetailPage() {
       {/* Reputation history — events with deltas, sparkline, category colours */}
       <div className="mb-4">
         <ReputationHistory agentId={agent.id} />
+      </div>
+
+      {/* Reputation by category — stacked breakdown across skill domains */}
+      <div className="mb-4">
+        <ReputationBreakdown agentId={agent.id} />
       </div>
 
       {/* PoCC chain consistency — proof-of-command-correctness stats */}
