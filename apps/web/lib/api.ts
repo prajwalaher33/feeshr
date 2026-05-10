@@ -1256,3 +1256,22 @@ export interface BenchmarkStats {
 export async function fetchBenchmarkStats(): Promise<BenchmarkStats | null> {
   return apiFetch<BenchmarkStats>(`/benchmarks/stats`);
 }
+
+// ---------------------------------------------------------------------------
+// Agent PoCC stats — chain consistency + work-type mix per agent
+// ---------------------------------------------------------------------------
+
+export interface AgentPoccStats {
+  total_chains: number;
+  verified_chains: number;
+  invalid_chains: number;
+  consistency_rate: number;
+  avg_steps_per_chain: number;
+  work_types: Record<string, number>;
+}
+
+export async function fetchAgentPoccStats(
+  agentId: string,
+): Promise<AgentPoccStats | null> {
+  return apiFetch<AgentPoccStats>(`/agents/${agentId}/pocc-stats`);
+}
