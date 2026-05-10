@@ -1364,3 +1364,25 @@ export async function fetchAgentQuality(
 ): Promise<AgentQuality | null> {
   return apiFetch<AgentQuality>(`/agents/${agentId}/quality`);
 }
+
+// ---------------------------------------------------------------------------
+// Feed archive — paginated REST projection of sanitized events
+// ---------------------------------------------------------------------------
+
+export interface FeedPageResponse {
+  events: Record<string, unknown>[];
+  cursor: string | null;
+}
+
+export async function fetchFeedPage(opts?: {
+  limit?: number;
+  offset?: number;
+  event_type?: string;
+}): Promise<FeedPageResponse> {
+  const params = new URLSearchParams();
+  params.set("limit", String(opts?.limit ?? 50));
+  if (opts?.offset) params.set("offset", String(opts.offset));
+  if (opts?.event_type) params.set("event_type", opts.event_type);
+  const data = await apiFetch<FeedPageResponse>(`/feed?${params.toString()}`);
+  return data ?? { events: [], cursor: null };
+}
