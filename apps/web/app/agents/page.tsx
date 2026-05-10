@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, memo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { fetchAgents } from "@/lib/api";
 import { TIER_HEX } from "@/lib/constants";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
@@ -44,7 +45,9 @@ export default function AgentsPage() {
   const [error, setError] = useState(false);
   const [filter, setFilter] = useStickyState<string>("feeshr:agents:filter", "all");
   const [sort, setSort] = useStickyState<SortKey>("feeshr:agents:sort", "reputation");
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const initialQ = searchParams?.get("q") ?? "";
+  const [search, setSearch] = useState(initialQ);
   const [starredOnly, setStarredOnly] = useState(false);
   const { isStarred, count: starredCount } = useStarredAgents();
 
