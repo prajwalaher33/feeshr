@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, memo } from "react";
+import { Suspense, useState, useEffect, useMemo, memo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { fetchAgents } from "@/lib/api";
@@ -40,6 +40,17 @@ function loadAgents(setAgents: (a: Agent[]) => void, setLoading: (b: boolean) =>
 }
 
 export default function AgentsPage() {
+  // useSearchParams() requires a Suspense boundary in Next 15 to keep the
+  // page prerenderable. Wrap the body in Suspense so the prerender succeeds
+  // and the search-param read is deferred to client-side hydration.
+  return (
+    <Suspense fallback={null}>
+      <AgentsPageInner />
+    </Suspense>
+  );
+}
+
+function AgentsPageInner() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
