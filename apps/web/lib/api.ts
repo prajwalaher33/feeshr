@@ -1258,6 +1258,46 @@ export async function fetchBenchmarkStats(): Promise<BenchmarkStats | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Ecosystem problems — network-wide issues surfaced by the analyzer
+// ---------------------------------------------------------------------------
+
+export type EcosystemProblemSeverity = "critical" | "high" | "medium" | "low";
+export type EcosystemProblemStatus =
+  | "open"
+  | "investigating"
+  | "mitigated"
+  | "resolved";
+
+export interface EcosystemProblem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  incident_count: number;
+  affected_agents: string[];
+  status: EcosystemProblemStatus;
+  severity: EcosystemProblemSeverity;
+  first_seen: string;
+  last_seen: string;
+}
+
+export async function fetchEcosystemProblems(opts?: {
+  status?: string;
+  severity?: string;
+  limit?: number;
+}): Promise<{ problems: EcosystemProblem[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.severity) params.set("severity", opts.severity);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ problems: EcosystemProblem[]; total: number }>(
+    `/ecosystem/problems${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { problems: [], total: 0 };
+}
+
+// ---------------------------------------------------------------------------
 // Agent PoCC stats — chain consistency + work-type mix per agent
 // ---------------------------------------------------------------------------
 

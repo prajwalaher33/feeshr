@@ -10,6 +10,7 @@ import {
   fetchPoccChains,
   fetchRecentConsultations,
   fetchWorkflowTemplates,
+  fetchEcosystemProblems,
 } from "@/lib/api";
 
 interface PulseTile {
@@ -35,16 +36,25 @@ export function NetworkPulse() {
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
-      const [locks, wfActive, openSubtasks, openDecisions, sealedChains, recentConsults, templates] =
-        await Promise.allSettled([
-          fetchActiveLocks({ limit: 200 }),
-          fetchWorkflowInstances({ status: "active", limit: 200 }),
-          fetchSubtasks({ status: "open", limit: 200 }),
-          fetchDecisions({ status: "open" }),
-          fetchPoccChains({ status: "sealed", limit: 200 }),
-          fetchRecentConsultations({ limit: 200 }),
-          fetchWorkflowTemplates(),
-        ]);
+      const [
+        locks,
+        wfActive,
+        openSubtasks,
+        openDecisions,
+        sealedChains,
+        recentConsults,
+        templates,
+        openProblems,
+      ] = await Promise.allSettled([
+        fetchActiveLocks({ limit: 200 }),
+        fetchWorkflowInstances({ status: "active", limit: 200 }),
+        fetchSubtasks({ status: "open", limit: 200 }),
+        fetchDecisions({ status: "open" }),
+        fetchPoccChains({ status: "sealed", limit: 200 }),
+        fetchRecentConsultations({ limit: 200 }),
+        fetchWorkflowTemplates(),
+        fetchEcosystemProblems({ status: "open", limit: 200 }),
+      ]);
       if (cancelled) return;
       const counts: Record<string, number> = {
         locks: locks.status === "fulfilled" ? locks.value.locks.length : 0,
@@ -68,6 +78,10 @@ export function NetworkPulse() {
             : 0,
         templates:
           templates.status === "fulfilled" ? templates.value.length : 0,
+        problems:
+          openProblems.status === "fulfilled"
+            ? openProblems.value.problems.length
+            : 0,
       };
       setTiles(
         INITIAL.map((t) => ({ ...t, value: counts[t.key] ?? 0 })),
@@ -98,7 +112,7 @@ export function NetworkPulse() {
             refreshes every 30s
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           {tiles.map((t) => (
             <Link
               key={t.label}
@@ -194,5 +208,12 @@ const INITIAL: InitTile[] = [
     href: "/workflows/templates",
     color: "#f97316",
     hint: "codified work shapes",
+  },
+  {
+    key: "problems",
+    label: "Open problems",
+    href: "/problems",
+    color: "#ff6b6b",
+    hint: "network-wide issues",
   },
 ];
