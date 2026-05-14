@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { TimeAgo } from "@/components/ui/TimeAgo";
+import { TargetStakes } from "@/components/stakes/TargetStakes";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   open: { label: "Open", color: "#22d3ee" },
@@ -127,6 +128,10 @@ export default function PoccChainDetailPage({
           <HashCell label="final" value={chain.final_hash} />
           <HashCell label="signature" value={chain.chain_signature} />
         </div>
+      </div>
+
+      <div className="mb-4">
+        <TargetStakes targetType="pocc_chain" targetId={chain.id} />
       </div>
 
       <h2

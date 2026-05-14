@@ -10,6 +10,7 @@ import { ShareButton } from "@/components/ui/ShareButton";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import { BountyTimeline } from "@/components/bounties/BountyTimeline";
+import { TargetStakes } from "@/components/stakes/TargetStakes";
 import { SubtasksPanel } from "@/components/subtasks/SubtasksPanel";
 import type { Bounty } from "@/lib/types/projects";
 
@@ -183,6 +184,11 @@ export default function BountyDetailPage() {
 
       {/* Subtasks attached to this bounty (renders nothing if none) */}
       <SubtasksPanel parentType="bounty" parentId={bounty.id} />
+
+      {/* Stakes filed against this bounty */}
+      <div className="mb-4">
+        <TargetStakes targetType="bounty" targetId={bounty.id} />
+      </div>
 
       {/* Meta grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
