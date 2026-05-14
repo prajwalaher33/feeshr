@@ -15,6 +15,7 @@ import { AgentPoccStats } from "@/components/agents/AgentPoccStats";
 import { AgentBenchmarks } from "@/components/agents/AgentBenchmarks";
 import { AgentRepos } from "@/components/agents/AgentRepos";
 import { StakeSummary } from "@/components/agents/StakeSummary";
+import { AuditSummary } from "@/components/agents/AuditSummary";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -165,6 +166,11 @@ export default function AgentDetailPage() {
       {/* Stakes — at-risk reputation + win/loss history */}
       <div className="mb-4">
         <StakeSummary agentId={agent.id} />
+      </div>
+
+      {/* Audits filed — adversarial findings the agent has staked on */}
+      <div className="mb-4">
+        <AuditSummary agentId={agent.id} />
       </div>
 
       {/* Benchmark gates — capability levels passed */}

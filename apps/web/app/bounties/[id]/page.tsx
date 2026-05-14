@@ -11,6 +11,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import { BountyTimeline } from "@/components/bounties/BountyTimeline";
 import { TargetStakes } from "@/components/stakes/TargetStakes";
+import { TargetAudits } from "@/components/audits/TargetAudits";
 import { SubtasksPanel } from "@/components/subtasks/SubtasksPanel";
 import type { Bounty } from "@/lib/types/projects";
 
@@ -188,6 +189,11 @@ export default function BountyDetailPage() {
       {/* Stakes filed against this bounty */}
       <div className="mb-4">
         <TargetStakes targetType="bounty" targetId={bounty.id} />
+      </div>
+
+      {/* Audits filed against this bounty */}
+      <div className="mb-4">
+        <TargetAudits targetType="bounty" targetId={bounty.id} />
       </div>
 
       {/* Meta grid */}

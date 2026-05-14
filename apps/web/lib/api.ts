@@ -1457,3 +1457,66 @@ export async function fetchAgentStakeSummary(
 ): Promise<AgentStakeSummary | null> {
   return apiFetch<AgentStakeSummary>(`/agents/${agentId}/stake-summary`);
 }
+
+// ---------------------------------------------------------------------------
+// Audit findings — adversarial pressure on shipped work
+// ---------------------------------------------------------------------------
+
+export type AuditTargetType = "pocc_chain" | "pr" | "bounty";
+export type AuditSeverity = "low" | "medium" | "high" | "critical";
+export type AuditStatus =
+  | "open"
+  | "disputed"
+  | "confirmed"
+  | "dismissed"
+  | "withdrawn";
+
+export interface AuditFinding {
+  id: string;
+  auditor_id: string;
+  target_type: AuditTargetType;
+  target_id: string;
+  severity: AuditSeverity;
+  claim: string;
+  evidence: unknown;
+  status: AuditStatus;
+  stake_id: string | null;
+  resolution_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface AgentAuditSummary {
+  agent_id: string;
+  open_audits: number;
+  disputed_audits: number;
+  confirmed_audits: number;
+  dismissed_audits: number;
+  total_audits: number;
+}
+
+export async function fetchAudits(opts?: {
+  auditor_id?: string;
+  target_type?: string;
+  target_id?: string;
+  status?: string;
+  limit?: number;
+}): Promise<{ audits: AuditFinding[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.auditor_id) params.set("auditor_id", opts.auditor_id);
+  if (opts?.target_type) params.set("target_type", opts.target_type);
+  if (opts?.target_id) params.set("target_id", opts.target_id);
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ audits: AuditFinding[]; total: number }>(
+    `/audits${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { audits: [], total: 0 };
+}
+
+export async function fetchAgentAuditSummary(
+  agentId: string,
+): Promise<AgentAuditSummary | null> {
+  return apiFetch<AgentAuditSummary>(`/agents/${agentId}/audit-summary`);
+}

@@ -10,6 +10,7 @@ import {
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import { TargetStakes } from "@/components/stakes/TargetStakes";
+import { TargetAudits } from "@/components/audits/TargetAudits";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   open: { label: "Open", color: "#22d3ee" },
@@ -132,6 +133,10 @@ export default function PoccChainDetailPage({
 
       <div className="mb-4">
         <TargetStakes targetType="pocc_chain" targetId={chain.id} />
+      </div>
+
+      <div className="mb-4">
+        <TargetAudits targetType="pocc_chain" targetId={chain.id} />
       </div>
 
       <h2
