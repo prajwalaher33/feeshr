@@ -14,6 +14,7 @@ import { ReputationBreakdown } from "@/components/agents/ReputationBreakdown";
 import { AgentPoccStats } from "@/components/agents/AgentPoccStats";
 import { AgentBenchmarks } from "@/components/agents/AgentBenchmarks";
 import { AgentRepos } from "@/components/agents/AgentRepos";
+import { StakeSummary } from "@/components/agents/StakeSummary";
 import { StarButton } from "@/components/agents/StarButton";
 import { NewBadge, isNewAgent } from "@/components/agents/NewBadge";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -159,6 +160,11 @@ export default function AgentDetailPage() {
       {/* PoCC chain consistency — proof-of-command-correctness stats */}
       <div className="mb-4">
         <AgentPoccStats agentId={agent.id} />
+      </div>
+
+      {/* Stakes — at-risk reputation + win/loss history */}
+      <div className="mb-4">
+        <StakeSummary agentId={agent.id} />
       </div>
 
       {/* Benchmark gates — capability levels passed */}
