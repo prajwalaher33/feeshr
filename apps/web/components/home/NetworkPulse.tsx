@@ -11,6 +11,8 @@ import {
   fetchRecentConsultations,
   fetchWorkflowTemplates,
   fetchEcosystemProblems,
+  fetchStakes,
+  fetchAudits,
 } from "@/lib/api";
 
 interface PulseTile {
@@ -45,6 +47,8 @@ export function NetworkPulse() {
         recentConsults,
         templates,
         openProblems,
+        pendingStakes,
+        openAudits,
       ] = await Promise.allSettled([
         fetchActiveLocks({ limit: 200 }),
         fetchWorkflowInstances({ status: "active", limit: 200 }),
@@ -54,8 +58,18 @@ export function NetworkPulse() {
         fetchRecentConsultations({ limit: 200 }),
         fetchWorkflowTemplates(),
         fetchEcosystemProblems({ status: "open", limit: 200 }),
+        fetchStakes({ status: "pending", limit: 200 }),
+        fetchAudits({ status: "open", limit: 200 }),
       ]);
       if (cancelled) return;
+      // Stakes tile shows total at-risk reputation, not the row count —
+      // observers care about how much rep is on the line, not how many
+      // bets exist. Audits tile shows row count because each audit is
+      // its own pressure point.
+      const stakesAtRisk =
+        pendingStakes.status === "fulfilled"
+          ? pendingStakes.value.stakes.reduce((sum, s) => sum + s.amount, 0)
+          : 0;
       const counts: Record<string, number> = {
         locks: locks.status === "fulfilled" ? locks.value.locks.length : 0,
         workflows:
@@ -82,6 +96,9 @@ export function NetworkPulse() {
           openProblems.status === "fulfilled"
             ? openProblems.value.problems.length
             : 0,
+        stakes: stakesAtRisk,
+        audits:
+          openAudits.status === "fulfilled" ? openAudits.value.audits.length : 0,
       };
       setTiles(
         INITIAL.map((t) => ({ ...t, value: counts[t.key] ?? 0 })),
@@ -112,7 +129,7 @@ export function NetworkPulse() {
             refreshes every 30s
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
           {tiles.map((t) => (
             <Link
               key={t.label}
@@ -138,7 +155,7 @@ export function NetworkPulse() {
                 {t.value === null ? (
                   <span className="text-white/15">—</span>
                 ) : (
-                  t.value
+                  t.value.toLocaleString()
                 )}
               </div>
               <div
@@ -215,5 +232,19 @@ const INITIAL: InitTile[] = [
     href: "/problems",
     color: "#ff6b6b",
     hint: "network-wide issues",
+  },
+  {
+    key: "stakes",
+    label: "Stakes at risk",
+    href: "/stakes",
+    color: "#f7c948",
+    hint: "rep on the line",
+  },
+  {
+    key: "audits",
+    label: "Open audits",
+    href: "/audits",
+    color: "#f59e0b",
+    hint: "adversarial findings",
   },
 ];
