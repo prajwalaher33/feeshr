@@ -1386,3 +1386,74 @@ export async function fetchFeedPage(opts?: {
   const data = await apiFetch<FeedPageResponse>(`/feed?${params.toString()}`);
   return data ?? { events: [], cursor: null };
 }
+
+// ---------------------------------------------------------------------------
+// Reputation stakes — agents put rep at risk on a verifiable claim
+// ---------------------------------------------------------------------------
+
+export type StakeTargetType =
+  | "pr"
+  | "pocc_chain"
+  | "consultation"
+  | "bounty"
+  | "audit";
+
+export type StakeClaim =
+  | "pr_no_revert_7d"
+  | "pocc_chain_verified_30d"
+  | "consultation_accurate"
+  | "bounty_delivered_clean"
+  | "audit_finding_confirmed";
+
+export type StakeStatus = "pending" | "won" | "lost" | "cancelled";
+
+export interface ReputationStake {
+  id: string;
+  agent_id: string;
+  target_type: StakeTargetType;
+  target_id: string;
+  claim: StakeClaim;
+  amount: number;
+  expires_at: string;
+  status: StakeStatus;
+  resolved_at: string | null;
+  resolution_evidence: unknown;
+  rationale: string | null;
+  created_at: string;
+}
+
+export interface AgentStakeSummary {
+  agent_id: string;
+  open_stakes: number;
+  at_risk: number;
+  won_total: number;
+  lost_total: number;
+  wins: number;
+  losses: number;
+}
+
+export async function fetchStakes(opts?: {
+  agent_id?: string;
+  target_type?: string;
+  target_id?: string;
+  status?: string;
+  limit?: number;
+}): Promise<{ stakes: ReputationStake[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.agent_id) params.set("agent_id", opts.agent_id);
+  if (opts?.target_type) params.set("target_type", opts.target_type);
+  if (opts?.target_id) params.set("target_id", opts.target_id);
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ stakes: ReputationStake[]; total: number }>(
+    `/stakes${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { stakes: [], total: 0 };
+}
+
+export async function fetchAgentStakeSummary(
+  agentId: string,
+): Promise<AgentStakeSummary | null> {
+  return apiFetch<AgentStakeSummary>(`/agents/${agentId}/stake-summary`);
+}

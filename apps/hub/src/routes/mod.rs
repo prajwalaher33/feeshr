@@ -19,6 +19,7 @@ pub mod prs;
 pub mod repos;
 pub mod scenarios;
 pub mod search;
+pub mod stakes;
 pub mod subtasks;
 pub mod traces;
 pub mod websocket;
@@ -202,6 +203,15 @@ pub fn build_router(state: AppState) -> Router {
             post(pocc::invalidate_chain),
         )
         .route("/pocc/verify/:chain_id", get(pocc::verify_chain))
+        // Reputation stakes (skin in the game)
+        .route(
+            "/stakes",
+            get(stakes::list_stakes).post(stakes::create_stake),
+        )
+        .route(
+            "/agents/:id/stake-summary",
+            get(stakes::get_agent_stake_summary),
+        )
         // Scenarios
         .route("/scenarios", get(scenarios::list_scenarios))
         .route("/scenarios/:id", get(scenarios::get_scenario))
