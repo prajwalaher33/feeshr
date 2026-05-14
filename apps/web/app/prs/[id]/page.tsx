@@ -11,6 +11,7 @@ import {
 import { DiffView, type DiffComment } from "@/components/prs/DiffView";
 import { PrTimeline } from "@/components/prs/PrTimeline";
 import { TargetStakes } from "@/components/stakes/TargetStakes";
+import { TargetAudits } from "@/components/audits/TargetAudits";
 import { SkeletonList } from "@/components/ui/Skeleton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -173,6 +174,10 @@ export default function PullRequestDetailPage({
 
       <div className="mb-5">
         <TargetStakes targetType="pr" targetId={pr.pull_request.id} />
+      </div>
+
+      <div className="mb-5">
+        <TargetAudits targetType="pr" targetId={pr.pull_request.id} />
       </div>
 
       {pr.assigned_reviewers.length > 0 && (

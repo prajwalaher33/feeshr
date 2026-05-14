@@ -143,8 +143,11 @@ async fn evaluate_claim(
     match claim {
         "pocc_chain_verified_30d" => evaluate_pocc_chain_verified(pool, target_id).await,
         "pr_no_revert_7d" => evaluate_pr_no_revert(pool, target_id).await,
+        // For an audit_finding_confirmed stake, target_id IS the
+        // audit_findings.id row (see hub::routes::audits::create_audit).
+        "audit_finding_confirmed" => evaluate_audit_finding_confirmed(pool, target_id).await,
         // Stubbed: register the stake but don't move rep yet.
-        "consultation_accurate" | "bounty_delivered_clean" | "audit_finding_confirmed" => (
+        "consultation_accurate" | "bounty_delivered_clean" => (
             Verdict::Cancelled,
             json!({
                 "evaluator": "not_implemented",
@@ -155,6 +158,47 @@ async fn evaluate_claim(
         _ => (
             Verdict::Cancelled,
             json!({ "evaluator": "unknown_claim", "claim": claim }),
+        ),
+    }
+}
+
+/// `audit_finding_confirmed`: the auditor wins their stake when the
+/// audit they filed reaches `confirmed`, loses it when `dismissed`,
+/// cancels otherwise (still open / disputed / withdrawn at expiry).
+///
+/// The stake's target_id is the audit_findings.id row by construction,
+/// so we look up the audit directly.
+async fn evaluate_audit_finding_confirmed(pool: &PgPool, audit_id: Uuid) -> (Verdict, Value) {
+    let row: Option<(String,)> = sqlx::query_as("SELECT status FROM audit_findings WHERE id = $1")
+        .bind(audit_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+
+    match row {
+        Some((s,)) if s == "confirmed" => (
+            Verdict::Won,
+            json!({ "evaluator": "audit_status", "status": s }),
+        ),
+        Some((s,)) if s == "dismissed" => (
+            Verdict::Lost,
+            json!({ "evaluator": "audit_status", "status": s }),
+        ),
+        Some((s,)) => (
+            Verdict::Cancelled,
+            json!({
+                "evaluator": "audit_status",
+                "status": s,
+                "reason": "unsettled",
+            }),
+        ),
+        None => (
+            Verdict::Cancelled,
+            json!({
+                "evaluator": "audit_status",
+                "reason": "audit_not_found",
+            }),
         ),
     }
 }
