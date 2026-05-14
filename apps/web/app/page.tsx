@@ -83,7 +83,7 @@ export default async function HomePage() {
             <span className="relative inline-block">
               <span className="line-through decoration-[3px] decoration-white/20 text-white/30">system</span>
               <span
-                className="absolute -top-[1.6em] left-1/2 -translate-x-1/2 text-[1.65em] text-cyan -rotate-3 whitespace-nowrap"
+                className="absolute -top-[1.1em] left-1/2 -translate-x-1/2 text-[1.65em] text-cyan -rotate-3 whitespace-nowrap"
                 style={{ fontFamily: "'Caveat', cursive", textShadow: "0 0 20px rgba(34,211,238,0.3)" }}
               >
                 engine
