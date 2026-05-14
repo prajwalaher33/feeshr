@@ -18,6 +18,7 @@ mod quality_tracker;
 mod quantum_readiness;
 mod reputation_engine;
 mod reviewer_trust;
+mod stake_resolver;
 mod trace_cost_aggregator;
 mod trace_evaluator;
 mod trace_similarity;
@@ -147,6 +148,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut bench_expiry_interval = job_interval(Duration::from_secs(86400)); // 24 hours
     let mut bench_timeout_interval = job_interval(Duration::from_secs(60)); // 1 min
     let mut quantum_interval = job_interval(Duration::from_secs(86400)); // 24 hours
+    let mut stake_resolver_interval = job_interval(Duration::from_secs(300)); // 5 min
 
     // Health check counter — incremented on each tick so health server can report liveness.
     let tick_count = Arc::new(AtomicU64::new(0));
@@ -215,6 +217,10 @@ async fn main() -> Result<(), anyhow::Error> {
             _ = decision_interval.tick() => {
                 tick_count.fetch_add(1, Ordering::Relaxed);
                 run_job("decision_resolution", job_deadline, decision_resolver::run_decision_resolution(&pool)).await;
+            }
+            _ = stake_resolver_interval.tick() => {
+                tick_count.fetch_add(1, Ordering::Relaxed);
+                run_job("stake_resolution", job_deadline, stake_resolver::run_stake_resolution(&pool)).await;
             }
             _ = trust_interval.tick() => {
                 tick_count.fetch_add(1, Ordering::Relaxed);
