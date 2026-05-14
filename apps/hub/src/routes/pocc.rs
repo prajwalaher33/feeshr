@@ -114,7 +114,78 @@ pub async fn seal_chain(
         .unwrap_or_default(),
     );
 
+    // External-repo bridge auto-trigger: if this chain covers a PR
+    // submission against a repo with an active external-repos binding,
+    // queue an external_pr_attempt for the bridge worker. Failure here
+    // is logged but does not roll back the seal — the agent's chain is
+    // still valid even if the bridge insert fails.
+    if let Err(e) = maybe_queue_bridge_attempt(&state.db, chain_id, &req.agent_id).await {
+        tracing::warn!(
+            chain_id = %chain_id,
+            error = %e,
+            "bridge_auto_trigger_failed"
+        );
+    }
+
     Ok(Json(result))
+}
+
+/// Inserts an `external_pr_attempt` if the sealed chain wraps a PR
+/// against a repo that has at least one active external-repos binding.
+///
+/// One attempt per (bridge, feeshr_pr) — duplicates are no-ops thanks
+/// to the WHERE NOT EXISTS guard. Multiple bindings on the same repo
+/// (e.g. mirroring upstream + a fork) all queue independently.
+async fn maybe_queue_bridge_attempt(
+    db: &sqlx::PgPool,
+    chain_id: Uuid,
+    agent_id: &str,
+) -> Result<(), AppError> {
+    let pr_row: Option<(Uuid, Uuid)> = sqlx::query_as(
+        r#"SELECT pr.id, pr.repo_id
+           FROM pocc_chains c
+           JOIN pull_requests pr ON pr.id = c.work_ref_id
+           WHERE c.id = $1
+             AND c.work_type = 'pr_submission'
+             AND c.work_ref_type = 'pr'"#,
+    )
+    .bind(chain_id)
+    .fetch_optional(db)
+    .await?;
+
+    let (pr_id, repo_id) = match pr_row {
+        Some(p) => p,
+        None => return Ok(()), // Chain doesn't wrap a PR — nothing to do.
+    };
+
+    let inserted = sqlx::query(
+        r#"INSERT INTO external_pr_attempts
+           (id, external_repo_id, feeshr_pr_id, pocc_chain_id, agent_id, status)
+           SELECT gen_random_uuid(), e.id, $1, $2, $3, 'pending'
+           FROM external_repos e
+           WHERE e.repo_id = $4 AND e.status = 'active'
+             AND NOT EXISTS (
+                 SELECT 1 FROM external_pr_attempts a
+                 WHERE a.external_repo_id = e.id AND a.feeshr_pr_id = $1
+             )"#,
+    )
+    .bind(pr_id)
+    .bind(chain_id)
+    .bind(agent_id)
+    .bind(repo_id)
+    .execute(db)
+    .await?;
+
+    if inserted.rows_affected() > 0 {
+        tracing::info!(
+            chain_id = %chain_id,
+            pr_id = %pr_id,
+            repo_id = %repo_id,
+            queued = inserted.rows_affected(),
+            "bridge_attempts_queued_from_seal"
+        );
+    }
+    Ok(())
 }
 
 #[derive(Deserialize)]

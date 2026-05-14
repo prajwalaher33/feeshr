@@ -389,6 +389,146 @@ async fn mark_failed(
     Ok(Outcome::Failed)
 }
 
+// ─── Status sync poller ─────────────────────────────────────────────
+//
+// Walks `opened` attempts, queries the upstream PR's state, and moves
+// the attempt to `merged` or `closed` when the maintainer acts.
+// Conservative batch size so a single tick can't burn the GitHub
+// secondary rate limit on a busy network.
+
+const SYNC_BATCH: i64 = 30;
+
+/// Sync upstream PR statuses for opened attempts. Same opt-in guard as
+/// the bridge worker: returns immediately if FEESHR_BRIDGE_ENABLED is
+/// not set.
+pub async fn run_bridge_status_sync(pool: &PgPool) -> Result<(), anyhow::Error> {
+    if !is_enabled() {
+        tracing::debug!("bridge_status_sync_disabled");
+        return Ok(());
+    }
+
+    let attempts: Vec<(Uuid, Uuid, Option<i32>)> = sqlx::query_as(
+        r#"SELECT id, external_repo_id, upstream_pr_number
+           FROM external_pr_attempts
+           WHERE status = 'opened' AND upstream_pr_number IS NOT NULL
+           ORDER BY opened_at ASC NULLS LAST
+           LIMIT $1"#,
+    )
+    .bind(SYNC_BATCH)
+    .fetch_all(pool)
+    .await?;
+
+    if attempts.is_empty() {
+        return Ok(());
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("feeshr-bridge-sync/0.1")
+        .timeout(std::time::Duration::from_secs(15))
+        .build()?;
+
+    let mut moved = 0;
+    for (attempt_id, bridge_id, pr_number) in &attempts {
+        let pr_number = match pr_number {
+            Some(n) => *n,
+            None => continue,
+        };
+        match sync_one(pool, &client, *attempt_id, *bridge_id, pr_number).await {
+            Ok(true) => moved += 1,
+            Ok(false) => {}
+            Err(e) => {
+                tracing::warn!(
+                    attempt_id = %attempt_id,
+                    error = %e,
+                    "bridge_status_sync_failed"
+                );
+            }
+        }
+    }
+
+    tracing::info!(scanned = attempts.len(), moved, "bridge_status_sync_tick");
+    Ok(())
+}
+
+async fn sync_one(
+    pool: &PgPool,
+    client: &reqwest::Client,
+    attempt_id: Uuid,
+    bridge_id: Uuid,
+    pr_number: i32,
+) -> Result<bool, anyhow::Error> {
+    let bridge: Option<BridgeRow> = sqlx::query_as(
+        r#"SELECT provider, upstream_owner, upstream_repo, min_reputation,
+                  capability_required, require_pocc, token_ref, status
+           FROM external_repos WHERE id = $1"#,
+    )
+    .bind(bridge_id)
+    .fetch_optional(pool)
+    .await?;
+    let bridge = match bridge {
+        Some(b) => b,
+        None => return Ok(false),
+    };
+    if bridge.provider != "github" {
+        return Ok(false);
+    }
+
+    let token = bridge.token_ref.as_deref().and_then(resolve_token);
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/pulls/{}",
+        bridge.upstream_owner, bridge.upstream_repo, pr_number
+    );
+
+    let mut req = client
+        .get(&url)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28");
+    if let Some(t) = &token {
+        req = req.bearer_auth(t);
+    }
+    // Public repos work unauthenticated but with a much lower rate
+    // limit. We use the bridge's token when present for headroom.
+    let resp = req.send().await?;
+    if !resp.status().is_success() {
+        // 404 / 403 / 5xx — leave the attempt as 'opened' for the next
+        // tick; don't blow up so one bad PR doesn't stall the queue.
+        return Ok(false);
+    }
+
+    let payload: Value = resp.json().await?;
+    let state = payload.get("state").and_then(|v| v.as_str()).unwrap_or("");
+    let merged = payload
+        .get("merged")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let new_status = if merged {
+        "merged"
+    } else if state == "closed" {
+        "closed"
+    } else {
+        return Ok(false);
+    };
+
+    sqlx::query(
+        r#"UPDATE external_pr_attempts
+           SET status = $1, resolved_at = NOW(), error_message = NULL
+           WHERE id = $2 AND status = 'opened'"#,
+    )
+    .bind(new_status)
+    .bind(attempt_id)
+    .execute(pool)
+    .await?;
+
+    tracing::info!(
+        attempt_id = %attempt_id,
+        upstream = %format!("{}/{}#{}", bridge.upstream_owner, bridge.upstream_repo, pr_number),
+        new_status = new_status,
+        "bridge_status_synced"
+    );
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
