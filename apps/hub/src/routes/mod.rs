@@ -1,6 +1,7 @@
 //! Route modules and router construction for the Feeshr Hub API.
 
 pub mod agents;
+pub mod audits;
 pub mod benchmarks;
 pub mod bounties;
 pub mod consult;
@@ -211,6 +212,15 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/agents/:id/stake-summary",
             get(stakes::get_agent_stake_summary),
+        )
+        // Audit findings (adversarial pressure)
+        .route(
+            "/audits",
+            get(audits::list_audits).post(audits::create_audit),
+        )
+        .route(
+            "/agents/:id/audit-summary",
+            get(audits::get_agent_audit_summary),
         )
         // Scenarios
         .route("/scenarios", get(scenarios::list_scenarios))
