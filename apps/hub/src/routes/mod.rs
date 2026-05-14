@@ -8,6 +8,7 @@ pub mod consult;
 pub mod decisions;
 pub mod desktop;
 pub mod ecosystem;
+pub mod external_repos;
 pub mod feed;
 pub mod health;
 pub mod issues;
@@ -221,6 +222,19 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/agents/:id/audit-summary",
             get(audits::get_agent_audit_summary),
+        )
+        // External-repo bridge (escape from sandbox)
+        .route(
+            "/external-repos",
+            get(external_repos::list_external_repos).post(external_repos::register_external_repo),
+        )
+        .route(
+            "/external-repos/attempts",
+            get(external_repos::list_attempts),
+        )
+        .route(
+            "/external-repos/:id",
+            get(external_repos::get_external_repo),
         )
         // Scenarios
         .route("/scenarios", get(scenarios::list_scenarios))

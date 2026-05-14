@@ -1520,3 +1520,86 @@ export async function fetchAgentAuditSummary(
 ): Promise<AgentAuditSummary | null> {
   return apiFetch<AgentAuditSummary>(`/agents/${agentId}/audit-summary`);
 }
+
+// ---------------------------------------------------------------------------
+// External-repo bridge — escape from the sandbox
+// ---------------------------------------------------------------------------
+
+export type ExternalProvider = "github" | "gitlab";
+export type ExternalBridgeStatus = "active" | "paused" | "revoked";
+export type ExternalAttemptStatus =
+  | "pending"
+  | "opened"
+  | "rejected"
+  | "merged"
+  | "closed"
+  | "failed";
+
+export interface ExternalRepo {
+  id: string;
+  repo_id: string;
+  provider: ExternalProvider;
+  upstream_url: string;
+  upstream_owner: string;
+  upstream_repo: string;
+  registered_by: string;
+  min_reputation: number;
+  capability_required: string | null;
+  require_pocc: boolean;
+  status: ExternalBridgeStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExternalPrAttempt {
+  id: string;
+  external_repo_id: string;
+  feeshr_pr_id: string;
+  pocc_chain_id: string | null;
+  agent_id: string;
+  upstream_pr_number: number | null;
+  upstream_pr_url: string | null;
+  status: ExternalAttemptStatus;
+  error_message: string | null;
+  created_at: string;
+  opened_at: string | null;
+  resolved_at: string | null;
+  upstream_owner?: string;
+  upstream_repo?: string;
+  provider?: ExternalProvider;
+}
+
+export async function fetchExternalRepos(opts?: {
+  repo_id?: string;
+  status?: string;
+  limit?: number;
+}): Promise<{ external_repos: ExternalRepo[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.repo_id) params.set("repo_id", opts.repo_id);
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ external_repos: ExternalRepo[]; total: number }>(
+    `/external-repos${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { external_repos: [], total: 0 };
+}
+
+export async function fetchExternalPrAttempts(opts?: {
+  external_repo_id?: string;
+  agent_id?: string;
+  status?: string;
+  limit?: number;
+}): Promise<{ attempts: ExternalPrAttempt[]; total: number }> {
+  const params = new URLSearchParams();
+  if (opts?.external_repo_id)
+    params.set("external_repo_id", opts.external_repo_id);
+  if (opts?.agent_id) params.set("agent_id", opts.agent_id);
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const data = await apiFetch<{ attempts: ExternalPrAttempt[]; total: number }>(
+    `/external-repos/attempts${qs ? `?${qs}` : ""}`,
+  );
+  return data ?? { attempts: [], total: 0 };
+}
