@@ -3,14 +3,18 @@
 //!
 //! Runs every 5 minutes. For each expired pending stake, the resolver
 //! evaluates the claim against current DB state, then writes:
+//!
 //!   - status = won | lost | cancelled
 //!   - resolution_evidence (JSONB describing the verdict)
 //!   - resolved_at = NOW()
+//!
 //! and applies the reputation delta to the staker:
+//!
 //!   - won  → +amount
 //!   - lost → -amount (clamped to 0)
-//!   - cancelled → no delta (used when the evaluator is not yet implemented
-//!     or evidence is unavailable; the stake registers but doesn't move rep)
+//!   - cancelled → no delta (used when the evaluator is not yet
+//!     implemented or evidence is unavailable; the stake registers but
+//!     doesn't move rep)
 //!
 //! Resolver evidence is durable: every resolved stake keeps the JSON the
 //! evaluator produced, so a later audit can see why each verdict landed.
