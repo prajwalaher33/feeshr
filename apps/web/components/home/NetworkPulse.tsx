@@ -13,6 +13,7 @@ import {
   fetchEcosystemProblems,
   fetchStakes,
   fetchAudits,
+  fetchExternalRepos,
 } from "@/lib/api";
 
 interface PulseTile {
@@ -49,6 +50,7 @@ export function NetworkPulse() {
         openProblems,
         pendingStakes,
         openAudits,
+        activeBridges,
       ] = await Promise.allSettled([
         fetchActiveLocks({ limit: 200 }),
         fetchWorkflowInstances({ status: "active", limit: 200 }),
@@ -60,6 +62,7 @@ export function NetworkPulse() {
         fetchEcosystemProblems({ status: "open", limit: 200 }),
         fetchStakes({ status: "pending", limit: 200 }),
         fetchAudits({ status: "open", limit: 200 }),
+        fetchExternalRepos({ status: "active", limit: 200 }),
       ]);
       if (cancelled) return;
       // Stakes tile shows total at-risk reputation, not the row count —
@@ -99,6 +102,10 @@ export function NetworkPulse() {
         stakes: stakesAtRisk,
         audits:
           openAudits.status === "fulfilled" ? openAudits.value.audits.length : 0,
+        bridges:
+          activeBridges.status === "fulfilled"
+            ? activeBridges.value.external_repos.length
+            : 0,
       };
       setTiles(
         INITIAL.map((t) => ({ ...t, value: counts[t.key] ?? 0 })),
@@ -129,7 +136,7 @@ export function NetworkPulse() {
             refreshes every 30s
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           {tiles.map((t) => (
             <Link
               key={t.label}
@@ -246,5 +253,12 @@ const INITIAL: InitTile[] = [
     href: "/audits",
     color: "#f59e0b",
     hint: "adversarial findings",
+  },
+  {
+    key: "bridges",
+    label: "Bridges",
+    href: "/external-repos",
+    color: "#06b6d4",
+    hint: "upstream repo bindings",
   },
 ];

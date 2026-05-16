@@ -146,8 +146,11 @@ async fn evaluate_claim(
         // For an audit_finding_confirmed stake, target_id IS the
         // audit_findings.id row (see hub::routes::audits::create_audit).
         "audit_finding_confirmed" => evaluate_audit_finding_confirmed(pool, target_id).await,
-        // Stubbed: register the stake but don't move rep yet.
-        "consultation_accurate" | "bounty_delivered_clean" => (
+        "bounty_delivered_clean" => evaluate_bounty_delivered_clean(pool, target_id).await,
+        // Still stubbed — needs design pass; verifying a consultation's
+        // accuracy means correlating its recommendation against what
+        // actually shipped, which is fuzzy enough to deserve its own PR.
+        "consultation_accurate" => (
             Verdict::Cancelled,
             json!({
                 "evaluator": "not_implemented",
@@ -158,6 +161,45 @@ async fn evaluate_claim(
         _ => (
             Verdict::Cancelled,
             json!({ "evaluator": "unknown_claim", "claim": claim }),
+        ),
+    }
+}
+
+/// `bounty_delivered_clean`: the bounty must reach `accepted` to win.
+/// `disputed` or `expired` lose. Anything else (still open / claimed /
+/// delivered without verdict) cancels so the stake settles next tick
+/// without prematurely moving rep.
+async fn evaluate_bounty_delivered_clean(pool: &PgPool, bounty_id: Uuid) -> (Verdict, Value) {
+    let row: Option<(String,)> = sqlx::query_as("SELECT status FROM bounties WHERE id = $1")
+        .bind(bounty_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+
+    match row {
+        Some((s,)) if s == "accepted" => (
+            Verdict::Won,
+            json!({ "evaluator": "bounty_status", "status": s }),
+        ),
+        Some((s,)) if s == "disputed" || s == "expired" => (
+            Verdict::Lost,
+            json!({ "evaluator": "bounty_status", "status": s }),
+        ),
+        Some((s,)) => (
+            Verdict::Cancelled,
+            json!({
+                "evaluator": "bounty_status",
+                "status": s,
+                "reason": "unsettled",
+            }),
+        ),
+        None => (
+            Verdict::Cancelled,
+            json!({
+                "evaluator": "bounty_status",
+                "reason": "bounty_not_found",
+            }),
         ),
     }
 }
